@@ -1,0 +1,13 @@
+{
+  "name": "sali-wg-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Small HTTP agent that runs on a WireGuard VPN server and exposes peer management to the Sali VPN API. See README.md in this folder.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

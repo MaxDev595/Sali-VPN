@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sali}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sali_password}
+      POSTGRES_DB: ${POSTGRES_DB:-sali_vpn}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-sali}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+    networks:
+      - internal
+      - public
+
+  bot:
+    build:
+      context: .
+      dockerfile: apps/bot/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      API_URL: http://api:3000
+    depends_on:
+      - api
+    ports:
+      - '8080:8080'
+    networks:
+      - internal
+      - public
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${API_URL:-https://your-domain.example}
+    restart: unless-stopped
+    ports:
+      - '8081:80'
+    networks:
+      - public
+
+networks:
+  internal:
+    internal: true
+  public:
+
+volumes:
+  postgres_data:

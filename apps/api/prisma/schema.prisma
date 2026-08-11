@@ -1,0 +1,335 @@
+// Sali VPN — database schema
+// Run `npm run prisma:migrate` (apps/api) to apply.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(uuid())
+  telegramId    BigInt   @unique
+  username      String?
+  firstName     String?
+  lastName      String?
+  languageCode  String?
+  isBlocked     Boolean  @default(false)
+  isAdmin       Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  vpnAccount     VpnAccount?
+  trial          Trial?
+  subscriptions  Subscription[]
+  payments       Payment[]
+  devices        Device[]
+  supportTickets SupportTicket[]
+  notifications  Notification[]
+
+  // Referral relations: this user was referred by `referredBy`
+  referredById  String?
+  referredBy    Referral? @relation("ReferredUser")
+
+  // Referrals this user made (as the referrer)
+  referralsMade Referral[] @relation("ReferrerUser")
+
+  referralRewards ReferralReward[]
+
+  @@index([telegramId])
+}
+
+// ---------------------------------------------------------------------------
+// VPN
+// ---------------------------------------------------------------------------
+
+enum VpnAccountStatus {
+  ACTIVE
+  DISABLED
+  PENDING
+  ERROR
+}
+
+model VpnServer {
+  id           String   @id @default(uuid())
+  name         String
+  location     String
+  publicHost   String
+  publicPort   Int
+  provider     String   @default("wireguard") // matches VPNProvider implementation key
+  isActive     Boolean  @default(true)
+  capacity     Int      @default(1000)
+  currentLoad  Int      @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  vpnAccounts  VpnAccount[]
+}
+
+model VpnAccount {
+  id            String            @id @default(uuid())
+  userId        String            @unique
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  serverId      String
+  server        VpnServer         @relation(fields: [serverId], references: [id])
+
+  provider      String            @default("wireguard")
+  externalId    String            // id/username of the peer on the VPN provider side
+  publicKey     String
+  // Private key is generated server-side and only ever sent to the user once
+  // (in the connection config); it is stored encrypted at rest.
+  privateKeyEncrypted String
+  allocatedIp   String
+  status        VpnAccountStatus  @default(PENDING)
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  devices       Device[]
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Trials
+// ---------------------------------------------------------------------------
+
+enum TrialStatus {
+  ACTIVE
+  EXPIRED
+}
+
+model Trial {
+  id         String      @id @default(uuid())
+  userId     String      @unique
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  startedAt  DateTime    @default(now())
+  expiresAt  DateTime
+  status     TrialStatus @default(ACTIVE)
+
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([expiresAt, status])
+}
+
+// ---------------------------------------------------------------------------
+// Plans & Subscriptions
+// ---------------------------------------------------------------------------
+
+model Plan {
+  id             String   @id @default(uuid())
+  code           String   @unique // e.g. "pro_monthly"
+  name           String            // e.g. "Sali Pro"
+  durationDays   Int
+  priceUsd       Decimal  @db.Decimal(10, 2)
+  originalPriceUsd Decimal? @db.Decimal(10, 2)
+  maxDevices     Int      @default(3)
+  isActive       Boolean  @default(true)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subscriptions  Subscription[]
+  payments       Payment[]
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+  PENDING_PAYMENT
+}
+
+model Subscription {
+  id            String             @id @default(uuid())
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planId        String
+  plan          Plan               @relation(fields: [planId], references: [id])
+
+  status        SubscriptionStatus @default(PENDING_PAYMENT)
+  startedAt     DateTime?
+  expiresAt     DateTime?
+  autoRenew     Boolean            @default(false)
+  canceledAt    DateTime?
+
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  payments      Payment[]
+
+  @@index([userId, status])
+  @@index([expiresAt, status])
+}
+
+// ---------------------------------------------------------------------------
+// Payments
+// ---------------------------------------------------------------------------
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planId           String
+  plan             Plan          @relation(fields: [planId], references: [id])
+
+  subscriptionId   String?
+  subscription     Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  provider         String        // "manual" | "telegram_stars" | "stripe" ...
+  externalPaymentId String?      // id on the provider's side
+  amountUsd        Decimal       @db.Decimal(10, 2)
+  currency         String        @default("USD")
+  status           PaymentStatus @default(PENDING)
+  failureReason    String?
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([userId, status])
+  @@index([externalPaymentId])
+}
+
+// ---------------------------------------------------------------------------
+// Devices
+// ---------------------------------------------------------------------------
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WINDOWS
+  MACOS
+  LINUX
+  OTHER
+}
+
+model Device {
+  id           String         @id @default(uuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  vpnAccountId String?
+  vpnAccount   VpnAccount?    @relation(fields: [vpnAccountId], references: [id])
+
+  name         String
+  platform     DevicePlatform @default(OTHER)
+  isActive     Boolean        @default(false)
+  lastActiveAt DateTime?
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Referrals
+// ---------------------------------------------------------------------------
+
+enum ReferralStatus {
+  PENDING   // referred user has started the bot but has no reward-triggering action yet
+  REWARDED  // referrer has received their reward
+}
+
+model Referral {
+  id             String         @id @default(uuid())
+
+  referrerId     String
+  referrer       User           @relation("ReferrerUser", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  referredUserId String         @unique
+  referredUser   User           @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  status         ReferralStatus @default(PENDING)
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  rewards        ReferralReward[]
+
+  @@index([referrerId])
+}
+
+model ReferralReward {
+  id           String   @id @default(uuid())
+  referralId   String
+  referral     Referral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+
+  userId       String   // the user who receives the reward (the referrer)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind         String   // e.g. "free_days"
+  amount       Int      // e.g. number of free days granted
+  grantedAt    DateTime @default(now())
+
+  createdAt    DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Support
+// ---------------------------------------------------------------------------
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+model SupportTicket {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  category  String              // e.g. "vpn_not_connecting", "payment_issue", "other"
+  message   String
+  status    SupportTicketStatus @default(OPEN)
+
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+enum NotificationType {
+  TRIAL_EXPIRING_SOON
+  TRIAL_EXPIRED
+  SUBSCRIPTION_ACTIVATED
+  SUBSCRIPTION_EXPIRING_SOON
+  SUBSCRIPTION_EXPIRED
+  PAYMENT_FAILED
+  REFERRAL_REWARD
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  payload   Json?
+  sentAt    DateTime?
+  createdAt DateTime         @default(now())
+}
