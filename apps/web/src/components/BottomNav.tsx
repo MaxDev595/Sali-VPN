@@ -2,10 +2,10 @@ import { NavLink } from 'react-router-dom';
 import { telegram } from '../lib/telegram';
 
 const items = [
-  { to: '/', label: 'Home', icon: HomeIcon },
-  { to: '/subscription', label: 'Subscription', icon: PlanIcon },
-  { to: '/devices', label: 'Devices', icon: DeviceIcon },
-  { to: '/settings', label: 'Settings', icon: SettingsIcon },
+  { to: '/', label: 'Главная', icon: HomeIcon },
+  { to: '/subscription', label: 'Подписка', icon: PlanIcon },
+  { to: '/devices', label: 'Устройства', icon: DeviceIcon },
+  { to: '/settings', label: 'Настройки', icon: SettingsIcon },
 ];
 
 export function BottomNav() {

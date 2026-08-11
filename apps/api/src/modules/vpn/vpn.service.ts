@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -24,6 +24,13 @@ export class VpnService {
     });
   }
 
+  private async assertServerOnline(serverId: string) {
+    const status = await this.provider.getServerStatus(serverId).catch(() => null);
+    if (!status?.isOnline) {
+      throw new ServiceUnavailableException('Не удалось подключиться к VPN-серверу. Попробуйте позже.');
+    }
+  }
+
   /**
    * Creates (or returns the existing) VPN account for a user. Called once,
    * the very first time a user hits "Connect VPN" — this is also what starts
@@ -34,6 +41,7 @@ export class VpnService {
     if (existing) return existing;
 
     const server = await this.pickServer();
+    await this.assertServerOnline(server.id);
     const created = await this.provider.createUser({ userId, serverId: server.id });
 
     const secret = this.config.getOrThrow<string>('JWT_SECRET');
@@ -84,7 +92,12 @@ export class VpnService {
 
   async enable(userId: string) {
     const account = await this.prisma.vpnAccount.findUniqueOrThrow({ where: { userId } });
+    await this.assertServerOnline(account.serverId);
     await this.provider.enableUser(account.externalId, account.serverId);
+    const confirmed = await this.provider.getUser(account.externalId, account.serverId);
+    if (!confirmed?.isEnabled) {
+      throw new ServiceUnavailableException('VPN-сервер не подтвердил подключение.');
+    }
     return this.prisma.vpnAccount.update({
       where: { userId },
       data: { status: VpnAccountStatus.ACTIVE },

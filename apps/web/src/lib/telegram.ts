@@ -1,5 +1,12 @@
 import WebApp from '@twa-dev/sdk';
 
+let initialized = false;
+
+function supports(version: string): boolean {
+  return (WebApp as typeof WebApp & { isVersionAtLeast?: (version: string) => boolean })
+    .isVersionAtLeast?.(version) ?? false;
+}
+
 /**
  * Thin wrapper around the Telegram WebApp SDK so the rest of the app never
  * touches `window.Telegram` directly, and works (no-ops) outside Telegram
@@ -9,12 +16,17 @@ export const telegram = {
   isAvailable: typeof window !== 'undefined' && Boolean((window as any).Telegram?.WebApp),
 
   init() {
-    if (!this.isAvailable) return;
+    if (!this.isAvailable || initialized) return;
+    initialized = true;
     WebApp.ready();
     WebApp.expand();
-    WebApp.setHeaderColor('#000000');
-    WebApp.setBackgroundColor('#000000');
-    WebApp.enableClosingConfirmation();
+    if (supports('6.1')) {
+      WebApp.setHeaderColor('#000000');
+      WebApp.setBackgroundColor('#000000');
+    }
+    if (supports('6.2')) {
+      WebApp.enableClosingConfirmation();
+    }
   },
 
   get initData(): string {

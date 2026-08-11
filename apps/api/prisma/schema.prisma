@@ -116,6 +116,8 @@ model Trial {
 
   startedAt  DateTime    @default(now())
   expiresAt  DateTime
+  usedSeconds Int        @default(0)
+  activeSince DateTime?
   status     TrialStatus @default(ACTIVE)
 
   createdAt  DateTime    @default(now())

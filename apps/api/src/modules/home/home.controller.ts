@@ -28,9 +28,11 @@ export class HomeController {
     ]);
 
     const now = new Date();
-    const secondsRemaining = trial
-      ? Math.max(0, Math.floor((trial.expiresAt.getTime() - now.getTime()) / 1000))
+    const sessionSeconds = trial?.activeSince
+      ? Math.max(0, Math.floor((now.getTime() - trial.activeSince.getTime()) / 1000))
       : 0;
+    const totalSeconds = trial ? trial.usedSeconds + sessionSeconds : 0;
+    const limitSeconds = Number(process.env.TRIAL_DURATION_MINUTES ?? 60) * 60;
 
     return {
       user: {
@@ -50,7 +52,11 @@ export class HomeController {
             status: trial.status,
             startedAt: trial.startedAt.toISOString(),
             expiresAt: trial.expiresAt.toISOString(),
-            secondsRemaining,
+            secondsRemaining: Math.max(0, limitSeconds - totalSeconds),
+            sessionSeconds,
+            totalSeconds,
+            limitSeconds,
+            isRunning: Boolean(trial.activeSince),
           }
         : null,
       subscription: subscription
@@ -84,15 +90,13 @@ export class HomeController {
   @Post('vpn/connect')
   async connect(@CurrentUser() authUser: AuthTokenPayload) {
     const account = await this.vpn.ensureAccountForUser(authUser.sub);
-    await this.trials.startTrialIfNeeded(authUser.sub);
 
     const activeSub = await this.subscriptions.getActiveForUser(authUser.sub);
-    const trial = await this.trials.getTrial(authUser.sub);
-    const trialActive = trial?.status === 'ACTIVE';
-
-    if (activeSub || trialActive) {
-      await this.vpn.enable(authUser.sub);
+    if (!activeSub) {
+      await this.trials.assertAvailable(authUser.sub);
     }
+    await this.vpn.enable(authUser.sub);
+    if (!activeSub) await this.trials.startSession(authUser.sub);
 
     const config = await this.vpn.getConnectionConfig(authUser.sub);
     return { account, config };
@@ -100,6 +104,8 @@ export class HomeController {
 
   @Post('vpn/disconnect')
   async disconnect(@CurrentUser() authUser: AuthTokenPayload) {
-    return this.vpn.disable(authUser.sub);
+    const account = await this.vpn.disable(authUser.sub);
+    await this.trials.pauseSession(authUser.sub);
+    return account;
   }
 }

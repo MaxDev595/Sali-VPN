@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -31,7 +31,50 @@ export class TrialsService {
     const expiresAt = new Date(now.getTime() + minutes * 60_000);
 
     return this.prisma.trial.create({
-      data: { userId, startedAt: now, expiresAt, status: TrialStatus.ACTIVE },
+      data: { userId, startedAt: now, expiresAt, activeSince: null, status: TrialStatus.ACTIVE },
+    });
+  }
+
+  private limitSeconds() {
+    return Number(this.config.get('TRIAL_DURATION_MINUTES', 60)) * 60;
+  }
+
+  async assertAvailable(userId: string) {
+    const trial = await this.startTrialIfNeeded(userId);
+    const runningSeconds = trial.activeSince
+      ? Math.max(0, Math.floor((Date.now() - trial.activeSince.getTime()) / 1000))
+      : 0;
+    if (trial.status === TrialStatus.EXPIRED || trial.usedSeconds + runningSeconds >= this.limitSeconds()) {
+      throw new ForbiddenException('Пробный период закончился');
+    }
+    return trial;
+  }
+
+  async startSession(userId: string) {
+    const trial = await this.assertAvailable(userId);
+    if (trial.activeSince) return trial;
+
+    const now = new Date();
+    const remainingSeconds = this.limitSeconds() - trial.usedSeconds;
+    return this.prisma.trial.update({
+      where: { userId },
+      data: { activeSince: now, expiresAt: new Date(now.getTime() + remainingSeconds * 1000) },
+    });
+  }
+
+  async pauseSession(userId: string) {
+    const trial = await this.getTrial(userId);
+    if (!trial?.activeSince) return trial;
+
+    const elapsed = Math.max(0, Math.floor((Date.now() - trial.activeSince.getTime()) / 1000));
+    const usedSeconds = Math.min(this.limitSeconds(), trial.usedSeconds + elapsed);
+    return this.prisma.trial.update({
+      where: { userId },
+      data: {
+        usedSeconds,
+        activeSince: null,
+        status: usedSeconds >= this.limitSeconds() ? TrialStatus.EXPIRED : TrialStatus.ACTIVE,
+      },
     });
   }
 
@@ -59,7 +102,7 @@ export class TrialsService {
   async sweepExpiredTrials() {
     const now = new Date();
     const expired = await this.prisma.trial.findMany({
-      where: { status: TrialStatus.ACTIVE, expiresAt: { lte: now } },
+      where: { status: TrialStatus.ACTIVE, activeSince: { not: null }, expiresAt: { lte: now } },
       select: { id: true, userId: true },
     });
 

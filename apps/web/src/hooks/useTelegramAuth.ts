@@ -17,14 +17,11 @@ export function useTelegramAuth(): AuthState {
       telegram.init();
 
       if (!telegram.initData) {
-        // Local dev outside Telegram: allow the app to render with mock data
-        // so the UI can be built without a live bot session.
-        if (import.meta.env.DEV) {
-          if (!cancelled) setState({ status: 'ready' });
-          return;
-        }
         if (!cancelled) {
-          setState({ status: 'error', message: 'Invalid Telegram session' });
+          setState({
+            status: 'error',
+            message: 'Необходимо открыть приложение через Telegram и войти в свой аккаунт.',
+          });
         }
         return;
       }
@@ -37,7 +34,7 @@ export function useTelegramAuth(): AuthState {
         if (!cancelled) {
           setState({
             status: 'error',
-            message: err instanceof Error ? err.message : 'Invalid Telegram session',
+            message: err instanceof Error ? err.message : 'Недействительная сессия Telegram',
           });
         }
       }

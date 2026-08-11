@@ -15,13 +15,11 @@ export function HomeSkeleton() {
   );
 }
 
-export function ErrorState({ onRetry }: { onRetry: () => void }) {
+export function ErrorState({ onRetry, message = 'Что-то пошло не так. Попробуйте ещё раз.' }: { onRetry: () => void; message?: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-4 screen-enter">
-      <p className="text-sali-gray-300 text-[15px]">Что-то пошло не так. Попробуйте ещё раз.</p>
-      <Button onClick={onRetry} fullWidth={false} className="px-8">
-        Повторить
-      </Button>
+      <p className="text-sali-gray-300 text-[15px]">{message}</p>
+      <Button onClick={onRetry} fullWidth={false} className="px-8">Повторить</Button>
     </div>
   );
 }

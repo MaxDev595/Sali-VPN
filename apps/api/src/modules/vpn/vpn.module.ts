@@ -13,8 +13,9 @@ import { MockVpnProvider } from './providers/mock.provider';
     {
       provide: VPN_PROVIDER,
       useFactory: (config: ConfigService, wg: WireGuardProvider, mock: MockVpnProvider) => {
-        const selected = config.get<string>('VPN_PROVIDER', 'mock');
-        return selected === 'wireguard' ? wg : mock;
+        const selected = config.get<string>('VPN_PROVIDER', 'wireguard');
+        const isTest = config.get<string>('NODE_ENV') === 'test';
+        return selected === 'mock' && isTest ? mock : wg;
       },
       inject: [ConfigService, WireGuardProvider, MockVpnProvider],
     },

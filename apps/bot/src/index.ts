@@ -27,6 +27,12 @@ const bot = new Telegraf(BOT_TOKEN);
 const pendingSupport = new Map<number, string>();
 
 bot.start(handleStart);
+bot.command('vpn', handleConnectCommand);
+bot.command('subscription', handleMySubscription);
+bot.command('tariff', handleTariff);
+bot.command('invite', handleInviteFriend);
+bot.command('support', handleSupport);
+bot.command('settings', handleSettings);
 
 bot.action('features', handleFeatures);
 
@@ -82,6 +88,16 @@ bot.catch((err, ctx) => {
 
 async function main() {
   const mode = process.env.TELEGRAM_MODE ?? 'polling';
+
+  await bot.telegram.setMyCommands([
+    { command: 'start', description: 'Открыть главное меню' },
+    { command: 'vpn', description: 'Подключить VPN' },
+    { command: 'subscription', description: 'Моя подписка' },
+    { command: 'tariff', description: 'Посмотреть тариф' },
+    { command: 'invite', description: 'Пригласить друга' },
+    { command: 'support', description: 'Написать в поддержку' },
+    { command: 'settings', description: 'Настройки' },
+  ]);
 
   if (mode === 'webhook') {
     const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL;

@@ -27,14 +27,14 @@ export class AuthService {
   async loginWithTelegramWebApp(initData: string) {
     const botToken = this.config.get<string>('TELEGRAM_BOT_TOKEN');
     if (!botToken) {
-      throw new UnauthorizedException('Server misconfiguration');
+      throw new UnauthorizedException('Сервис временно недоступен');
     }
 
     let parsed;
     try {
       parsed = verifyTelegramInitData(initData, botToken);
     } catch {
-      throw new UnauthorizedException('Invalid Telegram session');
+      throw new UnauthorizedException('Недействительная сессия Telegram');
     }
 
     const user = await this.users.findOrCreateByTelegramProfile({
@@ -46,7 +46,7 @@ export class AuthService {
     });
 
     if (user.isBlocked) {
-      throw new UnauthorizedException('Account is blocked');
+      throw new UnauthorizedException('Аккаунт заблокирован');
     }
 
     const token = await this.signToken(user.id, user.telegramId.toString());

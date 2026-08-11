@@ -24,6 +24,10 @@ export interface TrialDTO {
   startedAt: string;
   expiresAt: string;
   secondsRemaining: number;
+  sessionSeconds: number;
+  totalSeconds: number;
+  limitSeconds: number;
+  isRunning: boolean;
 }
 
 export interface PlanDTO {
