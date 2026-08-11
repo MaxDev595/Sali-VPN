@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: #000000;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: contain;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Screen transition: fast, subtle, never a layout jump. */
+.screen-enter {
+  animation: screen-fade-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes screen-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.press-feedback {
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease-out;
+}
+.press-feedback:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, #141414 25%, #1e1e1e 37%, #141414 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+  border-radius: 12px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
