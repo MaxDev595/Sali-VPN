@@ -1,45 +1,57 @@
-# Telegram Bot Setup
+# Telegram bot production setup
 
-## 1. Create the bot
+The bot is `@VpnSaliBot`. It uses the existing Mini App and the API as its only
+source of user, trial and subscription state.
 
-1. Open [@BotFather](https://t.me/BotFather) in Telegram.
-2. Send `/newbot`, choose a name and a username (e.g. `SaliVPNBot`).
-3. Copy the token BotFather gives you into `.env` as `TELEGRAM_BOT_TOKEN`.
-4. Set `TELEGRAM_BOT_USERNAME` in `.env` to the username (no `@`).
+## Environment
 
-## 2. Register the Mini App
+Required for the bot:
 
-1. In BotFather, send `/newapp`, pick your bot, and set the Web App URL to
-   your deployed Mini App (`TELEGRAM_MINIAPP_URL` in `.env`, e.g.
-   `https://your-miniapp-domain.example`).
-2. Optionally send `/setmenubutton` and choose "Configure menu button" to
-   make the Mini App reachable directly from the chat's menu button, in
-   addition to the inline buttons the bot already sends.
+- `TELEGRAM_BOT_TOKEN` — BotFather token;
+- `TELEGRAM_MINIAPP_URL` — public HTTPS Mini App URL;
+- `API_URL` — API base URL (inside Compose: `http://api:3000`);
+- `INTERNAL_API_KEY` — long random shared secret, identical in API and bot;
+- `TELEGRAM_MODE` — `polling` locally, `webhook` in production;
+- `TELEGRAM_WEBHOOK_URL` and `TELEGRAM_WEBHOOK_SECRET` — required for webhook mode;
+- `SUPPORT_URL` — public support chat/account URL;
+- `BOT_API_TIMEOUT_MS` — internal API timeout, default `8000`.
 
-## 3. Configure commands (optional, cosmetic)
+`TRIAL_DURATION_MINUTES` is read by the API. A trial is created atomically only
+after the API validates Telegram Mini App `initData`.
 
-Send `/setcommands` to BotFather with:
-```
-start - Начать работу с Sali VPN
-```
+## BotFather
 
-## 4. Choose a run mode
+Open `@BotFather`, choose `@VpnSaliBot`, then configure:
 
-- **Local development**: set `TELEGRAM_MODE=polling` in `.env`. Run
-  `npm run dev:bot`. No public URL needed.
-- **Production**: set `TELEGRAM_MODE=webhook`, `TELEGRAM_WEBHOOK_URL` to a
-  public HTTPS URL routed to the bot container (see
-  `infrastructure/nginx/reverse-proxy.conf`), and `TELEGRAM_WEBHOOK_SECRET`
-  to a random string. The bot registers the webhook with Telegram on boot.
+1. `/setcommands`
 
-## 5. Payments (optional, only if using Telegram Stars)
+   ```text
+   start - Открыть Sali VPN
+   vpn - Статус VPN
+   subscription - Подписка
+   account - Аккаунт
+   help - Помощь
+   ```
 
-1. In BotFather, send `/mybots` → your bot → Payments, and connect a
-   provider to get a provider token.
-2. Put it in `.env` as `TELEGRAM_PAYMENTS_PROVIDER_TOKEN`.
-3. Set `PAYMENT_PROVIDER=telegram_stars` in `.env`.
+2. `/setmenubutton` → select the bot → enter the deployed
+   `TELEGRAM_MINIAPP_URL` and label `Открыть Sali VPN`.
+3. `/newapp` (or edit the existing app) → use the same HTTPS Mini App URL. Do
+   not create a second Mini App.
+4. `/setdescription`:
+   `Sali VPN — простой и приватный VPN без сложных настроек. Откройте приложение, чтобы подключиться и управлять подпиской.`
+5. `/setabouttext`:
+   `Простой VPN в Telegram. Быстрое подключение и минимум настроек.`
+6. `/setuserpic` → upload the current square Sali brand mark if the bot has no
+   production avatar.
+7. Group privacy settings are not needed: this bot is designed for private
+   chats. Do not disable privacy mode unless group features are added later.
 
-Until this is configured, `PAYMENT_PROVIDER=manual` keeps the full purchase
-flow working end-to-end (payments are marked pending and confirmed manually
-via the admin API), so the rest of the product can be built and demoed
-before a real payment processor is connected.
+## Production checks
+
+- expose only the webhook route through HTTPS; never expose `/api/v1/internal`;
+- run one polling instance or one webhook deployment (not both);
+- apply Prisma migrations and seed the active plan;
+- verify `/start` for a new Telegram account, open the Mini App, then repeat
+  `/start` and confirm that the main menu is shown;
+- monitor API/bot restarts and Telegram/API error logs;
+- rotate the bot token and internal API key immediately if either is leaked.

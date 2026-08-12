@@ -1,128 +1,71 @@
 import 'dotenv/config';
 import { Telegraf } from 'telegraf';
-import {
-  handleConnectCommand,
-  handleFeatures,
-  handleInviteFriend,
-  handleMySubscription,
-  handleSettings,
-  handleStart,
-  handleSupport,
-  handleSupportCategory,
-  handleSupportMessage,
-  handleTariff,
-} from './handlers';
-
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-if (!BOT_TOKEN) {
-  throw new Error('TELEGRAM_BOT_TOKEN is required. Get one from @BotFather.');
-}
-
-const bot = new Telegraf(BOT_TOKEN);
-
-// Minimal in-memory session keyed by chat id, only used for the short-lived
-// "which support category did you pick" flow. Fine for MVP / single
-// instance; swap for a Redis-backed session store before scaling to
-// multiple bot instances.
-const pendingSupport = new Map<number, string>();
-
-bot.start(handleStart);
-bot.command('vpn', handleConnectCommand);
-bot.command('subscription', handleMySubscription);
-bot.command('tariff', handleTariff);
-bot.command('invite', handleInviteFriend);
-bot.command('support', handleSupport);
-bot.command('settings', handleSettings);
-
-bot.action('features', handleFeatures);
-
-bot.hears('🔐 Подключить VPN', handleConnectCommand);
-bot.hears('👤 Моя подписка', handleMySubscription);
-bot.hears('💳 Тариф', handleTariff);
-bot.hears('🎁 Пригласить друга', handleInviteFriend);
-bot.hears('🛟 Поддержка', handleSupport);
-bot.hears('⚙️ Настройки', handleSettings);
-
-const SUPPORT_CATEGORIES = [
-  'vpn_not_connecting',
-  'no_internet',
-  'payment_issue',
-  'device_setup',
-  'other',
-];
-
-for (const category of SUPPORT_CATEGORIES) {
-  bot.action(`support_${category}`, async (ctx) => {
-    if (ctx.chat) pendingSupport.set(ctx.chat.id, category);
-    await handleSupportCategory(ctx, category);
-  });
-}
-
-bot.on('text', async (ctx, next) => {
-  const chatId = ctx.chat?.id;
-  if (chatId && pendingSupport.has(chatId)) {
-    const category = pendingSupport.get(chatId)!;
-    pendingSupport.delete(chatId);
-    await handleSupportMessage(ctx, category, ctx.message.text);
-    return;
-  }
-  return next();
-});
-
-// Handles Telegram's native payment confirmation (used only when
-// PAYMENT_PROVIDER=telegram_stars). Forwards straight to the API, which is
-// the sole source of truth for payment status.
-bot.on('successful_payment', async (ctx) => {
-  const payload = (ctx.message as any)?.successful_payment?.invoice_payload;
-  if (!payload) return;
-  const { api } = await import('./services/api-client');
-  await api.confirmPayment(payload).catch(() => undefined);
-  await ctx.reply('Оплата прошла успешно! Подписка активирована. 🖤');
-});
-
-bot.catch((err, ctx) => {
-  // eslint-disable-next-line no-console
-  console.error(`Unhandled bot error for update ${ctx.updateType}`, err);
-  ctx.reply('Что-то пошло не так. Попробуйте ещё раз.').catch(() => undefined);
-});
+import { loadConfig } from './config';
+import { createHandlers } from './handlers';
+import { genericError } from './messages';
+import { menuLabels } from './keyboards';
+import { api } from './services/api-client';
 
 async function main() {
-  const mode = process.env.TELEGRAM_MODE ?? 'polling';
+  const config = loadConfig();
+  const bot = new Telegraf(config.token);
+  const handlers = createHandlers(config);
+
+  bot.start(handlers.start);
+  bot.command('vpn', handlers.vpn);
+  bot.command('subscription', handlers.subscription);
+  bot.command('account', handlers.account);
+  bot.command('help', handlers.help);
+  bot.hears(menuLabels.vpn, handlers.vpn);
+  bot.hears(menuLabels.subscription, handlers.subscription);
+  bot.hears(menuLabels.account, handlers.account);
+  bot.hears(menuLabels.help, handlers.help);
+  bot.action(/^faq_/, handlers.faq);
+
+  bot.on('successful_payment', async (ctx) => {
+    const payment = ctx.message.successful_payment;
+    try {
+      await api.confirmPayment(payment.invoice_payload);
+      await ctx.reply('Оплата прошла успешно. Подписка активирована.');
+    } catch (error) {
+      console.error('Failed to confirm Telegram payment', error);
+      await ctx.reply('Оплата получена. Статус подписки обновляется.');
+    }
+  });
+
+  bot.catch(async (error, ctx) => {
+    console.error(`Unhandled bot error update=${ctx.update.update_id}`, error);
+    await ctx.reply(genericError).catch(() => undefined);
+  });
 
   await bot.telegram.setMyCommands([
-    { command: 'start', description: 'Открыть главное меню' },
-    { command: 'vpn', description: 'Подключить VPN' },
-    { command: 'subscription', description: 'Моя подписка' },
-    { command: 'tariff', description: 'Посмотреть тариф' },
-    { command: 'invite', description: 'Пригласить друга' },
-    { command: 'support', description: 'Написать в поддержку' },
-    { command: 'settings', description: 'Настройки' },
+    { command: 'start', description: 'Открыть Sali VPN' },
+    { command: 'vpn', description: 'Статус VPN' },
+    { command: 'subscription', description: 'Подписка' },
+    { command: 'account', description: 'Аккаунт' },
+    { command: 'help', description: 'Помощь' },
   ]);
 
-  if (mode === 'webhook') {
-    const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL;
-    const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-    if (!webhookUrl || !secret) {
-      throw new Error('TELEGRAM_WEBHOOK_URL and TELEGRAM_WEBHOOK_SECRET are required in webhook mode.');
-    }
-    await bot.telegram.setWebhook(webhookUrl, { secret_token: secret });
+  if (config.mode === 'webhook') {
     await bot.launch({
       webhook: {
-        domain: webhookUrl,
-        port: Number(process.env.PORT ?? 8080),
-        secretToken: secret,
+        domain: config.webhookUrl!,
+        port: config.port,
+        secretToken: config.webhookSecret!,
       },
     });
-    // eslint-disable-next-line no-console
-    console.log(`Sali VPN bot running in webhook mode: ${webhookUrl}`);
   } else {
-    await bot.launch();
-    // eslint-disable-next-line no-console
-    console.log('Sali VPN bot running in polling mode');
+    await bot.telegram.deleteWebhook({ drop_pending_updates: false });
+    await bot.launch({ dropPendingUpdates: false });
   }
+
+  console.log(`Sali VPN bot started in ${config.mode} mode`);
+  const shutdown = (signal: 'SIGINT' | 'SIGTERM') => bot.stop(signal);
+  process.once('SIGINT', () => shutdown('SIGINT'));
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
 }
 
-main();
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+main().catch((error) => {
+  console.error('Failed to start Sali VPN bot', error);
+  process.exitCode = 1;
+});

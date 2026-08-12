@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
+import { TrialsModule } from '../trials/trials.module';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 // Global: JwtAuthGuard (and the underlying JwtService) is used by controllers
@@ -15,6 +16,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
   imports: [
     ConfigModule,
     UsersModule,
+    TrialsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

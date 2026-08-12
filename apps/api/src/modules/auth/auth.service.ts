@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { verifyTelegramInitData } from './telegram-init-data.util';
 import { UsersService } from '../users/users.service';
+import { TrialsService } from '../trials/trials.service';
 
 export interface AuthTokenPayload {
   sub: string; // internal user id
@@ -17,6 +18,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly users: UsersService,
+    private readonly trials: TrialsService,
   ) {}
 
   /**
@@ -48,6 +50,11 @@ export class AuthService {
     if (user.isBlocked) {
       throw new UnauthorizedException('Аккаунт заблокирован');
     }
+
+    // A trial is issued only after Telegram has cryptographically proved the
+    // user's identity. The unique Trial.userId constraint makes this safe and
+    // idempotent across repeated Mini App launches.
+    await this.trials.startTrialIfNeeded(user.id);
 
     const token = await this.signToken(user.id, user.telegramId.toString());
     return { token, startParam: parsed.startParam };

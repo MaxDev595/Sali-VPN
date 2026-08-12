@@ -1,32 +1,34 @@
 import { Markup } from 'telegraf';
 
+export const menuLabels = {
+  vpn: '⚡ VPN',
+  subscription: '💎 Подписка',
+  account: '👤 Аккаунт',
+  help: '❓ Помощь',
+} as const;
+
 export const mainReplyKeyboard = Markup.keyboard([
-  ['👤 Моя подписка', '💳 Тариф'],
-  ['🎁 Пригласить друга', '🛟 Поддержка'],
-  ['⚙️ Настройки'],
+  [menuLabels.vpn, menuLabels.subscription],
+  [menuLabels.account, menuLabels.help],
 ]).resize();
 
-export function welcomeInlineKeyboard(miniAppUrl: string) {
+export function openAppKeyboard(url: string, label = '⚡ Открыть Sali VPN') {
+  return Markup.inlineKeyboard([[Markup.button.webApp(label, url)]]);
+}
+
+export function expiredAccessKeyboard(appUrl: string, subscriptionUrl: string) {
   return Markup.inlineKeyboard([
-    [Markup.button.webApp('🔐 Подключить VPN', miniAppUrl)],
-    [Markup.button.callback('⚡ Возможности Sali', 'features')],
+    [Markup.button.webApp('💎 Купить подписку', subscriptionUrl)],
+    [Markup.button.webApp('Открыть Sali', appUrl)],
   ]);
 }
 
-export function buySubscriptionInlineKeyboard(miniAppUrl: string) {
-  return Markup.inlineKeyboard([
-    [Markup.button.webApp('🔥 Купить подписку — $5/мес', `${miniAppUrl}#/subscription`)],
+export const faqKeyboard = (supportUrl?: string) =>
+  Markup.inlineKeyboard([
+    [Markup.button.callback('Как подключить VPN?', 'faq_connect')],
+    [Markup.button.callback('VPN не подключается', 'faq_not_connecting')],
+    [Markup.button.callback('Как сменить сервер?', 'faq_server')],
+    [Markup.button.callback('Как купить подписку?', 'faq_buy')],
+    [Markup.button.callback('Проблемы с оплатой', 'faq_payment')],
+    ...(supportUrl ? [[Markup.button.url('Связаться с поддержкой', supportUrl)]] : []),
   ]);
-}
-
-export function openAppInlineKeyboard(miniAppUrl: string, label = '📱 Открыть Sali VPN') {
-  return Markup.inlineKeyboard([[Markup.button.webApp(label, miniAppUrl)]]);
-}
-
-export const supportCategoriesKeyboard = Markup.inlineKeyboard([
-  [Markup.button.callback('VPN не подключается', 'support_vpn_not_connecting')],
-  [Markup.button.callback('Не работает интернет', 'support_no_internet')],
-  [Markup.button.callback('Проблема с оплатой', 'support_payment_issue')],
-  [Markup.button.callback('Как подключить устройство?', 'support_device_setup')],
-  [Markup.button.callback('Другой вопрос', 'support_other')],
-]);

@@ -34,6 +34,7 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   app.setGlobalPrefix('api/v1');
+  app.enableShutdownHooks();
 
   const port = Number(process.env.API_PORT ?? 3000);
   await app.listen(port, '0.0.0.0');

@@ -1,176 +1,126 @@
 import { Context } from 'telegraf';
-import { api } from '../services/api-client';
-import {
-  buySubscriptionInlineKeyboard,
-  mainReplyKeyboard,
-  openAppInlineKeyboard,
-  supportCategoriesKeyboard,
-  welcomeInlineKeyboard,
-} from '../keyboards';
+import { BotConfig } from '../config';
+import { api, BotUserState } from '../services/api-client';
+import { accessText, date, genericError, onboarding } from '../messages';
+import { expiredAccessKeyboard, faqKeyboard, mainReplyKeyboard, openAppKeyboard } from '../keyboards';
 
-const MINIAPP_URL = process.env.TELEGRAM_MINIAPP_URL ?? 'https://your-miniapp-domain.example';
-const PRICE = process.env.SUBSCRIPTION_PRICE_USD ?? '5';
-const ORIGINAL_PRICE = process.env.SUBSCRIPTION_ORIGINAL_PRICE_USD ?? '8';
+const FAQ: Record<string, string> = {
+  faq_connect: '<b>Как подключить VPN?</b>\n\nОткройте Sali VPN, нажмите кнопку подключения и следуйте короткой инструкции для вашего устройства.',
+  faq_not_connecting: '<b>VPN не подключается</b>\n\nПроверьте интернет, отключите другой VPN и попробуйте подключиться снова. Если не помогло — напишите в поддержку.',
+  faq_server: '<b>Как сменить сервер?</b>\n\nОткройте Sali VPN и выберите доступный сервер в приложении.',
+  faq_buy: '<b>Как купить подписку?</b>\n\nОткройте раздел «Подписка» в Sali VPN и выберите тариф.',
+  faq_payment: '<b>Проблемы с оплатой</b>\n\nНе повторяйте платёж много раз. Проверьте его статус в Sali VPN, затем обратитесь в поддержку.',
+};
 
-export async function handleStart(ctx: Context) {
-  const from = ctx.from;
-  if (!from) return;
-
-  const startPayload = (ctx as any).startPayload as string | undefined;
-
-  await api.syncUser({
-    telegramId: from.id,
-    username: from.username,
-    firstName: from.first_name,
-    lastName: from.last_name,
-    languageCode: from.language_code,
-    startParam: startPayload,
-  });
-
-  await ctx.reply(
-    [
-      'Добро пожаловать в Sali VPN',
-      '',
-      'Быстрый, простой и приватный VPN без лишней регистрации.',
-      '',
-      'Подключитесь за несколько секунд и получите 1 час бесплатного доступа.',
-    ].join('\n'),
-    welcomeInlineKeyboard(MINIAPP_URL),
-  );
-
-  await ctx.reply('Используйте меню ниже для быстрого доступа:', mainReplyKeyboard);
+function profile(ctx: Context) {
+  if (!ctx.from) return null;
+  return {
+    telegramId: ctx.from.id,
+    username: ctx.from.username,
+    firstName: ctx.from.first_name,
+    lastName: ctx.from.last_name,
+    languageCode: ctx.from.language_code,
+  };
 }
 
-export async function handleFeatures(ctx: Context) {
-  await ctx.answerCbQuery();
-  await ctx.reply(
-    [
-      '⚡ Возможности Sali VPN',
-      '',
-      '• Быстрое подключение — без логина и пароля',
-      '• Приватность — трафик защищён WireGuard-протоколом',
-      '• Стабильное соединение на нескольких локациях',
-      '• Простая работа с нескольких устройств',
-    ].join('\n'),
-    openAppInlineKeyboard(MINIAPP_URL, '🔐 Подключить VPN'),
-  );
+async function stateFor(ctx: Context): Promise<BotUserState | null> {
+  return ctx.from ? api.getState(ctx.from.id) : null;
 }
 
-export async function handleConnectCommand(ctx: Context) {
-  const from = ctx.from;
-  if (!from) return;
-
-  try {
-    const result = await api.connectVpn(from.id);
-    const isTrial = result.trial.status === 'ACTIVE';
-
-    await ctx.reply(
-      [
-        'Добро пожаловать в Sali VPN 🖤',
-        '',
-        'Ваш аккаунт успешно создан.',
-        '',
-        isTrial ? '🎁 Бесплатный доступ: 1 час.' : '',
-        '',
-        'После окончания пробного периода VPN будет отключён.',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      buySubscriptionInlineKeyboard(MINIAPP_URL),
-    );
-    await ctx.replyWithHTML(
-      `<b>~$${ORIGINAL_PRICE}~ $${PRICE}/мес</b> (-38%)`,
-      openAppInlineKeyboard(MINIAPP_URL, '📱 Открыть Sali VPN'),
-    );
-  } catch (err) {
-    await ctx.reply('Что-то пошло не так. Попробуйте ещё раз.');
-  }
+function isExpired(state: BotUserState) {
+  return state.state === 'TRIAL_EXPIRED' || state.state === 'SUBSCRIPTION_EXPIRED';
 }
 
-export async function handleMySubscription(ctx: Context) {
-  const from = ctx.from;
-  if (!from) return;
+export function createHandlers(config: BotConfig) {
+  return {
+    start: async (ctx: Context) => {
+      const telegramProfile = profile(ctx);
+      if (!telegramProfile) return;
+      try {
+        const startParam = (ctx as Context & { startPayload?: string }).startPayload;
+        await api.syncUser({ ...telegramProfile, startParam });
+        const state = await api.getState(telegramProfile.telegramId);
+        if (!state.registered && state.state === 'NEW') {
+          await ctx.replyWithHTML(onboarding, openAppKeyboard(config.miniAppUrl, '⚡ Попробовать бесплатно'));
+          return;
+        }
+        await ctx.replyWithHTML(
+          accessText(state),
+          isExpired(state)
+            ? expiredAccessKeyboard(config.miniAppUrl, config.subscriptionUrl)
+            : openAppKeyboard(config.miniAppUrl),
+        );
+        await ctx.reply('Главное меню', mainReplyKeyboard);
+      } catch (error) {
+        console.error('Failed to handle /start', error);
+        await ctx.reply(genericError);
+      }
+    },
 
-  try {
-    const state = await api.getState(from.id);
-    if (state.subscription) {
-      const expires = new Date(state.subscription.expiresAt).toLocaleDateString('ru-RU');
-      await ctx.reply(
-        [
-          '👤 Моя подписка',
-          '',
-          `Тариф: ${state.subscription.plan.name}`,
-          `Действует до: ${expires}`,
-        ].join('\n'),
-      );
-    } else {
-      await ctx.reply('Подписка не активна', buySubscriptionInlineKeyboard(MINIAPP_URL));
-    }
-  } catch {
-    await ctx.reply('Что-то пошло не так. Попробуйте ещё раз.');
-  }
-}
+    vpn: async (ctx: Context) => {
+      try {
+        const state = await stateFor(ctx);
+        if (!state) return;
+        await ctx.replyWithHTML(
+          accessText(state),
+          isExpired(state)
+            ? expiredAccessKeyboard(config.miniAppUrl, config.subscriptionUrl)
+            : openAppKeyboard(config.miniAppUrl, '⚡ Открыть VPN'),
+        );
+      } catch (error) {
+        console.error('Failed to show VPN state', error);
+        await ctx.reply(genericError);
+      }
+    },
 
-export async function handleTariff(ctx: Context) {
-  await ctx.replyWithHTML(
-    [
-      '<b>Sali Pro</b>',
-      '',
-      `$${PRICE} / month`,
-      `<s>$${ORIGINAL_PRICE}</s>  -38%`,
-      '',
-      '• Fast VPN',
-      '• Secure connection',
-      '• Multiple locations',
-      '• No manual registration',
-      '• Device support',
-      '• Stable connection',
-    ].join('\n'),
-    buySubscriptionInlineKeyboard(MINIAPP_URL),
-  );
-}
+    subscription: async (ctx: Context) => {
+      try {
+        const state = await stateFor(ctx);
+        if (!state) return;
+        const text = state.subscription
+          ? [
+              '<b>Подписка</b>',
+              '',
+              `Тариф: ${state.subscription.plan.name}`,
+              `Статус: ${state.subscription.status === 'ACTIVE' ? 'активна' : 'неактивна'}`,
+              `Действует до: ${date(state.subscription.expiresAt)}`,
+            ].join('\n')
+          : state.trial?.status === 'ACTIVE'
+            ? `<b>Подписка</b>\n\nСейчас действует бесплатный период.\nОсталось: ${Math.ceil(state.trial.secondsRemaining / 60)} мин.`
+            : '<b>Подписка</b>\n\nАктивной подписки нет.';
+        await ctx.replyWithHTML(text, openAppKeyboard(config.subscriptionUrl, state.subscription?.status === 'EXPIRED' ? '💎 Продлить подписку' : '💎 Купить подписку'));
+      } catch (error) {
+        console.error('Failed to show subscription', error);
+        await ctx.reply(genericError);
+      }
+    },
 
-export async function handleInviteFriend(ctx: Context) {
-  const from = ctx.from;
-  if (!from) return;
+    account: async (ctx: Context) => {
+      try {
+        const state = await stateFor(ctx);
+        if (!state) return;
+        const telegram = state.user.username ? `@${state.user.username}` : state.user.firstName || 'Telegram';
+        const tariff = state.subscription?.plan.name ?? (state.trial?.status === 'ACTIVE' ? 'Бесплатный' : 'Нет активного тарифа');
+        await ctx.reply(
+          ['Аккаунт', '', `Telegram: ${telegram}`, `Sali ID: ${state.user.publicId}`, `Статус: ${state.state === 'BLOCKED' ? 'ограничен' : 'активен'}`, `Тариф: ${tariff}`, ...(state.subscription ? [`Действует до: ${date(state.subscription.expiresAt)}`] : [])].join('\n'),
+          openAppKeyboard(config.accountUrl, 'Открыть аккаунт'),
+        );
+      } catch (error) {
+        console.error('Failed to show account', error);
+        await ctx.reply(genericError);
+      }
+    },
 
-  try {
-    const state = await api.getState(from.id);
-    const link = state.referralStats.link;
-    await ctx.reply(
-      ['Пригласи друга', '', 'Поделись Sali VPN и получай бонусы.', '', link].join('\n'),
-    );
-  } catch {
-    await ctx.reply('Что-то пошло не так. Попробуйте ещё раз.');
-  }
-}
+    help: async (ctx: Context) => {
+      await ctx.replyWithHTML('<b>Помощь</b>\n\nВыберите вопрос:', faqKeyboard(config.supportUrl));
+    },
 
-export async function handleSettings(ctx: Context) {
-  await ctx.reply(
-    ['⚙️ Настройки', '', 'Language\nNotifications\nFAQ\nTerms\nPrivacy Policy'].join('\n'),
-    openAppInlineKeyboard(MINIAPP_URL, '📱 Открыть в приложении'),
-  );
-}
-
-export async function handleSupport(ctx: Context) {
-  await ctx.reply('🛟 Поддержка\n\nВыберите тему обращения:', supportCategoriesKeyboard);
-}
-
-export async function handleSupportCategory(ctx: Context, category: string) {
-  await ctx.answerCbQuery();
-  (ctx as any).session ??= {};
-  (ctx as any).session.pendingSupportCategory = category;
-  await ctx.reply('Опишите проблему одним сообщением — мы передадим её оператору.');
-}
-
-export async function handleSupportMessage(ctx: Context, category: string, message: string) {
-  const from = ctx.from;
-  if (!from) return;
-
-  try {
-    await api.createSupportTicket({ telegramId: from.id, category, message });
-    await ctx.reply('Спасибо! Обращение передано в поддержку. Мы ответим как можно скорее.');
-  } catch {
-    await ctx.reply('Что-то пошло не так. Попробуйте ещё раз.');
-  }
+    faq: async (ctx: Context) => {
+      if (!('callback_query' in ctx.update)) return;
+      const data = 'data' in ctx.update.callback_query ? ctx.update.callback_query.data : undefined;
+      if (!data || !FAQ[data]) return;
+      await ctx.answerCbQuery().catch(() => undefined);
+      await ctx.replyWithHTML(FAQ[data], config.supportUrl ? faqKeyboard(config.supportUrl) : undefined);
+    },
+  };
 }

@@ -23,15 +23,17 @@ export class TrialsService {
    * duration can never be extended by calling this again.
    */
   async startTrialIfNeeded(userId: string) {
-    const existing = await this.prisma.trial.findUnique({ where: { userId } });
-    if (existing) return existing;
-
     const minutes = Number(this.config.get('TRIAL_DURATION_MINUTES', 60));
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      throw new Error('TRIAL_DURATION_MINUTES must be a positive number');
+    }
     const now = new Date();
     const expiresAt = new Date(now.getTime() + minutes * 60_000);
 
-    return this.prisma.trial.create({
-      data: { userId, startedAt: now, expiresAt, activeSince: null, status: TrialStatus.ACTIVE },
+    return this.prisma.trial.upsert({
+      where: { userId },
+      update: {},
+      create: { userId, startedAt: now, expiresAt, activeSince: null, status: TrialStatus.ACTIVE },
     });
   }
 

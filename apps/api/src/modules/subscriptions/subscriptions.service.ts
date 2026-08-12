@@ -16,8 +16,13 @@ export class SubscriptionsService {
   ) {}
 
   async getActiveForUser(userId: string) {
+    const now = new Date();
     return this.prisma.subscription.findFirst({
-      where: { userId, status: SubscriptionStatus.ACTIVE },
+      where: {
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
       include: { plan: true },
       orderBy: { expiresAt: 'desc' },
     });

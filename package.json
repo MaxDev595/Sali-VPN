@@ -12,6 +12,8 @@
     "dev:web": "npm run dev --workspace=apps/web",
     "deploy:web": "wrangler deploy",
     "build": "npm run build --workspace=packages/types && npm run build --workspace=apps/api && npm run build --workspace=apps/bot && npm run build --workspace=apps/web",
+    "typecheck": "npm run build --workspace=packages/types && npm run lint --workspace=apps/api && npm run lint --workspace=apps/bot && npm exec --workspace=apps/web tsc -- -b --pretty false",
+    "test": "npm run test --workspace=apps/bot",
     "prisma:generate": "npm run prisma:generate --workspace=apps/api",
     "prisma:migrate": "npm run prisma:migrate --workspace=apps/api",
     "prisma:studio": "npm run prisma:studio --workspace=apps/api",

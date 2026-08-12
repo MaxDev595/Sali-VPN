@@ -70,13 +70,64 @@ export class InternalController {
     const user = await this.users.findByTelegramId(BigInt(dto.telegramId));
     if (!user) throw new Error('User not found');
 
-    const [trial, subscription, referralStats] = await Promise.all([
+    const [trial, activeSubscription, latestSubscription, referralStats] = await Promise.all([
       this.trials.getTrial(user.id),
       this.subscriptions.getActiveForUser(user.id),
+      this.subscriptions.getLatestForUser(user.id),
       this.referrals.getStats(user.id),
     ]);
+    const now = Date.now();
+    const trialSessionSeconds = trial?.activeSince
+      ? Math.max(0, Math.floor((now - trial.activeSince.getTime()) / 1000))
+      : 0;
+    const trialLimitSeconds = Number(process.env.TRIAL_DURATION_MINUTES ?? 60) * 60;
+    const trialSecondsRemaining = trial
+      ? Math.max(0, trialLimitSeconds - trial.usedSeconds - trialSessionSeconds)
+      : 0;
+    const trialActive = Boolean(trial && trial.status === 'ACTIVE' && trialSecondsRemaining > 0);
+    const subscription = activeSubscription ?? latestSubscription;
+    const registered = Boolean(trial || subscription);
+    const state = user.isBlocked
+      ? 'BLOCKED'
+      : activeSubscription
+        ? 'SUBSCRIPTION_ACTIVE'
+        : latestSubscription && ['EXPIRED', 'CANCELED'].includes(latestSubscription.status)
+          ? 'SUBSCRIPTION_EXPIRED'
+          : trialActive
+            ? 'TRIAL_ACTIVE'
+            : trial
+              ? 'TRIAL_EXPIRED'
+              : registered
+                ? 'REGISTERED'
+                : 'NEW';
 
-    return { user, trial, subscription, referralStats };
+    return {
+      state,
+      registered,
+      user: {
+        publicId: user.id.slice(0, 8).toUpperCase(),
+        username: user.username,
+        firstName: user.firstName,
+        isBlocked: user.isBlocked,
+      },
+      trial: trial
+        ? {
+            status: trialActive ? 'ACTIVE' : 'EXPIRED',
+            startedAt: trial.startedAt.toISOString(),
+            expiresAt: trial.expiresAt.toISOString(),
+            secondsRemaining: trialSecondsRemaining,
+          }
+        : null,
+      subscription: subscription
+        ? {
+            status: activeSubscription ? 'ACTIVE' : subscription.status,
+            startedAt: subscription.startedAt?.toISOString() ?? null,
+            expiresAt: subscription.expiresAt?.toISOString() ?? null,
+            plan: { name: subscription.plan.name },
+          }
+        : null,
+      referralStats,
+    };
   }
 
   /** Called after Telegram's `successful_payment` webhook, or a manual admin confirm. */

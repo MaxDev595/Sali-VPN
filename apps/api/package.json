@@ -11,7 +11,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "ts-node prisma/seed.ts",
     "prisma:studio": "prisma studio",
-    "lint": "eslint \"src/**/*.ts\""
+    "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.4",
