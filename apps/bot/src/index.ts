@@ -1,10 +1,16 @@
-import 'dotenv/config';
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'path';
 import { Telegraf } from 'telegraf';
 import { loadConfig } from './config';
 import { createHandlers } from './handlers';
 import { genericError } from './messages';
 import { menuLabels } from './keyboards';
 import { api } from './services/api-client';
+
+// npm workspaces starts this process with apps/bot as the working directory.
+// Resolve from __dirname so both src/ (development) and dist/ (production)
+// reliably load the monorepo-level .env file.
+loadEnv({ path: resolve(__dirname, '../../../.env') });
 
 async function main() {
   const config = loadConfig();
