@@ -2,7 +2,13 @@ import { Context } from 'telegraf';
 import { BotConfig } from '../config';
 import { api, BotUserState } from '../services/api-client';
 import { accessText, date, genericError, onboarding } from '../messages';
-import { expiredAccessKeyboard, faqKeyboard, mainReplyKeyboard, openAppKeyboard } from '../keyboards';
+import {
+  expiredAccessKeyboard,
+  faqKeyboard,
+  mainInlineKeyboard,
+  mainReplyKeyboard,
+  openAppKeyboard,
+} from '../keyboards';
 
 const FAQ: Record<string, string> = {
   faq_connect: '<b>Как подключить VPN?</b>\n\nОткройте Sali VPN, нажмите кнопку подключения и следуйте короткой инструкции для вашего устройства.',
@@ -34,7 +40,8 @@ function isExpired(state: BotUserState) {
 export function createHandlers(config: BotConfig) {
   return {
     menu: async (ctx: Context) => {
-      await ctx.reply('Главное меню', mainReplyKeyboard);
+      await ctx.reply('Главное меню', mainInlineKeyboard);
+      await ctx.reply('Быстрые кнопки закреплены снизу', mainReplyKeyboard);
     },
 
     start: async (ctx: Context) => {
@@ -46,7 +53,8 @@ export function createHandlers(config: BotConfig) {
         const state = await api.getState(telegramProfile.telegramId);
         if (!state.registered && state.state === 'NEW') {
           await ctx.replyWithHTML(onboarding, openAppKeyboard(config.miniAppUrl, '⚡ Попробовать бесплатно'));
-          await ctx.reply('Главное меню', mainReplyKeyboard);
+          await ctx.reply('Главное меню', mainInlineKeyboard);
+          await ctx.reply('Быстрые кнопки закреплены снизу', mainReplyKeyboard);
           return;
         }
         await ctx.replyWithHTML(
@@ -55,7 +63,8 @@ export function createHandlers(config: BotConfig) {
             ? expiredAccessKeyboard(config.miniAppUrl, config.subscriptionUrl)
             : openAppKeyboard(config.miniAppUrl),
         );
-        await ctx.reply('Главное меню', mainReplyKeyboard);
+        await ctx.reply('Главное меню', mainInlineKeyboard);
+        await ctx.reply('Быстрые кнопки закреплены снизу', mainReplyKeyboard);
       } catch (error) {
         console.error('Failed to handle /start', error);
         await ctx.reply(genericError);

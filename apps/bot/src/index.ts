@@ -27,6 +27,22 @@ async function main() {
   bot.hears(menuLabels.subscription, handlers.subscription);
   bot.hears(menuLabels.account, handlers.account);
   bot.hears(menuLabels.help, handlers.help);
+  bot.action('menu_vpn', async (ctx) => {
+    await ctx.answerCbQuery();
+    await handlers.vpn(ctx);
+  });
+  bot.action('menu_subscription', async (ctx) => {
+    await ctx.answerCbQuery();
+    await handlers.subscription(ctx);
+  });
+  bot.action('menu_account', async (ctx) => {
+    await ctx.answerCbQuery();
+    await handlers.account(ctx);
+  });
+  bot.action('menu_help', async (ctx) => {
+    await ctx.answerCbQuery();
+    await handlers.help(ctx);
+  });
   bot.action(/^faq_/, handlers.faq);
 
   bot.on('successful_payment', async (ctx) => {
