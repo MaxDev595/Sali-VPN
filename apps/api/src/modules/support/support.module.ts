@@ -5,5 +5,6 @@ import { SupportController } from './support.controller';
 @Module({
   controllers: [SupportController],
   providers: [SupportService],
+  exports: [SupportService],
 })
 export class SupportModule {}
