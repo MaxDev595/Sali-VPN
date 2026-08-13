@@ -10,7 +10,9 @@ export const menuLabels = {
 export const mainReplyKeyboard = Markup.keyboard([
   [menuLabels.vpn, menuLabels.subscription],
   [menuLabels.account, menuLabels.help],
-]).resize();
+])
+  .resize()
+  .persistent();
 
 export function openAppKeyboard(url: string, label = '⚡ Открыть Sali VPN') {
   return Markup.inlineKeyboard([[Markup.button.webApp(label, url)]]);

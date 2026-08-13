@@ -33,6 +33,10 @@ function isExpired(state: BotUserState) {
 
 export function createHandlers(config: BotConfig) {
   return {
+    menu: async (ctx: Context) => {
+      await ctx.reply('Главное меню', mainReplyKeyboard);
+    },
+
     start: async (ctx: Context) => {
       const telegramProfile = profile(ctx);
       if (!telegramProfile) return;
@@ -42,6 +46,7 @@ export function createHandlers(config: BotConfig) {
         const state = await api.getState(telegramProfile.telegramId);
         if (!state.registered && state.state === 'NEW') {
           await ctx.replyWithHTML(onboarding, openAppKeyboard(config.miniAppUrl, '⚡ Попробовать бесплатно'));
+          await ctx.reply('Главное меню', mainReplyKeyboard);
           return;
         }
         await ctx.replyWithHTML(

@@ -18,6 +18,7 @@ async function main() {
   const handlers = createHandlers(config);
 
   bot.start(handlers.start);
+  bot.command('menu', handlers.menu);
   bot.command('vpn', handlers.vpn);
   bot.command('subscription', handlers.subscription);
   bot.command('account', handlers.account);
@@ -46,6 +47,7 @@ async function main() {
 
   await bot.telegram.setMyCommands([
     { command: 'start', description: 'Открыть Sali VPN' },
+    { command: 'menu', description: 'Открыть меню' },
     { command: 'vpn', description: 'Статус VPN' },
     { command: 'subscription', description: 'Подписка' },
     { command: 'account', description: 'Аккаунт' },
