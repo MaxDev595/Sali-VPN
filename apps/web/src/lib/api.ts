@@ -9,7 +9,7 @@ import type {
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000') + '/api/v1';
 let authToken: string | null = null;
 
-export function setAuthToken(token: string) {
+export function setAuthToken(token: string | null) {
   authToken = token;
 }
 

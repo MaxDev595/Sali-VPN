@@ -21,7 +21,7 @@ export function App() {
   }
 
   if (auth.status === 'error') {
-    return <TelegramLoginRequired message={auth.message} />;
+    return <TelegramLoginRequired message={auth.message} onRetry={auth.retry} />;
   }
 
   return (
@@ -40,14 +40,14 @@ export function App() {
   );
 }
 
-function TelegramLoginRequired({ message }: { message: string }) {
+function TelegramLoginRequired({ message, onRetry }: { message: string; onRetry: () => Promise<void> }) {
   const botUrl = import.meta.env.VITE_TELEGRAM_BOT_URL ?? 'https://t.me/VpnSaliBot';
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-6">
       <div className="w-full max-w-sm text-center space-y-5 screen-enter">
         <div className="mx-auto w-16 h-16 rounded-full bg-white text-black flex items-center justify-center text-3xl">
-          ↗
+          →
         </div>
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">Войдите через Telegram</h1>
@@ -60,7 +60,8 @@ function TelegramLoginRequired({ message }: { message: string }) {
           Перейти в Telegram-бота
         </a>
         <button
-          onClick={() => window.location.reload()}
+          type="button"
+          onClick={() => void onRetry()}
           className="press-feedback text-sali-gray-400 text-sm py-2"
         >
           Я уже открыл приложение в Telegram

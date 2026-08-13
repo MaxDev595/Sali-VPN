@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, setAuthToken } from '../lib/api';
 import { telegram } from '../lib/telegram';
 
@@ -7,44 +7,51 @@ type AuthState =
   | { status: 'ready' }
   | { status: 'error'; message: string };
 
-export function useTelegramAuth(): AuthState {
+export type TelegramAuthState = AuthState & { retry: () => Promise<void> };
+
+export function useTelegramAuth(): TelegramAuthState {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
+  const attemptRef = useRef(0);
 
-  useEffect(() => {
-    let cancelled = false;
+  const authenticate = useCallback(async () => {
+    const attempt = ++attemptRef.current;
+    setState({ status: 'loading' });
+    setAuthToken(null);
+    telegram.init();
 
-    async function run() {
-      telegram.init();
-
-      if (!telegram.initData) {
-        if (!cancelled) {
-          setState({
-            status: 'error',
-            message: 'Необходимо открыть приложение через Telegram и войти в свой аккаунт.',
-          });
-        }
-        return;
+    const initData = telegram.initData;
+    if (!initData) {
+      if (attempt === attemptRef.current) {
+        setState({
+          status: 'error',
+          message: 'Не удалось получить сессию Telegram. Откройте приложение из бота и повторите проверку.',
+        });
       }
-
-      try {
-        const { token } = await api.loginWithTelegramWebApp(telegram.initData);
-        setAuthToken(token);
-        if (!cancelled) setState({ status: 'ready' });
-      } catch (err) {
-        if (!cancelled) {
-          setState({
-            status: 'error',
-            message: err instanceof Error ? err.message : 'Недействительная сессия Telegram',
-          });
-        }
-      }
+      return;
     }
 
-    run();
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const { token } = await api.loginWithTelegramWebApp(initData);
+      if (attempt === attemptRef.current) {
+        setAuthToken(token);
+        setState({ status: 'ready' });
+      }
+    } catch (error) {
+      if (attempt === attemptRef.current) {
+        setState({
+          status: 'error',
+          message: error instanceof Error ? error.message : 'Недействительная сессия Telegram',
+        });
+      }
+    }
   }, []);
 
-  return state;
+  useEffect(() => {
+    void authenticate();
+    return () => {
+      attemptRef.current += 1;
+    };
+  }, [authenticate]);
+
+  return { ...state, retry: authenticate };
 }
