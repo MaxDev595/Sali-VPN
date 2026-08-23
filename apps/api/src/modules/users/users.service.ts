@@ -58,6 +58,22 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { telegramId } });
   }
 
+  async updateTelegramProfileIfExists(profile: TelegramProfile) {
+    const user = await this.findByTelegramId(profile.telegramId);
+    if (!user) return null;
+
+    return this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        username: profile.username,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        languageCode: profile.languageCode,
+        isAdmin: this.isConfiguredAdmin(profile.telegramId),
+      },
+    });
+  }
+
   async findById(id: string) {
     return this.prisma.user.findUniqueOrThrow({ where: { id } });
   }

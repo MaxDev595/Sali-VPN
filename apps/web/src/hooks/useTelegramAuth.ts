@@ -31,7 +31,8 @@ export function useTelegramAuth(): TelegramAuthState {
     }
 
     try {
-      const { token } = await api.loginWithTelegramWebApp(initData);
+      const referralCode = new URLSearchParams(window.location.search).get('ref') ?? undefined;
+      const { token } = await api.loginWithTelegramWebApp(initData, referralCode);
       if (attempt === attemptRef.current) {
         setAuthToken(token);
         setState({ status: 'ready' });

@@ -25,8 +25,11 @@ async function main() {
   bot.command('help', handlers.help);
   bot.hears(menuLabels.vpn, handlers.vpn);
   bot.hears(menuLabels.subscription, handlers.subscription);
-  bot.hears(menuLabels.account, handlers.account);
-  bot.hears(menuLabels.help, handlers.help);
+  bot.hears(menuLabels.tariffs, handlers.tariffs);
+  bot.hears(menuLabels.servers, handlers.servers);
+  bot.hears(menuLabels.invite, handlers.invite);
+  bot.hears(menuLabels.support, handlers.help);
+  bot.hears(menuLabels.settings, handlers.account);
   bot.action('menu_vpn', async (ctx) => {
     await ctx.answerCbQuery();
     await handlers.vpn(ctx);
@@ -35,13 +38,25 @@ async function main() {
     await ctx.answerCbQuery();
     await handlers.subscription(ctx);
   });
-  bot.action('menu_account', async (ctx) => {
+  bot.action('menu_tariffs', async (ctx) => {
     await ctx.answerCbQuery();
-    await handlers.account(ctx);
+    await handlers.tariffs(ctx);
   });
-  bot.action('menu_help', async (ctx) => {
+  bot.action('menu_servers', async (ctx) => {
+    await ctx.answerCbQuery();
+    await handlers.servers(ctx);
+  });
+  bot.action('menu_invite', async (ctx) => {
+    await ctx.answerCbQuery();
+    await handlers.invite(ctx);
+  });
+  bot.action('menu_support', async (ctx) => {
     await ctx.answerCbQuery();
     await handlers.help(ctx);
+  });
+  bot.action('menu_settings', async (ctx) => {
+    await ctx.answerCbQuery();
+    await handlers.account(ctx);
   });
   bot.action(/^faq_/, handlers.faq);
 

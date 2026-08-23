@@ -8,6 +8,6 @@ export class AuthController {
 
   @Post('telegram-webapp')
   async loginWithTelegramWebApp(@Body() dto: TelegramWebAppLoginDto) {
-    return this.auth.loginWithTelegramWebApp(dto.initData);
+    return this.auth.loginWithTelegramWebApp(dto.initData, dto.referralCode);
   }
 }

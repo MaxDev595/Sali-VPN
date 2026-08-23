@@ -17,25 +17,55 @@ export class PaymentsService {
   /** Step 1: user taps "Buy subscription" — creates a PENDING payment + subscription. */
   async initiatePurchase(userId: string, planId: string) {
     const plan = await this.prisma.plan.findUniqueOrThrow({ where: { id: planId } });
+    const fullAmount = Number(plan.priceUsd);
 
-    const subscription = await this.prisma.subscription.create({
-      data: { userId, planId, status: SubscriptionStatus.PENDING_PAYMENT },
-    });
+    const reserved = await this.prisma.$transaction(async (tx) => {
+      const reward = await tx.referralReward.findFirst({
+        where: { userId, kind: 'discount_percent', paymentId: null, consumedAt: null },
+        orderBy: { grantedAt: 'asc' },
+      });
+      const subscription = await tx.subscription.create({
+        data: { userId, planId, status: SubscriptionStatus.PENDING_PAYMENT },
+      });
+      const payment = await tx.payment.create({
+        data: {
+          userId,
+          planId,
+          subscriptionId: subscription.id,
+          provider: this.provider.name,
+          amountUsd: plan.priceUsd,
+          status: PaymentStatus.PENDING,
+        },
+      });
 
-    const result = await this.provider.createPayment({
-      userId,
-      planId,
-      amountUsd: Number(plan.priceUsd),
-    });
+      let discountPercent = 0;
+      if (reward) {
+        const claimed = await tx.referralReward.updateMany({
+          where: { id: reward.id, paymentId: null, consumedAt: null },
+          data: { paymentId: payment.id },
+        });
+        if (claimed.count === 1) discountPercent = reward.amount;
+      }
+      const amountUsd = Math.round(fullAmount * (1 - discountPercent / 100) * 100) / 100;
+      const pricedPayment = await tx.payment.update({
+        where: { id: payment.id },
+        data: { amountUsd, discountPercent },
+      });
+      return { subscription, payment: pricedPayment, amountUsd };
+    }, { isolationLevel: 'Serializable' });
 
-    const payment = await this.prisma.payment.create({
+    let result;
+    try {
+      result = await this.provider.createPayment({ userId, planId, amountUsd: reserved.amountUsd });
+    } catch (error) {
+      await this.markFailed(reserved.payment.id, 'Payment provider initialization failed');
+      throw error;
+    }
+
+    const payment = await this.prisma.payment.update({
+      where: { id: reserved.payment.id },
       data: {
-        userId,
-        planId,
-        subscriptionId: subscription.id,
-        provider: this.provider.name,
         externalPaymentId: result.externalPaymentId,
-        amountUsd: plan.priceUsd,
         status: result.status === 'SUCCEEDED' ? PaymentStatus.SUCCEEDED : PaymentStatus.PENDING,
       },
     });
@@ -44,7 +74,7 @@ export class PaymentsService {
       await this.confirmSucceeded(payment.id);
     }
 
-    return { payment, subscription, checkout: result };
+    return { payment, subscription: reserved.subscription, checkout: result };
   }
 
   /** Step 2: called by a webhook / bot successful_payment update / admin confirmation. */
@@ -71,6 +101,11 @@ export class PaymentsService {
       await this.notifications.enqueue(payment.userId, 'SUBSCRIPTION_ACTIVATED');
     }
 
+    await this.prisma.referralReward.updateMany({
+      where: { paymentId: payment.id, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
+
     return payment;
   }
 
@@ -78,6 +113,10 @@ export class PaymentsService {
     const payment = await this.prisma.payment.update({
       where: { id: paymentId },
       data: { status: PaymentStatus.FAILED, failureReason: reason },
+    });
+    await this.prisma.referralReward.updateMany({
+      where: { paymentId, consumedAt: null },
+      data: { paymentId: null },
     });
     await this.notifications.enqueue(payment.userId, 'PAYMENT_FAILED');
     return payment;

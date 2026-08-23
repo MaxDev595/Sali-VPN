@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Sali VPN",
+    "slug": "sali-vpn",
+    "scheme": "sali",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/sali-logo.png",
+    "splash": { "image": "./assets/sali-logo.png", "resizeMode": "contain", "backgroundColor": "#05070A" },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.sali.vpn",
+      "infoPlist": { "NSLocalNetworkUsageDescription": "Sali использует сеть для подключения VPN." }
+    },
+    "android": {
+      "package": "app.sali.vpn",
+      "adaptiveIcon": { "foregroundImage": "./assets/sali-logo.png", "backgroundColor": "#FFFFFF" },
+      "permissions": ["FOREGROUND_SERVICE", "FOREGROUND_SERVICE_SPECIAL_USE", "POST_NOTIFICATIONS"]
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": { "typedRoutes": true }
+  }
+}

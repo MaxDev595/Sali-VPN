@@ -41,9 +41,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  loginWithTelegramWebApp: (initData: string) =>
+  loginWithTelegramWebApp: (initData: string, referralCode?: string) =>
     request<{ token: string; startParam?: string }>('/auth/telegram-webapp', {
-      method: 'POST', body: JSON.stringify({ initData }),
+      method: 'POST', body: JSON.stringify({ initData, referralCode }),
     }),
   getHome: () => request<HomeStateDTO>('/home'),
   connectVpn: () =>

@@ -1,28 +1,29 @@
 import { Markup } from 'telegraf';
 
 export const menuLabels = {
-  vpn: '⚡ VPN',
-  subscription: '💎 Подписка',
-  account: '👤 Аккаунт',
-  help: '❓ Помощь',
+  vpn: 'Подключить VPN',
+  subscription: 'Моя подписка',
+  tariffs: 'Тарифы',
+  servers: 'Серверы',
+  invite: 'Пригласить друга',
+  support: 'Поддержка',
+  settings: 'Настройки',
 } as const;
 
 export const mainReplyKeyboard = Markup.keyboard([
-  [menuLabels.vpn, menuLabels.subscription],
-  [menuLabels.account, menuLabels.help],
+  [menuLabels.vpn],
+  [menuLabels.subscription, menuLabels.tariffs],
+  [menuLabels.servers, menuLabels.invite],
+  [menuLabels.support, menuLabels.settings],
 ])
   .resize()
   .persistent();
 
 export const mainInlineKeyboard = Markup.inlineKeyboard([
-  [
-    Markup.button.callback(menuLabels.vpn, 'menu_vpn'),
-    Markup.button.callback(menuLabels.subscription, 'menu_subscription'),
-  ],
-  [
-    Markup.button.callback(menuLabels.account, 'menu_account'),
-    Markup.button.callback(menuLabels.help, 'menu_help'),
-  ],
+  [Markup.button.callback(menuLabels.vpn, 'menu_vpn')],
+  [Markup.button.callback(menuLabels.subscription, 'menu_subscription'), Markup.button.callback(menuLabels.tariffs, 'menu_tariffs')],
+  [Markup.button.callback(menuLabels.servers, 'menu_servers'), Markup.button.callback(menuLabels.invite, 'menu_invite')],
+  [Markup.button.callback(menuLabels.support, 'menu_support'), Markup.button.callback(menuLabels.settings, 'menu_settings')],
 ]);
 
 export function openAppKeyboard(url: string, label = '⚡ Открыть Sali VPN') {
@@ -45,3 +46,20 @@ export const faqKeyboard = (supportUrl?: string) =>
     [Markup.button.callback('Проблемы с оплатой', 'faq_payment')],
     ...(supportUrl ? [[Markup.button.url('Связаться с поддержкой', supportUrl)]] : []),
   ]);
+
+export const supportKeyboard = (supportUrl: string) =>
+  Markup.inlineKeyboard([
+    [Markup.button.url('Связаться с поддержкой', supportUrl)],
+  ]);
+
+export function referralShareKeyboard(link: string, shareText: string) {
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareText)}`;
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: 'Скопировать ссылку', copy_text: { text: link } }],
+        [{ text: 'Поделиться', url: shareUrl }],
+      ],
+    },
+  };
+}

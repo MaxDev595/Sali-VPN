@@ -8,6 +8,8 @@ import {
   mainInlineKeyboard,
   mainReplyKeyboard,
   openAppKeyboard,
+  referralShareKeyboard,
+  supportKeyboard,
 } from '../keyboards';
 
 const FAQ: Record<string, string> = {
@@ -49,14 +51,15 @@ export function createHandlers(config: BotConfig) {
       if (!telegramProfile) return;
       try {
         const startParam = (ctx as Context & { startPayload?: string }).startPayload;
-        await api.syncUser({ ...telegramProfile, startParam });
-        const state = await api.getState(telegramProfile.telegramId);
-        if (!state.registered && state.state === 'NEW') {
-          await ctx.replyWithHTML(onboarding, openAppKeyboard(config.miniAppUrl, '⚡ Попробовать бесплатно'));
-          await ctx.reply('Главное меню', mainInlineKeyboard);
-          await ctx.reply('Быстрые кнопки закреплены снизу', mainReplyKeyboard);
+        const synced = await api.syncUser({ ...telegramProfile, startParam });
+        if (!synced.exists) {
+          const onboardingUrl = new URL(config.miniAppUrl);
+          if (startParam && /^ref_\d+$/.test(startParam)) onboardingUrl.searchParams.set('ref', startParam);
+          await ctx.replyWithHTML(onboarding, openAppKeyboard(onboardingUrl.toString(), '⚡ Попробовать бесплатно'));
           return;
         }
+        const state = await api.getState(telegramProfile.telegramId);
+        await ctx.replyWithHTML('<b>Рады снова вас приветствовать!</b>\n\nМы помним вас. Ваш аккаунт Sali VPN готов к работе.');
         await ctx.replyWithHTML(
           accessText(state),
           isExpired(state)
@@ -109,6 +112,43 @@ export function createHandlers(config: BotConfig) {
       }
     },
 
+    tariffs: async (ctx: Context) => {
+      await ctx.reply('Выберите подходящий тариф', openAppKeyboard(config.tariffsUrl, 'Открыть тарифы'));
+    },
+
+    servers: async (ctx: Context) => {
+      await ctx.reply('Выберите VPN-сервер в Sali', openAppKeyboard(config.serversUrl, 'Открыть серверы'));
+    },
+
+    invite: async (ctx: Context) => {
+      try {
+        const state = await stateFor(ctx);
+        if (!state) return;
+        const link = state.referralStats.link;
+        const shareText = 'Попробуй Sali VPN — простой и приватный VPN. По моей ссылке ты получишь дополнительные 30 минут VPN бесплатно.';
+
+        await ctx.replyWithHTML([
+          '<b>Приглашайте друзей в Sali VPN</b>',
+          '',
+          'Как это работает:',
+          '• вы отправляете другу свою ссылку;',
+          '• друг переходит по ней и создаёт новый аккаунт;',
+          '• друг получает +30 минут VPN;',
+          '• вы получаете скидку 10% на следующую оплату.',
+          '',
+          'Бонус действует только для новых аккаунтов.',
+        ].join('\n'));
+
+        await ctx.reply(
+          `${shareText}\n\n${link}`,
+          referralShareKeyboard(link, shareText) as Parameters<Context['reply']>[1],
+        );
+      } catch (error) {
+        console.error('Failed to show referral link', error);
+        await ctx.reply(genericError);
+      }
+    },
+
     account: async (ctx: Context) => {
       try {
         const state = await stateFor(ctx);
@@ -134,7 +174,7 @@ export function createHandlers(config: BotConfig) {
       const data = 'data' in ctx.update.callback_query ? ctx.update.callback_query.data : undefined;
       if (!data || !FAQ[data]) return;
       await ctx.answerCbQuery().catch(() => undefined);
-      await ctx.replyWithHTML(FAQ[data], config.supportUrl ? faqKeyboard(config.supportUrl) : undefined);
+      await ctx.replyWithHTML(FAQ[data], supportKeyboard(config.supportUrl));
     },
   };
 }

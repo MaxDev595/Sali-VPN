@@ -34,7 +34,7 @@ export class WireGuardProvider implements VPNProvider {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   private async agentFetch(path: string, init: RequestInit = {}) {
     const baseUrl = this.config.getOrThrow<string>('WIREGUARD_API_URL');
@@ -125,12 +125,24 @@ export class WireGuardProvider implements VPNProvider {
   }
 
   async getServerStatus(serverId: string): Promise<VpnServerStatus> {
-    const server = await this.prisma.vpnServer.findUniqueOrThrow({ where: { id: serverId } });
+    const server = await this.prisma.vpnServer.findUniqueOrThrow({
+      where: { id: serverId },
+    });
+
     try {
       const data = await this.agentFetch('/status');
-      return { isOnline: true, currentLoad: data.peerCount, capacity: server.capacity };
+
+      return {
+        isOnline: true,
+        currentLoad: data.peerCount,
+        capacity: server.capacity,
+      };
     } catch {
-      return { isOnline: false, currentLoad: server.currentLoad, capacity: server.capacity };
+      return {
+        isOnline: false,
+        currentLoad: server.currentLoad,
+        capacity: server.capacity,
+      };
     }
   }
 }

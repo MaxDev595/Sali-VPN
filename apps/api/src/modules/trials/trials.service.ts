@@ -37,8 +37,8 @@ export class TrialsService {
     });
   }
 
-  private limitSeconds() {
-    return Number(this.config.get('TRIAL_DURATION_MINUTES', 60)) * 60;
+  private limitSeconds(bonusSeconds = 0) {
+    return Number(this.config.get('TRIAL_DURATION_MINUTES', 60)) * 60 + bonusSeconds;
   }
 
   async assertAvailable(userId: string) {
@@ -46,7 +46,7 @@ export class TrialsService {
     const runningSeconds = trial.activeSince
       ? Math.max(0, Math.floor((Date.now() - trial.activeSince.getTime()) / 1000))
       : 0;
-    if (trial.status === TrialStatus.EXPIRED || trial.usedSeconds + runningSeconds >= this.limitSeconds()) {
+    if (trial.status === TrialStatus.EXPIRED || trial.usedSeconds + runningSeconds >= this.limitSeconds(trial.bonusSeconds)) {
       throw new ForbiddenException('Пробный период закончился');
     }
     return trial;
@@ -57,7 +57,7 @@ export class TrialsService {
     if (trial.activeSince) return trial;
 
     const now = new Date();
-    const remainingSeconds = this.limitSeconds() - trial.usedSeconds;
+    const remainingSeconds = this.limitSeconds(trial.bonusSeconds) - trial.usedSeconds;
     return this.prisma.trial.update({
       where: { userId },
       data: { activeSince: now, expiresAt: new Date(now.getTime() + remainingSeconds * 1000) },
@@ -69,13 +69,14 @@ export class TrialsService {
     if (!trial?.activeSince) return trial;
 
     const elapsed = Math.max(0, Math.floor((Date.now() - trial.activeSince.getTime()) / 1000));
-    const usedSeconds = Math.min(this.limitSeconds(), trial.usedSeconds + elapsed);
+    const limitSeconds = this.limitSeconds(trial.bonusSeconds);
+    const usedSeconds = Math.min(limitSeconds, trial.usedSeconds + elapsed);
     return this.prisma.trial.update({
       where: { userId },
       data: {
         usedSeconds,
         activeSince: null,
-        status: usedSeconds >= this.limitSeconds() ? TrialStatus.EXPIRED : TrialStatus.ACTIVE,
+        status: usedSeconds >= limitSeconds ? TrialStatus.EXPIRED : TrialStatus.ACTIVE,
       },
     });
   }

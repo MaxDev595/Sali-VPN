@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { ReferralInfoDTO } from '@sali/types';
 import { Card } from '../components/Card';
+import { api } from '../lib/api';
 
 const ITEMS = [
   { label: 'Язык', to: '/settings/language' },
@@ -11,6 +14,8 @@ const ITEMS = [
 
 export function SettingsScreen() {
   const navigate = useNavigate();
+  const [referrals, setReferrals] = useState<ReferralInfoDTO | null>(null);
+  useEffect(() => { void api.getReferralInfo().then(setReferrals).catch(() => undefined); }, []);
   return (
     <div className="px-5 pt-4 pb-8 space-y-5 screen-enter">
       <h1 className="text-2xl font-semibold tracking-tight">Настройки</h1>
@@ -22,7 +27,7 @@ export function SettingsScreen() {
         ))}
       </Card>
       <button onClick={() => navigate('/invite')} className="press-feedback w-full flex items-center justify-between px-5 py-4 text-left bg-sali-gray-950 border border-sali-gray-800 rounded-lg">
-        <span className="text-[15px]">Пригласить друга</span><span className="text-sali-gray-500">›</span>
+        <span className="text-[15px]">Пригласить друга</span><span className="text-sali-gray-500">{referrals ? `${referrals.totalRewarded} · ${referrals.availableDiscounts} скидок` : '›'}</span>
       </button>
     </div>
   );

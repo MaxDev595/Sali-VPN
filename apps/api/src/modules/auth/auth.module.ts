@@ -5,6 +5,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { TrialsModule } from '../trials/trials.module';
+import { ReferralsModule } from '../referrals/referrals.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 // Global: JwtAuthGuard (and the underlying JwtService) is used by controllers
@@ -17,6 +19,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
     ConfigModule,
     UsersModule,
     TrialsModule,
+    ReferralsModule,
+    NotificationsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

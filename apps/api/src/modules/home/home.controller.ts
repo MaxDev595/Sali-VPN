@@ -32,7 +32,7 @@ export class HomeController {
       ? Math.max(0, Math.floor((now.getTime() - trial.activeSince.getTime()) / 1000))
       : 0;
     const totalSeconds = trial ? trial.usedSeconds + sessionSeconds : 0;
-    const limitSeconds = Number(process.env.TRIAL_DURATION_MINUTES ?? 60) * 60;
+    const limitSeconds = Number(process.env.TRIAL_DURATION_MINUTES ?? 60) * 60 + (trial?.bonusSeconds ?? 0);
 
     return {
       user: {

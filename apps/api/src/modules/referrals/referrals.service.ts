@@ -4,7 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ReferralStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
-const REWARD_DAYS_PER_REFERRAL = 3;
+const DISCOUNT_PERCENT_PER_REFERRAL = 10;
+const REFERRED_TRIAL_BONUS_SECONDS = 30 * 60;
 
 @Injectable()
 export class ReferralsService {
@@ -20,8 +21,8 @@ export class ReferralsService {
   }
 
   /**
-   * Called by the bot on /start when a `ref_<telegramId>` deep-link param is
-   * present. Idempotent — a user can only ever be referred once (enforced by
+   * Called only while creating a cryptographically verified new Mini App user.
+   * Idempotent — a user can only ever be referred once (enforced by
    * the unique constraint on Referral.referredUserId).
    */
   async recordReferralIfNew(referredUserId: string, referrerTelegramId: bigint) {
@@ -37,27 +38,40 @@ export class ReferralsService {
   }
 
   /**
-   * Reward is granted once the referred user actually starts using the
-   * service (their trial begins) — not merely for opening the bot, to avoid
-   * trivial reward farming.
+   * Grants both sides exactly once: 10% for the referrer and 30 trial minutes
+   * for the newly-created referred account.
    */
   async rewardIfEligible(referredUserId: string) {
     const referral = await this.prisma.referral.findUnique({ where: { referredUserId } });
     if (!referral || referral.status === ReferralStatus.REWARDED) return null;
 
-    const updated = await this.prisma.referral.update({
-      where: { id: referral.id },
-      data: { status: ReferralStatus.REWARDED },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.referral.updateMany({
+        where: { id: referral.id, status: ReferralStatus.PENDING },
+        data: { status: ReferralStatus.REWARDED },
+      });
+      if (claimed.count === 0) return null;
+
+      await tx.referralReward.create({
+        data: {
+          referralId: referral.id,
+          userId: referral.referrerId,
+          kind: 'discount_percent',
+          amount: DISCOUNT_PERCENT_PER_REFERRAL,
+        },
+      });
+      const trial = await tx.trial.findUniqueOrThrow({ where: { userId: referredUserId } });
+      await tx.trial.update({
+        where: { userId: referredUserId },
+        data: {
+          bonusSeconds: { increment: REFERRED_TRIAL_BONUS_SECONDS },
+          expiresAt: new Date(trial.expiresAt.getTime() + REFERRED_TRIAL_BONUS_SECONDS * 1000),
+        },
+      });
+      return tx.referral.findUniqueOrThrow({ where: { id: referral.id } });
     });
 
-    await this.prisma.referralReward.create({
-      data: {
-        referralId: referral.id,
-        userId: referral.referrerId,
-        kind: 'free_days',
-        amount: REWARD_DAYS_PER_REFERRAL,
-      },
-    });
+    if (!updated) return null;
 
     await this.notifications.enqueue(referral.referrerId, 'REFERRAL_REWARD');
     return updated;
@@ -74,7 +88,9 @@ export class ReferralsService {
       link: this.buildReferralLink(user.telegramId),
       totalInvited,
       totalRewarded: rewards.length,
-      rewardDaysEarned: rewards.reduce((sum, r) => sum + r.amount, 0),
+      availableDiscounts: rewards.filter((reward) => !reward.paymentId && !reward.consumedAt).length,
+      discountPercent: DISCOUNT_PERCENT_PER_REFERRAL,
+      referredTrialBonusMinutes: REFERRED_TRIAL_BONUS_SECONDS / 60,
     };
   }
 }

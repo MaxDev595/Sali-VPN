@@ -117,6 +117,7 @@ model Trial {
   startedAt  DateTime    @default(now())
   expiresAt  DateTime
   usedSeconds Int        @default(0)
+  bonusSeconds Int       @default(0)
   activeSince DateTime?
   status     TrialStatus @default(ACTIVE)
 
@@ -202,6 +203,7 @@ model Payment {
   provider         String        // "manual" | "telegram_stars" | "stripe" ...
   externalPaymentId String?      // id on the provider's side
   amountUsd        Decimal       @db.Decimal(10, 2)
+  discountPercent Int           @default(0)
   currency         String        @default("USD")
   status           PaymentStatus @default(PENDING)
   failureReason    String?
@@ -281,11 +283,16 @@ model ReferralReward {
   userId       String   // the user who receives the reward (the referrer)
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  kind         String   // e.g. "free_days"
-  amount       Int      // e.g. number of free days granted
+  kind         String   // "discount_percent"
+  amount       Int      // percentage discount, currently 10
+  paymentId    String?
+  consumedAt   DateTime?
   grantedAt    DateTime @default(now())
 
   createdAt    DateTime @default(now())
+
+  @@index([userId, kind, consumedAt])
+  @@index([paymentId])
 }
 
 // ---------------------------------------------------------------------------

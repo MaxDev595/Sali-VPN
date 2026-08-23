@@ -27,10 +27,10 @@ export class InternalController {
     private readonly support: SupportService,
   ) {}
 
-  /** Called on every /start — creates the user if needed and records referrals. */
+  /** Called on /start. New users are created only after verified Mini App login. */
   @Post('users/sync')
   async syncUser(@Body() dto: SyncTelegramUserDto) {
-    const user = await this.users.findOrCreateByTelegramProfile({
+    const user = await this.users.updateTelegramProfileIfExists({
       telegramId: BigInt(dto.telegramId),
       username: dto.username,
       firstName: dto.firstName,
@@ -38,12 +38,9 @@ export class InternalController {
       languageCode: dto.languageCode,
     });
 
-    if (dto.startParam?.startsWith('ref_')) {
-      const referrerTelegramId = BigInt(dto.startParam.replace('ref_', ''));
-      await this.referrals.recordReferralIfNew(user.id, referrerTelegramId);
-    }
-
-    return { userId: user.id, isBlocked: user.isBlocked };
+    return user
+      ? { exists: true, userId: user.id, isBlocked: user.isBlocked }
+      : { exists: false, userId: null, isBlocked: false };
   }
 
   /** Bot's "Подключить VPN" button — creates the account/trial and returns config. */
@@ -80,7 +77,7 @@ export class InternalController {
     const trialSessionSeconds = trial?.activeSince
       ? Math.max(0, Math.floor((now - trial.activeSince.getTime()) / 1000))
       : 0;
-    const trialLimitSeconds = Number(process.env.TRIAL_DURATION_MINUTES ?? 60) * 60;
+    const trialLimitSeconds = Number(process.env.TRIAL_DURATION_MINUTES ?? 60) * 60 + (trial?.bonusSeconds ?? 0);
     const trialSecondsRemaining = trial
       ? Math.max(0, trialLimitSeconds - trial.usedSeconds - trialSessionSeconds)
       : 0;

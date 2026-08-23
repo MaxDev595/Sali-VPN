@@ -1,0 +1,5 @@
+import { Tabs } from 'expo-router';
+import { Text } from 'react-native';
+import { theme } from '../../src/theme';
+const Icon = ({ name, color }: { name: string; color: string }) => <Text style={{ color, fontSize: 17 }}>{name}</Text>;
+export default function TabsLayout() { return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: theme.colors.textPrimary, tabBarInactiveTintColor: theme.colors.muted, tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, height: 82, paddingTop: 9 }, tabBarLabelStyle: { fontSize: 11, marginTop: 3 } }}><Tabs.Screen name="index" options={{ title: 'VPN', tabBarIcon: ({ color }) => <Icon name="◉" color={color} /> }} /><Tabs.Screen name="servers" options={{ title: 'Серверы', tabBarIcon: ({ color }) => <Icon name="⌁" color={color} /> }} /><Tabs.Screen name="subscription" options={{ title: 'Premium', tabBarIcon: ({ color }) => <Icon name="✦" color={color} /> }} /><Tabs.Screen name="settings" options={{ title: 'Настройки', tabBarIcon: ({ color }) => <Icon name="••" color={color} /> }} /></Tabs>; }

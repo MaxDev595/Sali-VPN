@@ -72,7 +72,7 @@ export const api = {
     lastName?: string;
     languageCode?: string;
     startParam?: string;
-  }) => call<{ userId: string; isBlocked: boolean }>('/users/sync', profile),
+  }) => call<{ exists: boolean; userId: string | null; isBlocked: boolean }>('/users/sync', profile),
   getState: (telegramId: number) => call<BotUserState>('/users/state', { telegramId }),
   confirmPayment: (externalPaymentId: string) =>
     call<unknown>('/payments/confirm', { externalPaymentId }),

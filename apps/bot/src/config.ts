@@ -4,7 +4,10 @@ export interface BotConfig {
   miniAppUrl: string;
   subscriptionUrl: string;
   accountUrl: string;
-  supportUrl?: string;
+  tariffsUrl: string;
+  serversUrl: string;
+  inviteUrl: string;
+  supportUrl: string;
   webhookUrl?: string;
   webhookSecret?: string;
   port: number;
@@ -30,7 +33,10 @@ export function loadConfig(): BotConfig {
     miniAppUrl: miniAppUrl.replace(/\/$/, ''),
     subscriptionUrl: webAppUrl(miniAppUrl, '/subscription'),
     accountUrl: webAppUrl(miniAppUrl, '/settings'),
-    supportUrl: process.env.SUPPORT_URL || undefined,
+    tariffsUrl: webAppUrl(miniAppUrl, '/subscription'),
+    serversUrl: webAppUrl(miniAppUrl, '/'),
+    inviteUrl: webAppUrl(miniAppUrl, '/invite'),
+    supportUrl: process.env.SUPPORT_URL || 'https://t.me/SaliSupportBot',
     webhookUrl: process.env.TELEGRAM_WEBHOOK_URL,
     webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET,
     port: Number(process.env.PORT ?? 8080),

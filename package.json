@@ -9,14 +9,18 @@
   "scripts": {
     "dev:api": "npm run start:dev --workspace=apps/api",
     "dev:bot": "npm run start:dev --workspace=apps/bot",
+    "dev:support-bot": "npm run start:dev --workspace=apps/support-bot",
+    "dev:bots": "node scripts/dev-local.js",
+    "dev:local": "node scripts/dev-local.js",
     "dev:web": "npm run dev --workspace=apps/web",
+    "dev:mobile": "npm run start --workspace=@sali/mobile",
     "deploy:web": "wrangler deploy",
-    "build": "npm run build --workspace=packages/types && npm run build --workspace=apps/api && npm run build --workspace=apps/bot && npm run build --workspace=apps/web",
-    "typecheck": "npm run build --workspace=packages/types && npm run lint --workspace=apps/api && npm run lint --workspace=apps/bot && npm exec --workspace=apps/web tsc -- -b --pretty false",
+    "build": "npm run build --workspace=packages/types && npm run build --workspace=apps/api && npm run build --workspace=apps/bot && npm run build --workspace=apps/support-bot && npm run build --workspace=apps/web",
+    "typecheck": "npm run build --workspace=packages/types && npm run lint --workspace=apps/api && npm run lint --workspace=apps/bot && npm run lint --workspace=apps/support-bot && npm exec --workspace=apps/web tsc -- -b --pretty false && npm run typecheck --workspace=@sali/mobile",
     "test": "npm run test --workspace=apps/bot",
-    "prisma:generate": "npm run prisma:generate --workspace=apps/api",
-    "prisma:migrate": "npm run prisma:migrate --workspace=apps/api",
-    "prisma:studio": "npm run prisma:studio --workspace=apps/api",
+    "prisma:generate": "node scripts/run-prisma.js generate",
+    "prisma:migrate": "node scripts/run-prisma.js migrate dev",
+    "prisma:studio": "node scripts/run-prisma.js studio",
     "lint": "npm run lint --workspaces --if-present"
   },
   "devDependencies": {

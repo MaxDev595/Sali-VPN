@@ -76,7 +76,9 @@ export interface ReferralInfoDTO {
   link: string;
   totalInvited: number;
   totalRewarded: number;
-  rewardDaysEarned: number;
+  availableDiscounts: number;
+  discountPercent: number;
+  referredTrialBonusMinutes: number;
 }
 
 export interface HomeStateDTO {
