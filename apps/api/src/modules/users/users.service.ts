@@ -82,6 +82,21 @@ export class UsersService {
     return this.prisma.user.update({ where: { id: userId }, data: { isBlocked } });
   }
 
+  async getPreferences(userId: string) {
+    return this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { preferredLanguage: true, notificationsEnabled: true },
+    });
+  }
+
+  async updatePreferences(userId: string, data: { preferredLanguage?: 'ru' | 'en'; notificationsEnabled?: boolean }) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: { preferredLanguage: true, notificationsEnabled: true },
+    });
+  }
+
   async isAdminTelegramId(telegramId: bigint, adminIdsCsv: string): Promise<boolean> {
     const ids = adminIdsCsv
       .split(',')

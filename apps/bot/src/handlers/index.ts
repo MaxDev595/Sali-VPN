@@ -46,7 +46,7 @@ export function createHandlers(config: BotConfig) {
       await ctx.reply('Быстрые кнопки закреплены снизу', mainReplyKeyboard);
     },
 
-    start: async (ctx: Context) => {
+    start: async (ctx: Context, language: 'ru' | 'en' = 'ru') => {
       const telegramProfile = profile(ctx);
       if (!telegramProfile) return;
       try {
@@ -55,10 +55,20 @@ export function createHandlers(config: BotConfig) {
         if (!synced.exists) {
           const onboardingUrl = new URL(config.miniAppUrl);
           if (startParam && /^ref_\d+$/.test(startParam)) onboardingUrl.searchParams.set('ref', startParam);
-          await ctx.replyWithHTML(onboarding, openAppKeyboard(onboardingUrl.toString(), '⚡ Попробовать бесплатно'));
+          onboardingUrl.searchParams.set('lang', language);
+          const text = language === 'en'
+            ? '<b>Sali VPN</b>\n\nPrivate connection, stable servers and simple setup. Start your free trial in the app.'
+            : onboarding;
+          await ctx.replyWithHTML(text, openAppKeyboard(onboardingUrl.toString(), language === 'en' ? '⚡ Try for free' : '⚡ Попробовать бесплатно'));
           return;
         }
         const state = await api.getState(telegramProfile.telegramId);
+        if (language === 'en') {
+          const appUrl = new URL(config.miniAppUrl);
+          appUrl.searchParams.set('lang', 'en');
+          await ctx.replyWithHTML('<b>Welcome back!</b>\n\nYour Sali VPN account is ready.', openAppKeyboard(appUrl.toString(), '⚡ Open Sali VPN'));
+          return;
+        }
         await ctx.replyWithHTML('<b>Рады снова вас приветствовать!</b>\n\nМы помним вас. Ваш аккаунт Sali VPN готов к работе.');
         await ctx.replyWithHTML(
           accessText(state),

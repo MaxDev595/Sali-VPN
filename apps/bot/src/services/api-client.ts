@@ -44,7 +44,7 @@ function settings() {
   return { apiUrl: apiUrl.replace(/\/$/, ''), internalApiKey };
 }
 
-async function call<T>(path: string, body: unknown): Promise<T> {
+async function call<T>(path: string, body: unknown, retries = 2): Promise<T> {
   const { apiUrl, internalApiKey } = settings();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -57,8 +57,17 @@ async function call<T>(path: string, body: unknown): Promise<T> {
 
   try {
     const response = await fetch(`${apiUrl}/api/v1/internal${path}`, init);
-    if (!response.ok) throw new Error(`Internal API ${path} returned ${response.status}`);
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`Internal API ${path} returned ${response.status}: ${detail.slice(0, 300)}`);
+    }
     return (await response.json()) as T;
+  } catch (error) {
+    if (retries > 0) {
+      await new Promise((resolve) => setTimeout(resolve, (3 - retries) * 500));
+      return call<T>(path, body, retries - 1);
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }
@@ -75,7 +84,7 @@ export const api = {
   }) => call<{ exists: boolean; userId: string | null; isBlocked: boolean }>('/users/sync', profile),
   getState: (telegramId: number) => call<BotUserState>('/users/state', { telegramId }),
   confirmPayment: (externalPaymentId: string) =>
-    call<unknown>('/payments/confirm', { externalPaymentId }),
+    call<unknown>('/payments/confirm', { externalPaymentId }, 0),
   createSupportTicket: (params: { telegramId: number; category: string; message: string }) =>
     call<unknown>('/support/tickets', params),
 };

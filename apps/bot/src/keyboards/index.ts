@@ -26,6 +26,11 @@ export const mainInlineKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback(menuLabels.support, 'menu_support'), Markup.button.callback(menuLabels.settings, 'menu_settings')],
 ]);
 
+export const languageKeyboard = Markup.inlineKeyboard([[
+  Markup.button.callback('🇷🇺 Русский', 'language_ru'),
+  Markup.button.callback('🇬🇧 English', 'language_en'),
+]]);
+
 export function openAppKeyboard(url: string, label = '⚡ Открыть Sali VPN') {
   return Markup.inlineKeyboard([[Markup.button.webApp(label, url)]]);
 }

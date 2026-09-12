@@ -78,6 +78,7 @@ export class NotificationsService {
     if (!botToken) return; // no-op if bot isn't configured (e.g. isolated API tests)
 
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (!user.notificationsEnabled) return;
     const text = MESSAGES[type];
 
     const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

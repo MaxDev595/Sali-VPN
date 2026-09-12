@@ -15,9 +15,8 @@ export interface BotConfig {
 
 function webAppUrl(base: string, path: string) {
   const url = new URL(base);
-  url.pathname = path;
-  url.hash = '';
-  return url.toString().replace(/\/$/, '');
+  url.hash = `#${path}`;
+  return url.toString();
 }
 
 export function loadConfig(): BotConfig {
@@ -30,12 +29,12 @@ export function loadConfig(): BotConfig {
   const config: BotConfig = {
     token,
     mode,
-    miniAppUrl: miniAppUrl.replace(/\/$/, ''),
-    subscriptionUrl: webAppUrl(miniAppUrl, '/subscription'),
-    accountUrl: webAppUrl(miniAppUrl, '/settings'),
-    tariffsUrl: webAppUrl(miniAppUrl, '/subscription'),
-    serversUrl: webAppUrl(miniAppUrl, '/'),
-    inviteUrl: webAppUrl(miniAppUrl, '/invite'),
+    miniAppUrl: webAppUrl(miniAppUrl, '/app'),
+    subscriptionUrl: webAppUrl(miniAppUrl, '/app/subscription'),
+    accountUrl: webAppUrl(miniAppUrl, '/app/settings'),
+    tariffsUrl: webAppUrl(miniAppUrl, '/app/subscription'),
+    serversUrl: webAppUrl(miniAppUrl, '/app/servers'),
+    inviteUrl: webAppUrl(miniAppUrl, '/app/invite'),
     supportUrl: process.env.SUPPORT_URL || 'https://t.me/SaliSupportBot',
     webhookUrl: process.env.TELEGRAM_WEBHOOK_URL,
     webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET,

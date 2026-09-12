@@ -2,6 +2,16 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "sali-vpn",
   "compatibility_date": "2026-08-12",
+  "routes": [
+    {
+      "pattern": "salivpn.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.salivpn.com",
+      "custom_domain": true
+    }
+  ],
   "assets": {
     "directory": "./apps/web/dist",
     "not_found_handling": "single-page-application"

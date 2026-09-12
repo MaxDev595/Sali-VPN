@@ -10,4 +10,9 @@ export class AuthController {
   async loginWithTelegramWebApp(@Body() dto: TelegramWebAppLoginDto) {
     return this.auth.loginWithTelegramWebApp(dto.initData, dto.referralCode);
   }
+
+  @Post('local')
+  async loginLocalDevice() {
+    return this.auth.loginLocalDevice();
+  }
 }

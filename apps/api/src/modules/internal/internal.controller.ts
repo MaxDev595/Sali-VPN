@@ -65,7 +65,23 @@ export class InternalController {
   @Post('users/state')
   async getState(@Body() dto: TelegramIdParamDto) {
     const user = await this.users.findByTelegramId(BigInt(dto.telegramId));
-    if (!user) throw new Error('User not found');
+    if (!user) {
+      return {
+        state: 'NEW',
+        registered: false,
+        user: {
+          publicId: '—',
+          username: null,
+          firstName: null,
+          isBlocked: false,
+        },
+        trial: null,
+        subscription: null,
+        referralStats: {
+          link: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME ?? 'VpnSaliBot'}?start=ref_${dto.telegramId}`,
+        },
+      };
+    }
 
     const [trial, activeSubscription, latestSubscription, referralStats] = await Promise.all([
       this.trials.getTrial(user.id),

@@ -4,6 +4,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthTokenPayload } from '../auth/auth.service';
 import { DevicesService } from './devices.service';
 import { AddDeviceDto } from './dto/add-device.dto';
+import { RegisterDeviceDto } from './dto/register-device.dto';
 
 @Controller('devices')
 @UseGuards(JwtAuthGuard)
@@ -18,6 +19,11 @@ export class DevicesController {
   @Post()
   add(@CurrentUser() user: AuthTokenPayload, @Body() dto: AddDeviceDto) {
     return this.devices.add(user.sub, dto.name, dto.platform);
+  }
+
+  @Post('current')
+  registerCurrent(@CurrentUser() user: AuthTokenPayload, @Body() dto: RegisterDeviceDto) {
+    return this.devices.registerCurrent(user.sub, dto);
   }
 
   @Delete(':id')

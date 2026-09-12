@@ -9,7 +9,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
-    const response = await fetch(baseUrl + path, { ...init, signal: controller.signal, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers } });
+    const response = await fetch(baseUrl + path, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    });
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as { message?: string; code?: string };
       throw new ApiError(body.message ?? 'Не удалось выполнить запрос', body.code ?? 'UNKNOWN', response.status);
@@ -22,10 +30,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  localLogin: () => request<{ token: string }>('/auth/local', { method: 'POST' }),
   exchangeTelegramToken: (token: string) => request<{ token: string }>('/auth/mobile', { method: 'POST', body: JSON.stringify({ token }) }),
   home: () => request<HomeState>('/home'),
   connect: () => request<{ config: { configText: string; serverLocation: string; allocatedIp: string } }>('/vpn/connect', { method: 'POST' }),
   disconnect: () => request('/vpn/disconnect', { method: 'POST' }),
   servers: () => request<VPNServer[]>('/servers'),
   plans: () => request<Array<{ id: string; name: string; priceUsd: number; originalPriceUsd: number | null }>>('/plans'),
+  createSupportTicket: (message: string) => request('/support/tickets', { method: 'POST', body: JSON.stringify({ category: 'other', message }) }),
 };

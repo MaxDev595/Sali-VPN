@@ -3,11 +3,11 @@
     "name": "Sali VPN",
     "slug": "sali-vpn",
     "scheme": "sali",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "icon": "./assets/sali-logo.png",
-    "splash": { "image": "./assets/sali-logo.png", "resizeMode": "contain", "backgroundColor": "#05070A" },
+    "splash": { "image": "./assets/sali-logo.png", "resizeMode": "contain", "backgroundColor": "#FFFFFF" },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.sali.vpn",

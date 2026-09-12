@@ -1,6 +1,6 @@
 import { BotUserState } from './services/api-client';
 
-export const genericError = 'Что-то пошло не так. Попробуйте ещё раз.';
+export const genericError = 'Сервис временно перезапускается. Повторите команду через несколько секунд.';
 
 export const onboarding = [
   '<b>Sali VPN</b>',

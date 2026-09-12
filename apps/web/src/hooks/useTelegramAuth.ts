@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, setAuthToken } from '../lib/api';
 import { telegram } from '../lib/telegram';
+import { currentDevice } from '../lib/device';
 
 type AuthState =
   | { status: 'loading' }
@@ -33,8 +34,9 @@ export function useTelegramAuth(): TelegramAuthState {
     try {
       const referralCode = new URLSearchParams(window.location.search).get('ref') ?? undefined;
       const { token } = await api.loginWithTelegramWebApp(initData, referralCode);
+      setAuthToken(token);
+      await api.registerCurrentDevice(currentDevice());
       if (attempt === attemptRef.current) {
-        setAuthToken(token);
         setState({ status: 'ready' });
       }
     } catch (error) {

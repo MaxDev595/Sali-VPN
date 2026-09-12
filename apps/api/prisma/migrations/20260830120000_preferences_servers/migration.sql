@@ -1,0 +1,9 @@
+ALTER TABLE "User"
+  ADD COLUMN "preferredLanguage" TEXT NOT NULL DEFAULT 'ru',
+  ADD COLUMN "notificationsEnabled" BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE "VpnServer"
+  ADD COLUMN "countryCode" TEXT NOT NULL DEFAULT 'NL',
+  ADD COLUMN "city" TEXT NOT NULL DEFAULT 'Amsterdam',
+  ADD COLUMN "premiumOnly" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "pingMs" INTEGER NOT NULL DEFAULT 35;

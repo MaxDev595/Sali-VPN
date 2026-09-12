@@ -1,14 +1,15 @@
 import { NavLink } from 'react-router-dom';
 import { telegram } from '../lib/telegram';
-
-const items = [
-  { to: '/', label: 'Главная', icon: HomeIcon },
-  { to: '/subscription', label: 'Подписка', icon: PlanIcon },
-  { to: '/devices', label: 'Устройства', icon: DeviceIcon },
-  { to: '/settings', label: 'Настройки', icon: SettingsIcon },
-];
+import { useI18n } from '../lib/i18n';
 
 export function BottomNav() {
+  const { t } = useI18n();
+  const items = [
+    { to: '/app', label: t('home'), icon: HomeIcon },
+    { to: '/app/servers', label: t('servers'), icon: ServerIcon },
+    { to: '/app/devices', label: t('devices'), icon: DeviceIcon },
+    { to: '/app/settings', label: t('settings'), icon: SettingsIcon },
+  ];
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur border-t border-sali-gray-800 pb-[env(safe-area-inset-bottom)]">
       <div className="flex justify-around items-center h-16">
@@ -16,7 +17,7 @@ export function BottomNav() {
           <NavLink
             key={to}
             to={to}
-            end={to === '/'}
+            end={to === '/app'}
             onClick={() => telegram.haptic.light()}
             className={({ isActive }) =>
               `flex flex-col items-center gap-1 press-feedback ${
@@ -32,6 +33,7 @@ export function BottomNav() {
     </nav>
   );
 }
+function ServerIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="6" rx="2" stroke="currentColor" strokeWidth="1.8"/><rect x="3" y="14" width="18" height="6" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M7 7h.01M7 17h.01" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>; }
 
 function HomeIcon() {
   return (

@@ -2,6 +2,8 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { DevicePlatform } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import { RegisterDeviceDto } from './dto/register-device.dto';
 
 const DEFAULT_MAX_DEVICES_TRIAL = 1;
 
@@ -13,7 +15,12 @@ export class DevicesService {
   ) {}
 
   async list(userId: string) {
-    return this.prisma.device.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } });
+    const [devices, activeCount, maxDevices] = await Promise.all([
+      this.prisma.device.findMany({ where: { userId }, orderBy: { lastActiveAt: 'desc' } }),
+      this.prisma.device.count({ where: { userId, isActive: true } }),
+      this.getDeviceLimit(userId),
+    ]);
+    return { devices, activeCount, maxDevices };
   }
 
   private async getDeviceLimit(userId: string): Promise<number> {
@@ -24,7 +31,7 @@ export class DevicesService {
   async add(userId: string, name: string, platform: DevicePlatform) {
     const [limit, currentCount] = await Promise.all([
       this.getDeviceLimit(userId),
-      this.prisma.device.count({ where: { userId } }),
+      this.prisma.device.count({ where: { userId, isActive: true } }),
     ]);
 
     if (currentCount >= limit) {
@@ -34,7 +41,36 @@ export class DevicesService {
     }
 
     return this.prisma.device.create({
-      data: { userId, name, platform, isActive: false },
+      data: { userId, deviceKey: randomUUID(), name, platform, isActive: true, lastActiveAt: new Date() },
+    });
+  }
+
+  async registerCurrent(userId: string, dto: RegisterDeviceDto) {
+    const existing = await this.prisma.device.findUnique({
+      where: { userId_deviceKey: { userId, deviceKey: dto.deviceKey } },
+    });
+
+    const shouldActivate = existing?.isActive ?? await Promise.all([
+        this.getDeviceLimit(userId),
+        this.prisma.device.count({ where: { userId, isActive: true } }),
+      ]).then(([limit, currentCount]) => currentCount < limit);
+
+    return this.prisma.device.upsert({
+      where: { userId_deviceKey: { userId, deviceKey: dto.deviceKey } },
+      create: {
+        userId,
+        deviceKey: dto.deviceKey,
+        name: dto.name,
+        platform: dto.platform,
+        isActive: shouldActivate,
+        lastActiveAt: new Date(),
+      },
+      update: {
+        name: dto.name,
+        platform: dto.platform,
+        isActive: true,
+        lastActiveAt: new Date(),
+      },
     });
   }
 

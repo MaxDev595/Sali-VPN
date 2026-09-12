@@ -4,7 +4,7 @@ import { Telegraf } from 'telegraf';
 import { loadConfig } from './config';
 import { createHandlers } from './handlers';
 import { genericError } from './messages';
-import { menuLabels } from './keyboards';
+import { languageKeyboard, menuLabels } from './keyboards';
 import { api } from './services/api-client';
 
 // npm workspaces starts this process with apps/bot as the working directory.
@@ -17,7 +17,9 @@ async function main() {
   const bot = new Telegraf(config.token);
   const handlers = createHandlers(config);
 
-  bot.start(handlers.start);
+  bot.start(async (ctx) => {
+    await ctx.reply('Выберите язык / Choose your language', languageKeyboard);
+  });
   bot.command('menu', handlers.menu);
   bot.command('vpn', handlers.vpn);
   bot.command('subscription', handlers.subscription);
@@ -59,6 +61,12 @@ async function main() {
     await handlers.account(ctx);
   });
   bot.action(/^faq_/, handlers.faq);
+  bot.action(/^language_(ru|en)$/, async (ctx) => {
+    const data = 'data' in ctx.callbackQuery ? ctx.callbackQuery.data : 'language_ru';
+    const language = data.endsWith('_en') ? 'en' : 'ru';
+    await ctx.answerCbQuery();
+    await handlers.start(ctx, language);
+  });
 
   bot.on('successful_payment', async (ctx) => {
     const payment = ctx.message.successful_payment;
@@ -83,7 +91,9 @@ async function main() {
     { command: 'subscription', description: 'Подписка' },
     { command: 'account', description: 'Аккаунт' },
     { command: 'help', description: 'Помощь' },
-  ]);
+  ]).catch((error) => {
+    console.warn('Failed to register bot commands; continuing with polling', error);
+  });
 
   if (config.mode === 'webhook') {
     await bot.launch({
@@ -94,7 +104,9 @@ async function main() {
       },
     });
   } else {
-    await bot.telegram.deleteWebhook({ drop_pending_updates: false });
+    await bot.telegram.deleteWebhook({ drop_pending_updates: false }).catch((error) => {
+      console.warn('Failed to delete webhook; continuing with polling', error);
+    });
     await bot.launch({ dropPendingUpdates: false });
   }
 

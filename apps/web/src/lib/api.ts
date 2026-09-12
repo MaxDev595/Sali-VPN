@@ -1,9 +1,12 @@
 import type {
   DeviceDTO,
+  DevicesStateDTO,
   HomeStateDTO,
   PlanDTO,
   ReferralInfoDTO,
   SubscriptionDTO,
+  UserPreferencesDTO,
+  VpnServerDTO,
 } from '@sali/types';
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000') + '/api/v1';
@@ -17,7 +20,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...(init.headers ?? {}),
     },
@@ -57,10 +60,16 @@ export const api = {
     request<{ payment: unknown; subscription: unknown; checkout: unknown }>('/payments/purchase', {
       method: 'POST', body: JSON.stringify({ planId }),
     }),
-  getDevices: () => request<DeviceDTO[]>('/devices'),
+  getDevices: () => request<DevicesStateDTO>('/devices'),
+  registerCurrentDevice: (device: { deviceKey: string; name: string; platform: string }) =>
+    request<DeviceDTO>('/devices/current', { method: 'POST', body: JSON.stringify(device) }),
   addDevice: (name: string, platform: string) =>
     request<DeviceDTO>('/devices', { method: 'POST', body: JSON.stringify({ name, platform }) }),
   removeDevice: (id: string) => request(`/devices/${id}`, { method: 'DELETE' }),
+  getServers: () => request<VpnServerDTO[]>('/servers'),
+  getPreferences: () => request<UserPreferencesDTO>('/preferences'),
+  updatePreferences: (preferences: Partial<UserPreferencesDTO>) =>
+    request<UserPreferencesDTO>('/preferences', { method: 'PATCH', body: JSON.stringify(preferences) }),
   getReferralInfo: () => request<ReferralInfoDTO>('/referrals/me'),
   createSupportTicket: (category: string, message: string) =>
     request('/support/tickets', { method: 'POST', body: JSON.stringify({ category, message }) }),

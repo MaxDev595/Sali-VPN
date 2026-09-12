@@ -147,8 +147,12 @@ async function main() {
     { command: 'start', description: 'Открыть поддержку' },
     { command: 'help', description: 'Как связаться с поддержкой' },
     { command: 'admin', description: 'Админ-панель' },
-  ]);
-  await bot.telegram.deleteWebhook({ drop_pending_updates: false });
+  ]).catch((error) => {
+    console.warn('Failed to register support bot commands; continuing with polling', error);
+  });
+  await bot.telegram.deleteWebhook({ drop_pending_updates: false }).catch((error) => {
+    console.warn('Failed to delete support bot webhook; continuing with polling', error);
+  });
   await bot.launch({ dropPendingUpdates: false });
   console.log(`Sali support bot started; admin=@${adminUsername}`);
 }

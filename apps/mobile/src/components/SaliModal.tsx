@@ -1,0 +1,10 @@
+import { useEffect, useRef } from 'react';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { theme } from '../theme';
+
+export function SaliModal({ visible, title, children, onClose }: { visible: boolean; title: string; children: React.ReactNode; onClose(): void }) {
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => { if (visible) { progress.setValue(0); Animated.spring(progress, { toValue: 1, damping: 18, stiffness: 180, mass: .8, useNativeDriver: true }).start(); } }, [progress, visible]);
+  return <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}><Pressable style={styles.backdrop} onPress={onClose}><Animated.View style={[styles.motion, { opacity: progress, transform: [{ scale: progress.interpolate({ inputRange: [0, 1], outputRange: [.9, 1] }) }, { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] }]}><Pressable style={styles.card} onPress={() => {}}><View style={styles.badge}><View style={styles.badgeDot} /></View><Text style={styles.title}>{title}</Text>{children}</Pressable></Animated.View></Pressable></Modal>;
+}
+const styles = StyleSheet.create({ backdrop: { flex: 1, padding: 22, backgroundColor: 'rgba(0,0,0,.74)', justifyContent: 'center', alignItems: 'center' }, motion: { width: '100%', maxWidth: 440 }, card: { width: '100%', backgroundColor: theme.colors.surface, borderRadius: 26, borderWidth: 1, borderColor: theme.colors.border, padding: 22, shadowColor: '#000', shadowOpacity: .35, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 16 }, badge: { width: 38, height: 38, borderRadius: 19, alignSelf: 'center', backgroundColor: '#2A2119', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }, badgeDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.accent }, title: { color: theme.colors.textPrimary, fontSize: 24, lineHeight: 30, fontWeight: '800', textAlign: 'center', marginBottom: 18 } });

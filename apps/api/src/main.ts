@@ -15,6 +15,9 @@ async function bootstrap() {
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
+  if (process.env.NODE_ENV === 'development') {
+    corsOrigins.push('http://localhost:5173', 'http://127.0.0.1:5173');
+  }
 
   app.enableCors({
     origin: corsOrigins.length > 0 ? corsOrigins : true,

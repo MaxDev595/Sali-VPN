@@ -23,6 +23,8 @@ model User {
   languageCode  String?
   isBlocked     Boolean  @default(false)
   isAdmin       Boolean  @default(false)
+  preferredLanguage String @default("ru")
+  notificationsEnabled Boolean @default(true)
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -68,6 +70,10 @@ model VpnServer {
   isActive     Boolean  @default(true)
   capacity     Int      @default(1000)
   currentLoad  Int      @default(0)
+  countryCode  String   @default("NL")
+  city         String   @default("Amsterdam")
+  premiumOnly  Boolean  @default(false)
+  pingMs       Int      @default(35)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -237,6 +243,7 @@ model Device {
   vpnAccount   VpnAccount?    @relation(fields: [vpnAccountId], references: [id])
 
   name         String
+  deviceKey    String
   platform     DevicePlatform @default(OTHER)
   isActive     Boolean        @default(false)
   lastActiveAt DateTime?
@@ -245,6 +252,7 @@ model Device {
   updatedAt    DateTime       @updatedAt
 
   @@index([userId])
+  @@unique([userId, deviceKey])
 }
 
 // ---------------------------------------------------------------------------

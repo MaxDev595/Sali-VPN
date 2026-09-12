@@ -94,7 +94,9 @@ app.use(express.json());
 app.use(requireAuth);
 
 app.get('/server-public-key', (_req, res) => {
-  const publicKey = fs.readFileSync(SERVER_PUBLIC_KEY_PATH, 'utf8').trim();
+  const publicKey = fs.existsSync(SERVER_PUBLIC_KEY_PATH)
+    ? fs.readFileSync(SERVER_PUBLIC_KEY_PATH, 'utf8').trim()
+    : execFileSync('wg', ['show', WG_INTERFACE, 'public-key']).toString().trim();
   res.json({ publicKey });
 });
 

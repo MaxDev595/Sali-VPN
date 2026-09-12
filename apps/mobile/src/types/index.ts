@@ -1,6 +1,6 @@
 export type VPNStatus = 'disconnected' | 'connecting' | 'connected' | 'disconnecting' | 'error';
 export type SubscriptionStatus = 'free' | 'trial' | 'premium' | 'expired';
-export interface VPNServer { id: string; country: string; countryCode: string; city: string; ping: number; load: number; availability: boolean; premiumOnly: boolean }
+export interface VPNServer { id: string; country: string; countryCode: string; city: string; ping: number; load: number; availability: boolean; premiumOnly: boolean; access?: 'free' | 'premium' | 'soon' }
 export interface VPNConnection { status: VPNStatus; server: VPNServer | null; connectedAt: number | null; publicIp?: string }
 export interface User { id: string; telegramId: string; firstName?: string | null; username?: string | null }
 export interface Subscription { status: SubscriptionStatus; expiresAt: string | null; secondsRemaining?: number; planName?: string }

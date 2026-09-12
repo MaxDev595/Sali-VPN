@@ -72,6 +72,30 @@ export interface DeviceDTO {
   lastActiveAt: string | null;
 }
 
+export interface DevicesStateDTO {
+  devices: DeviceDTO[];
+  activeCount: number;
+  maxDevices: number;
+}
+
+export interface VpnServerDTO {
+  id: string;
+  name: string;
+  location: string;
+  countryCode: string;
+  city: string;
+  premiumOnly: boolean;
+  pingMs: number;
+  currentLoad: number;
+  capacity: number;
+  recommended: boolean;
+}
+
+export interface UserPreferencesDTO {
+  preferredLanguage: 'ru' | 'en';
+  notificationsEnabled: boolean;
+}
+
 export interface ReferralInfoDTO {
   link: string;
   totalInvited: number;

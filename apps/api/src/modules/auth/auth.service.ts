@@ -80,4 +80,16 @@ export class AuthService {
     const payload: AuthTokenPayload = { sub: userId, tid: telegramId };
     return this.jwt.signAsync(payload);
   }
+
+  async loginLocalDevice() {
+    if (this.config.get<string>('VPN_MODE') !== 'local') {
+      throw new UnauthorizedException('Локальный вход отключён');
+    }
+    const telegramId = 900000000000000001n;
+    const user = await this.users.findOrCreateByTelegramProfile({ telegramId, username: 'local_phone', firstName: 'Local device', languageCode: 'ru' });
+    if (user.isBlocked) throw new UnauthorizedException('Аккаунт заблокирован');
+    await this.trials.startTrialIfNeeded(user.id);
+    return { token: await this.signToken(user.id, telegramId.toString()) };
+  }
+
 }
