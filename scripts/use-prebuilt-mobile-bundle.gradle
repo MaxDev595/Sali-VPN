@@ -1,0 +1,10 @@
+// Used by the local release script after Expo has produced the bundle itself.
+// The task remains in Gradle's dependency graph so generated asset/res paths
+// are available to Android packaging, but its duplicate Metro action is skipped.
+gradle.projectsEvaluated {
+    allprojects {
+        tasks.matching { it.name == 'createBundleReleaseJsAndAssets' }.configureEach {
+            actions.clear()
+        }
+    }
+}

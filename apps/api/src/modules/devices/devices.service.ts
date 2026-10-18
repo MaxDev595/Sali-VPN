@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { DevicePlatform } from '@prisma/client';
@@ -68,18 +68,46 @@ export class DevicesService {
       update: {
         name: dto.name,
         platform: dto.platform,
-        isActive: true,
+        isActive: shouldActivate,
+        revokedAt: shouldActivate ? null : existing?.revokedAt,
         lastActiveAt: new Date(),
       },
     });
   }
 
   async remove(userId: string, deviceId: string) {
-    const device = await this.prisma.device.findFirstOrThrow({
+    const device = await this.prisma.device.findFirst({
       where: { id: deviceId, userId },
     });
-    await this.prisma.device.delete({ where: { id: device.id } });
+    if (!device) throw new NotFoundException('Устройство не найдено');
+    await this.prisma.device.update({
+      where: { id: device.id },
+      data: { isActive: false, revokedAt: new Date() },
+    });
     return { success: true };
+  }
+
+  /** Validates the calling installation and permanently claims its trial. */
+  async assertCanConnect(userId: string, deviceKey: string) {
+    const device = await this.prisma.device.findUnique({
+      where: { userId_deviceKey: { userId, deviceKey } },
+    });
+    if (!device?.isActive || device.revokedAt) {
+      throw new ForbiddenException('Устройство не зарегистрировано или отключено');
+    }
+
+    const activeSub = await this.subscriptions.getActiveForUser(userId);
+    if (!activeSub) {
+      const foreignClaim = await this.prisma.trialDeviceClaim.findUnique({ where: { deviceKey } });
+      if (foreignClaim && foreignClaim.userId !== userId) {
+        throw new ForbiddenException('Пробный период на этом устройстве уже использован');
+      }
+      await this.prisma.trialDeviceClaim.upsert({
+        where: { deviceKey }, update: {}, create: { deviceKey, userId },
+      });
+    }
+    await this.touchActive(device.id);
+    return { device, activeSub };
   }
 
   async touchActive(deviceId: string) {

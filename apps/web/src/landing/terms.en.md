@@ -9,7 +9,7 @@ These Terms govern access to and use of **Sali VPN**, including its Telegram bot
 
 Sali VPN routes internet traffic through Sali VPN servers and may be provided through Telegram, the website, VPN configurations, compatible third-party clients, and other Sali interfaces.
 
-**Operator:** Sali VPN · **Country:** Kazakhstan · **Email:** work@salivpn.com · **Support:** @SaliSupportBot · **Website:** salivpn.com
+**Operator:** Sali VPN · **Country:** Kazakhstan · **Email:** work@salivpn.com · **Support:** @SaliVPNHelpBot · **Website:** salivpn.com
 
 ## 2. Permitted use
 
@@ -45,7 +45,7 @@ Prices are shown before payment and may change for future purchases or renewals 
 
 ## 10. Refunds
 
-Refund requests are considered under applicable law, provider terms, and the circumstances—for example, missing service after payment, a duplicate charge, a confirmed substantial Sali VPN outage, or a legally required refund. Contact @SaliSupportBot or work@salivpn.com. We may request transaction details. This section does not limit mandatory consumer rights.
+Refund requests are considered under applicable law, provider terms, and the circumstances—for example, missing service after payment, a duplicate charge, a confirmed substantial Sali VPN outage, or a legally required refund. Contact @SaliVPNHelpBot or work@salivpn.com. We may request transaction details. This section does not limit mandatory consumer rights.
 
 ## 11. Devices
 
@@ -129,7 +129,7 @@ These Terms are governed by the laws of the Republic of Kazakhstan unless mandat
 
 ## 31. Disputes
 
-Contact @SaliSupportBot or work@salivpn.com first with questions or complaints. We aim to resolve valid issues before court. You retain any legal right to contact authorities or courts.
+Contact @SaliVPNHelpBot or work@salivpn.com first with questions or complaints. We aim to resolve valid issues before court. You retain any legal right to contact authorities or courts.
 
 ## 32. Severability
 
@@ -137,6 +137,6 @@ If a provision is invalid or unenforceable, the remaining provisions continue to
 
 ## 33. Contact
 
-**Sali VPN** · **Country:** Kazakhstan · **Email:** work@salivpn.com · **Telegram:** @SaliSupportBot · **Website:** salivpn.com
+**Sali VPN** · **Country:** Kazakhstan · **Email:** work@salivpn.com · **Telegram:** @SaliVPNHelpBot · **Website:** salivpn.com
 
 By using Sali VPN, activating free access, or buying a subscription, you confirm that you have read and agree to these Terms of Use.

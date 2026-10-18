@@ -14,7 +14,7 @@ export const useVpnStore = create<VpnState>((set, get) => ({
     if (current === 'connecting' || current === 'disconnecting') return;
     try {
       if (current === 'connected') { set({ status: 'disconnecting', error: null }); await vpnEngine.disconnect(); await api.disconnect(); set({ status: 'disconnected', connectedAt: null }); await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }
-      else { set({ status: 'connecting', error: null }); await vpnEngine.prepare(); if (!(await secureStorage.getToken())) { const auth = await api.localLogin(); await secureStorage.setToken(auth.token); } const result = await api.connect(); await vpnEngine.connect(result.config.configText); set({ status: 'connected', connectedAt: Date.now() }); await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }
+      else { set({ status: 'connecting', error: null }); await vpnEngine.prepare(); if (!(await secureStorage.getToken())) { const auth = await api.localLogin(); await secureStorage.setToken(auth.token); } const deviceKey = await vpnEngine.deviceKey(); await api.registerCurrentDevice(deviceKey); const result = await api.connect(deviceKey); await vpnEngine.connect(result.config.configText); set({ status: 'connected', connectedAt: Date.now() }); await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }
     } catch (error) { set({ status: 'error', error: error instanceof Error ? error.message : 'Не удалось подключиться' }); await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error); }
   },
 }));

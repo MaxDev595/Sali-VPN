@@ -16,7 +16,7 @@
 **Наименование:** Sali VPN\
 **Страна регистрации:** Казахстан\
 **Контактный email:** **work\@salivpn.com**\
-**Telegram поддержки:** @SaliSupportBot
+**Telegram поддержки:** @SaliVPNHelpBot
 
 ## 2. Какие данные мы можем собирать
 
@@ -293,7 +293,7 @@ Sali VPN не должен намеренно создавать базу ист
 
 **Sali VPN**\
 Email: **work\@salivpn.com**\
-Telegram:** ****@SaliSupportBot**\
+Telegram:** ****@SaliVPNHelpBot**\
 Веб-сайт: **salivpn.com**
 
 ---

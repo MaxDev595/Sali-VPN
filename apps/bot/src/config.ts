@@ -35,7 +35,7 @@ export function loadConfig(): BotConfig {
     tariffsUrl: webAppUrl(miniAppUrl, '/app/subscription'),
     serversUrl: webAppUrl(miniAppUrl, '/app/servers'),
     inviteUrl: webAppUrl(miniAppUrl, '/app/invite'),
-    supportUrl: process.env.SUPPORT_URL || 'https://t.me/SaliSupportBot',
+    supportUrl: process.env.SUPPORT_URL || 'https://t.me/SaliVPNHelpBot',
     webhookUrl: process.env.TELEGRAM_WEBHOOK_URL,
     webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET,
     port: Number(process.env.PORT ?? 8080),

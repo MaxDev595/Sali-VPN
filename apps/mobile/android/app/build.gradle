@@ -3,13 +3,16 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
+def workspaceRoot = new File(projectRoot).getParentFile().getParentFile().getAbsolutePath()
 
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
 react {
-    entryFile = file(["node", "-e", "require('expo/scripts/resolveAppEntry')", rootDir.getAbsoluteFile().getParentFile().getAbsolutePath(), "android", "absolute"].execute(null, rootDir).text.trim())
+    // In this npm workspace Expo's resolver may incorrectly select the
+    // repository root. Pin the actual mobile entry for reproducible release builds.
+    entryFile = file("${projectRoot}/node_modules/expo-router/entry.js")
     reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
     hermesCommand = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
     codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
@@ -21,8 +24,9 @@ react {
     bundleCommand = "export:embed"
 
     /* Folders */
-     //   The root of your project, i.e. where "package.json" lives. Default is '../..'
-    root = file(projectRoot)
+    // Expo detects the npm workspace root; keep Gradle paths aligned with it.
+    root = file(workspaceRoot)
+    bundleConfig = file("${projectRoot}/metro.config.js")
     //   The folder where the react-native NPM package is. Default is ../../node_modules/react-native
     // reactNativeDir = file("../../node_modules/react-native")
     //   The folder where the react-native Codegen package is. Default is ../../node_modules/@react-native/codegen
@@ -84,6 +88,16 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 android {
     ndkVersion rootProject.ext.ndkVersion
 
+    splits {
+        abi {
+            reset()
+            enable true
+            // Also produce one installable APK containing every supported ABI.
+            universalApk true
+            include(*(project.findProperty("reactNativeArchitectures") ?: "armeabi-v7a,arm64-v8a,x86,x86_64").split(","))
+        }
+    }
+
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
@@ -92,8 +106,8 @@ android {
         applicationId 'app.sali.vpn'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 11
-        versionName "0.2.0"
+        versionCode 12
+        versionName "0.2.1"
     }
     signingConfigs {
         debug {
@@ -151,6 +165,7 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation("com.wireguard.android:tunnel:1.0.20230706")
+    implementation("com.android.billingclient:billing:9.1.0")
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
@@ -174,5 +189,30 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+// Expo CLI resolves this monorepo's workspace root differently from the React
+// Native Gradle plugin. Run the release embed command with the known mobile
+// Metro config so the generated bundle is actually packaged into assets/.
+afterEvaluate {
+    tasks.named("createBundleReleaseJsAndAssets").configure {
+        actions.clear()
+        doLast {
+            exec {
+                workingDir projectRoot
+                commandLine "node",
+                    "${projectRoot}/node_modules/expo/bin/cli",
+                    "export:embed",
+                    "--entry-file", "./apps/mobile/node_modules/expo-router/entry.js",
+                    "--platform", "android",
+                    "--dev", "false",
+                    "--bundle-output", "${buildDir}/generated/assets/createBundleReleaseJsAndAssets/index.android.bundle",
+                    "--assets-dest", "${buildDir}/generated/res/createBundleReleaseJsAndAssets",
+                    "--sourcemap-output", "${buildDir}/generated/sourcemaps/react/release/index.android.bundle.map",
+                    "--minify", "true",
+                    "--config", "${projectRoot}/metro.config.js"
+            }
+        }
     }
 }

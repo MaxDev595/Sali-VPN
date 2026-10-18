@@ -1,6 +1,6 @@
 {
   "name": "@sali/mobile",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -30,6 +30,7 @@
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
+    "react-native-svg": "^15.15.5",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -40,11 +41,15 @@
     "jest-expo": "~53.0.0",
     "typescript": "~5.8.3"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "expo": {
     "autolinking": {
       "android": {
-        "buildFromSource": [".*"]
+        "buildFromSource": [
+          ".*"
+        ]
       }
     }
   }

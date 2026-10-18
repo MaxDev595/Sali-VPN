@@ -14,6 +14,8 @@ import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
+import android.provider.Settings
+import java.security.MessageDigest
 
 class SaliVpnModule(private val context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context), ActivityEventListener {
@@ -99,6 +101,19 @@ class SaliVpnModule(private val context: ReactApplicationContext) :
       promise.resolve(status)
     } catch (_: Throwable) {
       promise.resolve(status)
+    }
+  }
+
+  /** Stable across app reinstalls; opaque hash avoids exposing ANDROID_ID. */
+  @ReactMethod
+  fun getDeviceKey(promise: Promise) {
+    try {
+      val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+      val source = "app.sali.vpn:$androidId"
+      val digest = MessageDigest.getInstance("SHA-256").digest(source.toByteArray(StandardCharsets.UTF_8))
+      promise.resolve(digest.joinToString("") { "%02x".format(it) })
+    } catch (error: Throwable) {
+      promise.reject("DEVICE_ID_FAILED", "Не удалось определить устройство", error)
     }
   }
 

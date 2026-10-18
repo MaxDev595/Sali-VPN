@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { LandingFooter, LandingNavbar, SectionEyebrow, TelegramButton, VpnStatusPanel } from '../landing/components';
 import { landingCopy, useLandingLanguage } from '../landing/i18n';
 
-const BOT_URL = import.meta.env.VITE_TELEGRAM_BOT_URL ?? 'https://t.me/VpnSaliBot';
-const SUPPORT_URL = import.meta.env.VITE_SUPPORT_URL ?? 'https://t.me/SaliSupportBot';
+const BOT_URL = import.meta.env.VITE_TELEGRAM_BOT_URL ?? 'https://t.me/SaliVPNOfficialBot';
+const SUPPORT_URL = import.meta.env.VITE_SUPPORT_URL ?? 'https://t.me/SaliVPNHelpBot';
 const serverMeta = [{ code: 'NL-01', city: 'Amsterdam', latency: '32 ms', featured: true }, { code: 'DE-01', city: 'Frankfurt', latency: '45 ms' }, { code: 'US-01', city: 'New York', latency: '88 ms' }];
 
 export function LandingPage() {

@@ -27,7 +27,7 @@
 **Наименование:** Sali VPN  
 **Страна:** Казахстан  
 **Email:** work@salivpn.com  
-**Telegram поддержки:** @SaliSupportBot  
+**Telegram поддержки:** @SaliVPNHelpBot  
 **Веб-сайт:** salivpn.com
 
 Дополнительные сведения об операторе, включая адрес и контактный телефон, размещаются на официальном сайте Sali VPN в случаях, когда их публикация требуется применимым законодательством.
@@ -160,7 +160,7 @@ Sali VPN вправе изменять стоимость тарифов для 
 
 Запрос следует направить через:
 
-**Telegram:** @SaliSupportBot  
+**Telegram:** @SaliVPNHelpBot  
 **Email:** work@salivpn.com
 
 Для проверки платежа Sali VPN может запросить:
@@ -487,7 +487,7 @@ Sali VPN может периодически обновлять настоящи
 
 При возникновении вопросов или претензий пользователь в первую очередь может обратиться в службу поддержки Sali VPN:
 
-**Telegram:** @SaliSupportBot  
+**Telegram:** @SaliVPNHelpBot  
 **Email:** work@salivpn.com
 
 Мы стремимся урегулировать обоснованные обращения пользователей в досудебном порядке.
@@ -507,7 +507,7 @@ Sali VPN может периодически обновлять настоящи
 **Sali VPN**  
 **Страна:** Казахстан  
 **Email:** work@salivpn.com  
-**Telegram:** @SaliSupportBot  
+**Telegram:** @SaliVPNHelpBot  
 **Веб-сайт:** salivpn.com
 
 ---

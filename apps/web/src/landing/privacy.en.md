@@ -12,7 +12,7 @@ This Privacy Policy explains how data may be collected and processed when you us
 **Operator:** Sali VPN  
 **Country of registration:** Kazakhstan  
 **Email:** work@salivpn.com  
-**Support:** @SaliSupportBot
+**Support:** @SaliVPNHelpBot
 
 ## 2. Data we may collect
 
@@ -113,6 +113,6 @@ For privacy, deletion, and data-rights requests:
 
 **Sali VPN**  
 **Email:** work@salivpn.com  
-**Telegram:** @SaliSupportBot  
+**Telegram:** @SaliVPNHelpBot  
 **Country:** Kazakhstan  
 **Website:** salivpn.com

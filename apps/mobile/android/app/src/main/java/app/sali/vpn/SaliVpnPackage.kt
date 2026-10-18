@@ -7,7 +7,7 @@ import com.facebook.react.uimanager.ViewManager
 
 class SaliVpnPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> =
-    listOf(SaliVpnModule(reactContext))
+    listOf(SaliVpnModule(reactContext), SaliBillingModule(reactContext))
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> =
     emptyList()

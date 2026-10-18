@@ -12,6 +12,9 @@ buildscript {
   }
 }
 
+// Reuse the NDK already installed with Android Studio on this workstation.
+ext.ndkVersion = "28.2.13676358"
+
 def reactNativeAndroidDir = new File(
   providers.exec {
     workingDir(rootDir)

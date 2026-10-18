@@ -9,6 +9,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ trustProxy: true }),
+    { rawBody: true },
   );
 
   const corsOrigins = (process.env.CORS_ORIGINS ?? '')

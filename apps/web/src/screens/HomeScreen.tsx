@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { HomeStateDTO } from '@sali/types';
 import { api } from '../lib/api';
+import { currentDevice } from '../lib/device';
 import { telegram } from '../lib/telegram';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { ErrorState, HomeSkeleton } from '../components/StatusStates';
+import { HomeSkeleton } from '../components/StatusStates';
+import { DownloadOptions } from '../components/DownloadOptions';
 import { useElapsedTime, useRemainingTime } from '../hooks/useCountdown';
 import { useI18n } from '../lib/i18n';
 
@@ -30,7 +32,12 @@ export function HomeScreen() {
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+    const reloadAfterAuth = () => void load();
+    window.addEventListener('sali:authenticated', reloadAfterAuth);
+    return () => window.removeEventListener('sali:authenticated', reloadAfterAuth);
+  }, []);
 
   const { formatted } = useElapsedTime(
     state?.trial?.sessionSeconds ?? 0,
@@ -41,8 +48,8 @@ export function HomeScreen() {
     Boolean(state?.trial?.isRunning),
   );
 
-  if (loading) return <HomeSkeleton />;
-  if (error || !state) return <ErrorState message={error ?? undefined} onRetry={load} />;
+  if (loading) return <div className="px-5 pt-4 pb-8 space-y-5 screen-enter"><h1 className="text-2xl font-semibold tracking-tight">SALi VPN</h1><DownloadOptions /><div className="-mx-5"><HomeSkeleton /></div></div>;
+  if (error || !state) return <div className="px-5 pt-4 pb-8 space-y-5 screen-enter"><h1 className="text-2xl font-semibold tracking-tight">SALi VPN</h1><DownloadOptions /><Card><p className="text-lg font-medium">Подключение в один шаг</p><p className="mt-2 text-sm leading-6 text-sali-gray-400">Установите удобное приложение, получите конфигурацию Sali и включите защищённое соединение.</p></Card></div>;
 
   const isProvisioned = state.vpn?.status === 'ACTIVE';
   const trialActive = state.trial?.status === 'ACTIVE' && state.trial.secondsRemaining > 0;
@@ -50,7 +57,9 @@ export function HomeScreen() {
   async function handleToggleConnection() {
     setConnecting(true);
     try {
-      const result = await api.connectVpn();
+      const device = currentDevice();
+      await api.registerCurrentDevice(device);
+      const result = await api.connectVpn(device.deviceKey);
       setVpnConfig(result.config);
       telegram.haptic.success();
       await load();
@@ -76,6 +85,8 @@ export function HomeScreen() {
   return (
     <div className="px-5 pt-4 pb-8 space-y-5 screen-enter">
       <h1 className="text-2xl font-semibold tracking-tight">SALi VPN</h1>
+
+      <DownloadOptions />
 
       <Card className="text-center py-8">
         <div className="flex items-center justify-center gap-2 mb-1">

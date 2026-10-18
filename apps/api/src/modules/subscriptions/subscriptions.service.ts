@@ -59,6 +59,19 @@ export class SubscriptionsService {
     });
   }
 
+  async renew(subscriptionId: string) {
+    const current = await this.prisma.subscription.findUniqueOrThrow({ where: { id: subscriptionId }, include: { plan: true } });
+    const now = new Date();
+    const base = current.expiresAt && current.expiresAt > now ? current.expiresAt : now;
+    const updated = await this.prisma.subscription.update({
+      where: { id: subscriptionId },
+      data: { status: SubscriptionStatus.ACTIVE, autoRenew: true, canceledAt: null, expiresAt: new Date(base.getTime() + current.plan.durationDays * 86_400_000) },
+    });
+    await this.vpn.ensureAccountForUser(updated.userId);
+    await this.vpn.enable(updated.userId);
+    return updated;
+  }
+
   /** Server-authoritative expiry sweep — never trust a client-side clock. */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async sweepExpiredSubscriptions() {

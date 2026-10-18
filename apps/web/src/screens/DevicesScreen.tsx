@@ -1,24 +1,17 @@
-import { useEffect, useState } from 'react';
-import type { DevicesStateDTO } from '@sali/types';
-import { api } from '../lib/api';
-import { telegram } from '../lib/telegram';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/Card';
-import { ErrorState, Skeleton } from '../components/StatusStates';
+import { DownloadOptions } from '../components/DownloadOptions';
+import { PlatformIcon } from '../components/PlatformIcon';
 import { useI18n } from '../lib/i18n';
+
+const platforms = [
+  { id: 'android' as const, name: 'Android', description: 'Телефон или планшет' },
+  { id: 'apple' as const, name: 'Apple', description: 'iPhone, iPad или Mac' },
+  { id: 'windows' as const, name: 'Windows', description: 'Компьютер или ноутбук' },
+];
 
 export function DevicesScreen() {
   const { t } = useI18n();
-  const [state, setState] = useState<DevicesStateDTO | null>(null);
-  const [error, setError] = useState(false);
-  const load = async () => { setError(false); try { setState(await api.getDevices()); } catch { setError(true); } };
-  useEffect(() => { void load(); }, []);
-  async function remove(id: string) { try { await api.removeDevice(id); telegram.haptic.light(); await load(); } catch { telegram.haptic.error(); } }
-  if (error) return <ErrorState onRetry={load} />;
-  if (!state) return <div className="px-5 pt-4 space-y-3"><Skeleton className="h-8 w-40" /><Skeleton className="h-16 w-full" /></div>;
-  return <div className="px-5 pt-4 pb-8 space-y-5 screen-enter">
-    <div className="flex items-end justify-between"><div><h1 className="text-2xl font-semibold tracking-tight">{t('myDevices')}</h1><p className="text-sm text-sali-gray-500 mt-1">{t('connectedDevices')}</p></div><div className="text-2xl font-semibold tabular-nums">{state.activeCount}<span className="text-sali-gray-600">/{state.maxDevices}</span></div></div>
-    <div className="h-1 rounded-full bg-sali-gray-900 overflow-hidden"><div className="h-full bg-white transition-all duration-500" style={{ width: `${Math.min(100, state.activeCount / state.maxDevices * 100)}%` }} /></div>
-    <div className="space-y-3">{state.devices.length === 0 && <p className="text-sali-gray-400 text-[15px]">{t('noDevices')}</p>}{state.devices.map((device) => <Card key={device.id} className="flex items-center justify-between py-4"><div><p className="text-[15px] font-medium">{device.name}</p><p className="text-sali-gray-500 text-sm"><span className={`inline-block w-1.5 h-1.5 rounded-full mr-2 ${device.isActive ? 'bg-sali-accent' : 'bg-sali-gray-600'}`} />{device.isActive ? t('active') : 'Ожидает свободного слота'}</p></div><button onClick={() => remove(device.id)} className="press-feedback text-sali-danger text-sm font-medium">{t('remove')}</button></Card>)}</div>
-    <p className="text-xs text-sali-gray-500">Устройства определяются автоматически при открытии приложения через Telegram.</p>
-  </div>;
+  const navigate = useNavigate();
+  return <div className="px-5 pt-4 pb-8 space-y-5 screen-enter"><div><h1 className="text-2xl font-semibold tracking-tight">{t('myDevices')}</h1><p className="mt-1 text-sm text-sali-gray-500">Один доступ — все ваши устройства</p></div><Card className="border-sali-gray-700"><p className="text-xs uppercase tracking-widest text-sali-gray-500">Возможности тарифа</p><p className="mt-2 text-xl font-semibold">До 3 устройств</p><p className="mt-2 text-sm leading-6 text-sali-gray-400">Подключайте телефон, компьютер и планшет к одной подписке Sali.</p></Card><div className="space-y-3"><p className="text-xs uppercase tracking-widest text-sali-gray-500">Поддерживаемые устройства</p>{platforms.map(platform => <button key={platform.id} type="button" onClick={() => navigate('/app')} className="press-feedback flex w-full items-center gap-4 rounded-lg border border-sali-gray-800 bg-sali-gray-950 p-4 text-left"><span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-black text-white"><PlatformIcon platform={platform.id} className="h-12 w-12" /></span><span className="min-w-0 flex-1"><strong className="block text-[15px] font-medium text-white">{platform.name}</strong><span className="mt-1 block text-sm text-sali-gray-500">{platform.description}</span></span><span className="text-xl text-sali-gray-600">›</span></button>)}</div><Card><p className="font-medium">Как подключить устройство</p><ol className="mt-3 space-y-3 text-sm leading-6 text-sali-gray-400"><li><span className="mr-2 text-white">1.</span>Установите Sali VPN или HAPP.</li><li><span className="mr-2 text-white">2.</span>Получите конфигурацию на главной странице.</li><li><span className="mr-2 text-white">3.</span>Импортируйте её и включите защищённое соединение.</li></ol></Card><DownloadOptions /></div>;
 }

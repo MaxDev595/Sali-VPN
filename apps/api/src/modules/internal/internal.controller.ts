@@ -78,7 +78,7 @@ export class InternalController {
         trial: null,
         subscription: null,
         referralStats: {
-          link: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME ?? 'VpnSaliBot'}?start=ref_${dto.telegramId}`,
+          link: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME ?? 'SaliVPNOfficialBot'}?start=ref_${dto.telegramId}`,
         },
       };
     }

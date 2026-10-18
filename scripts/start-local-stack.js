@@ -133,7 +133,8 @@ async function startWireGuardAgent() {
 }
 
 async function main() {
-  const databaseUrl = 'postgresql://sali:sali_password@127.0.0.1:5432/sali?schema=public';
+  const databasePort = Number(process.env.LOCAL_POSTGRES_PORT || 55432);
+  const databaseUrl = `postgresql://sali:sali_password@127.0.0.1:${databasePort}/sali?schema=public`;
   const localEnv = {
     DATABASE_URL: databaseUrl,
     API_URL: 'http://127.0.0.1:3000',
@@ -148,13 +149,16 @@ async function main() {
     databaseDir,
     user: 'sali',
     password: 'sali_password',
-    port: 5432,
+    port: databasePort,
     persistent: true,
+    // Do not inherit a legacy Windows code page (for example WIN1251):
+    // Prisma/PostgreSQL migrations and JSON payloads require UTF-8.
+    initdbFlags: ['--encoding=UTF8', '--locale=C'],
   });
   if (!existsSync(path.join(databaseDir, 'PG_VERSION'))) {
     await database.initialise();
   }
-  if (!(await isPortOpen(5432))) {
+  if (!(await isPortOpen(databasePort))) {
     await database.start();
     await database.createDatabase('sali').catch((error) => {
       if (!String(error).includes('already exists')) throw error;

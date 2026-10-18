@@ -18,6 +18,15 @@ export interface CreatePaymentResult {
    * may be an invoke payload rather than a URL — see each adapter. */
   checkoutUrl?: string;
   telegramInvoicePayload?: Record<string, unknown>;
+  cryptoInvoice?: {
+    network: string;
+    asset: string;
+    address: string;
+    amount: string;
+    expiresAt: string;
+    reference?: string;
+    paymentUrl?: string;
+  };
   status: 'PENDING' | 'SUCCEEDED';
 }
 
@@ -28,6 +37,7 @@ export interface PaymentProvider {
   createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult>;
   getPaymentStatus(externalPaymentId: string): Promise<PaymentStatusResult>;
   refundPayment(externalPaymentId: string): Promise<void>;
+  cancelSubscription?(externalSubscriptionId: string): Promise<void>;
 }
 
 export const PAYMENT_PROVIDER = Symbol('PAYMENT_PROVIDER');

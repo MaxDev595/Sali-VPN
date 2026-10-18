@@ -5,8 +5,12 @@ import { PaymentsController } from './payments.controller';
 import { PAYMENT_PROVIDER } from './providers/payment-provider.interface';
 import { ManualPaymentProvider } from './providers/manual.provider';
 import { TelegramStarsPaymentProvider } from './providers/telegram-stars.provider';
+import { PaddlePaymentProvider } from './providers/paddle.provider';
+import { CryptoPaymentProvider } from './providers/crypto.provider';
+import { CryptoWatcherService } from './crypto-watcher.service';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { GooglePlayService } from './google-play.service';
 
 @Module({
   imports: [ConfigModule, SubscriptionsModule, NotificationsModule],
@@ -14,19 +18,26 @@ import { NotificationsModule } from '../notifications/notifications.module';
   providers: [
     ManualPaymentProvider,
     TelegramStarsPaymentProvider,
+    PaddlePaymentProvider,
+    CryptoPaymentProvider,
+    CryptoWatcherService,
+    GooglePlayService,
     {
       provide: PAYMENT_PROVIDER,
       useFactory: (
         config: ConfigService,
         manual: ManualPaymentProvider,
         stars: TelegramStarsPaymentProvider,
+        paddle: PaddlePaymentProvider,
+        crypto: CryptoPaymentProvider,
       ) => {
         const selected = config.get<string>('PAYMENT_PROVIDER', 'manual');
         if (selected === 'telegram_stars') return stars;
-        // 'stripe' would be added here as its own adapter once credentials exist.
+        if (selected === 'paddle') return paddle;
+        if (selected === 'crypto') return crypto;
         return manual;
       },
-      inject: [ConfigService, ManualPaymentProvider, TelegramStarsPaymentProvider],
+      inject: [ConfigService, ManualPaymentProvider, TelegramStarsPaymentProvider, PaddlePaymentProvider, CryptoPaymentProvider],
     },
     PaymentsService,
   ],

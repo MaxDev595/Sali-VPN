@@ -117,6 +117,11 @@ export class AdminController {
     return this.payments.adminConfirmPayment(id);
   }
 
+  @Post('payments/:id/refund')
+  refundPayment(@Param('id') id: string) {
+    return this.payments.refund(id);
+  }
+
   @Get('vpn-servers')
   listServers() {
     return this.prisma.vpnServer.findMany();

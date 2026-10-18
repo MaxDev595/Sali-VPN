@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.plan.updateMany({ where: { code: 'pro_annual' }, data: { isActive: false } });
   const plan = await prisma.plan.upsert({
     where: { code: 'pro_monthly' },
     update: {},

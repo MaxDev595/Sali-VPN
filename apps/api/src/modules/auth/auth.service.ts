@@ -57,11 +57,6 @@ export class AuthService {
       throw new UnauthorizedException('Аккаунт заблокирован');
     }
 
-    // A trial is issued only after Telegram has cryptographically proved the
-    // user's identity. The unique Trial.userId constraint makes this safe and
-    // idempotent across repeated Mini App launches.
-    await this.trials.startTrialIfNeeded(user.id);
-
     if (!existingUser) {
       const effectiveReferralCode = parsed.startParam?.startsWith('ref_') ? parsed.startParam : referralCode;
       if (effectiveReferralCode?.startsWith('ref_')) {
@@ -88,7 +83,6 @@ export class AuthService {
     const telegramId = 900000000000000001n;
     const user = await this.users.findOrCreateByTelegramProfile({ telegramId, username: 'local_phone', firstName: 'Local device', languageCode: 'ru' });
     if (user.isBlocked) throw new UnauthorizedException('Аккаунт заблокирован');
-    await this.trials.startTrialIfNeeded(user.id);
     return { token: await this.signToken(user.id, telegramId.toString()) };
   }
 

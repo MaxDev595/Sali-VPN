@@ -1,6 +1,6 @@
 # Telegram bot production setup
 
-The bot is `@VpnSaliBot`. It uses the existing Mini App and the API as its only
+The bot is `@SaliVPNOfficialBot`. It uses the existing Mini App and the API as its only
 source of user, trial and subscription state.
 
 ## Environment
@@ -21,7 +21,7 @@ after the API validates Telegram Mini App `initData`.
 
 ## BotFather
 
-Open `@BotFather`, choose `@VpnSaliBot`, then configure:
+Open `@BotFather`, choose `@SaliVPNOfficialBot`, then configure:
 
 1. `/setcommands`
 

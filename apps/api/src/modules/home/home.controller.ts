@@ -1,4 +1,4 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Headers, Post, UseGuards, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthTokenPayload } from '../auth/auth.service';
@@ -7,6 +7,7 @@ import { TrialsService } from '../trials/trials.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { UsersService } from '../users/users.service';
 import { HomeStateDTO } from '@sali/types';
+import { DevicesService } from '../devices/devices.service';
 
 @Controller()
 @UseGuards(JwtAuthGuard)
@@ -16,6 +17,7 @@ export class HomeController {
     private readonly trials: TrialsService,
     private readonly subscriptions: SubscriptionsService,
     private readonly users: UsersService,
+    private readonly devices: DevicesService,
   ) {}
 
   @Get('home')
@@ -88,10 +90,17 @@ export class HomeController {
    * or simply re-enables an already-provisioned account.
    */
   @Post('vpn/connect')
-  async connect(@CurrentUser() authUser: AuthTokenPayload) {
+  async connect(
+    @CurrentUser() authUser: AuthTokenPayload,
+    @Headers('x-device-key') deviceKey?: string,
+  ) {
+    if (!deviceKey || deviceKey.length < 16 || deviceKey.length > 128) {
+      throw new BadRequestException('Сначала зарегистрируйте это устройство');
+    }
+    const access = await this.devices.assertCanConnect(authUser.sub, deviceKey);
     const account = await this.vpn.ensureAccountForUser(authUser.sub);
 
-    const activeSub = await this.subscriptions.getActiveForUser(authUser.sub);
+    const activeSub = access.activeSub;
     if (!activeSub) {
       await this.trials.assertAvailable(authUser.sub);
     }

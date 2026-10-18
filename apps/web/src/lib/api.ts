@@ -12,8 +12,16 @@ import type {
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000') + '/api/v1';
 let authToken: string | null = null;
 
+export class ApiRequestError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+    this.name = 'ApiRequestError';
+  }
+}
+
 export function setAuthToken(token: string | null) {
   authToken = token;
+  if (token && typeof window !== 'undefined') window.dispatchEvent(new Event('sali:authenticated'));
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -25,7 +33,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...(init.headers ?? {}),
     },
   }).catch(() => {
-    throw new Error('Сервер недоступен. Попробуйте позже.');
+    throw new ApiRequestError('Сервер недоступен. Попробуйте позже.');
   });
 
   if (!response.ok) {
@@ -36,7 +44,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       // Ответ без JSON: оставляем безопасное сообщение.
     }
-    throw new Error(message);
+    throw new ApiRequestError(message, response.status);
   }
 
   if (response.status === 204) return undefined as T;
@@ -49,17 +57,21 @@ export const api = {
       method: 'POST', body: JSON.stringify({ initData, referralCode }),
     }),
   getHome: () => request<HomeStateDTO>('/home'),
-  connectVpn: () =>
+  connectVpn: (deviceKey: string) =>
     request<{ account: unknown; config: { configText: string; qrCodeDataUrl: string } }>(
-      '/vpn/connect', { method: 'POST' },
+      '/vpn/connect', { method: 'POST', headers: { 'X-Device-Key': deviceKey } },
     ),
   disconnectVpn: () => request('/vpn/disconnect', { method: 'POST' }),
   getPlans: () => request<PlanDTO[]>('/plans'),
   getMySubscription: () => request<SubscriptionDTO | null>('/subscription'),
-  purchase: (planId: string) =>
-    request<{ payment: unknown; subscription: unknown; checkout: unknown }>('/payments/purchase', {
-      method: 'POST', body: JSON.stringify({ planId }),
+  purchase: (planId: string, provider?: 'paddle' | 'crypto' | 'telegram_stars') =>
+    request<{ payment: { id: string }; subscription: unknown; checkout: { checkoutUrl?: string; cryptoInvoice?: { network: string; asset: string; address: string; amount: string; expiresAt: string; reference?: string; paymentUrl?: string } } }>('/payments/purchase', {
+      method: 'POST', body: JSON.stringify({ planId, provider }),
     }),
+  getPayment: (paymentId: string) =>
+    request<{ id: string; status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; failureReason?: string }>(
+      `/payments/${encodeURIComponent(paymentId)}`,
+    ),
   getDevices: () => request<DevicesStateDTO>('/devices'),
   registerCurrentDevice: (device: { deviceKey: string; name: string; platform: string }) =>
     request<DeviceDTO>('/devices/current', { method: 'POST', body: JSON.stringify(device) }),
