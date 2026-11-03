@@ -1,36 +1,48 @@
 @echo off
 rem Sali VPN - build the Android APK (release, arm64).
 rem Gradle/CMake fail on Cyrillic paths, so the project is mirrored to C:\sali-build first.
+rem Full output goes to build-apk.log next to this file.
 setlocal
 set SRC=%~dp0
+set LOG=%~dp0build-apk.log
+if "%~1"=="run" goto :run
+title Sali VPN - APK build
+echo Building Sali VPN APK... first run also installs JDK and Android SDK (20-40 minutes).
+echo Log: %LOG%
+call "%~f0" run > "%LOG%" 2>&1
+if errorlevel 1 (echo. & echo BUILD FAILED - see build-apk.log) else (echo. & echo DONE: %SRC%apps\mobile\dist\sali-vpn-0.3.0.apk)
+pause
+exit /b
+
+:run
 set DST=C:\sali-build
-if exist C:\sali-jdk17 set JAVA_HOME=C:\sali-jdk17
-if exist C:\sali-android-sdk set ANDROID_HOME=C:\sali-android-sdk
+if not exist C:\sali-android\sdk\platforms\android-35 (
+  echo [0/4] Installing JDK 17 and Android SDK into C:\sali-android ...
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%SRC%setup-android.ps1" || exit /b 1
+)
+set JAVA_HOME=C:\sali-android\jdk17
+set ANDROID_HOME=C:\sali-android\sdk
+if defined ANDROID_HOME set ANDROID_SDK_ROOT=%ANDROID_HOME%
 if defined JAVA_HOME set PATH=%JAVA_HOME%\bin;%PATH%
+echo JAVA_HOME=%JAVA_HOME%
+echo ANDROID_HOME=%ANDROID_HOME%
 
 echo [1/4] Copying project to %DST% ...
-robocopy "%SRC%." "%DST%" /MIR /XD node_modules .git build .gradle .expo .wrangler /XF *.apk /NFL /NDL /NJH /NJS /NP
-if errorlevel 8 goto :fail
+robocopy "%SRC%." "%DST%" /MIR /XD node_modules .git build .gradle .cxx .expo .wrangler dist /XF *.apk *.zip build-apk.log /NFL /NDL /NJH /NJS /NP
+if errorlevel 8 exit /b 1
 
 echo [2/4] Installing dependencies ...
 cd /d "%DST%"
-call npm install || goto :fail
-call npm run build --workspace=packages/types || goto :fail
+call npm install --no-audit --no-fund || exit /b 1
+call npm run build --workspace=packages/types || exit /b 1
 
 echo [3/4] Building release APK ...
+if exist "%ANDROID_HOME%" (echo sdk.dir=%ANDROID_HOME:\=/%> "%DST%\apps\mobile\android\local.properties")
 cd /d "%DST%\apps\mobile\android"
-call gradlew.bat assembleRelease -PreactNativeArchitectures=arm64-v8a || goto :fail
+call gradlew.bat assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon || exit /b 1
 
 echo [4/4] Copying APK ...
 if not exist "%SRC%apps\mobile\dist" mkdir "%SRC%apps\mobile\dist"
-copy /Y "%DST%\apps\mobile\android\app\build\outputs\apk\release\app-release.apk" "%SRC%apps\mobile\dist\sali-vpn-0.3.0.apk" >nul || goto :fail
-echo.
-echo Done: %SRC%apps\mobile\dist\sali-vpn-0.3.0.apk
-pause
+copy /Y "%DST%\apps\mobile\android\app\build\outputs\apk\release\app-release.apk" "%SRC%apps\mobile\dist\sali-vpn-0.3.0.apk" || exit /b 1
+echo BUILD OK
 exit /b 0
-
-:fail
-echo.
-echo Build failed - see the error above.
-pause
-exit /b 1
