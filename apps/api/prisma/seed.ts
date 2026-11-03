@@ -18,6 +18,21 @@ async function main() {
     },
   });
 
+  // Annual plan — sold in the bot as a 365-day activation code.
+  await prisma.plan.upsert({
+    where: { code: 'pro_yearly' },
+    update: { isActive: true },
+    create: {
+      code: 'pro_yearly',
+      name: 'Sali Pro · год',
+      durationDays: 365,
+      priceUsd: Number(process.env.SUBSCRIPTION_YEAR_PRICE_USD ?? 40),
+      originalPriceUsd: Number(process.env.SUBSCRIPTION_YEAR_ORIGINAL_PRICE_USD ?? 60),
+      maxDevices: Number(process.env.MAX_DEVICES_PER_PLAN ?? 3),
+      isActive: true,
+    },
+  });
+
   await prisma.vpnServer.upsert({
     where: { id: '00000000-0000-0000-0000-000000000002' },
     update: { premiumOnly: true, countryCode: 'DE', city: 'Frankfurt', pingMs: 45 },

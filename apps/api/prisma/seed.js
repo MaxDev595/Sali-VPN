@@ -18,6 +18,21 @@ async function main() {
     },
   });
 
+  // Annual plan — sold in the bot as a 365-day activation code.
+  await prisma.plan.upsert({
+    where: { code: 'pro_yearly' },
+    update: { isActive: true },
+    create: {
+      code: 'pro_yearly',
+      name: 'Sali Pro · год',
+      durationDays: 365,
+      priceUsd: Number(process.env.SUBSCRIPTION_YEAR_PRICE_USD ?? 40),
+      originalPriceUsd: Number(process.env.SUBSCRIPTION_YEAR_ORIGINAL_PRICE_USD ?? 60),
+      maxDevices: Number(process.env.MAX_DEVICES_PER_PLAN ?? 3),
+      isActive: true,
+    },
+  });
+
   await prisma.vpnServer.upsert({ where: { id: '00000000-0000-0000-0000-000000000002' }, update: { premiumOnly: true, countryCode: 'DE', city: 'Frankfurt', pingMs: 45 }, create: { id: '00000000-0000-0000-0000-000000000002', name: 'Sali DE-1', location: 'Germany', publicHost: process.env.WIREGUARD_SERVER_PUBLIC_HOST ?? '127.0.0.1', publicPort: Number(process.env.WIREGUARD_SERVER_PUBLIC_PORT ?? 51820), provider: 'wireguard', isActive: true, premiumOnly: true, countryCode: 'DE', city: 'Frankfurt', pingMs: 45 } });
   await prisma.vpnServer.upsert({ where: { id: '00000000-0000-0000-0000-000000000003' }, update: { premiumOnly: true, countryCode: 'US', city: 'New York', pingMs: 88 }, create: { id: '00000000-0000-0000-0000-000000000003', name: 'Sali US-1', location: 'United States', publicHost: process.env.WIREGUARD_SERVER_PUBLIC_HOST ?? '127.0.0.1', publicPort: Number(process.env.WIREGUARD_SERVER_PUBLIC_PORT ?? 51820), provider: 'wireguard', isActive: true, premiumOnly: true, countryCode: 'US', city: 'New York', pingMs: 88 } });
 

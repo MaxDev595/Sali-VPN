@@ -11,7 +11,12 @@ export type SupportTicketStatus = 'OPEN' | 'IN_PROGRESS' | 'CLOSED';
 
 export interface UserDTO {
   id: string;
-  telegramId: string;
+  /** Null for store-app accounts. */
+  telegramId: string | null;
+  /** Human-readable account number, e.g. SL-7K4P-Q2M9. */
+  publicId: string;
+  /** True once the customer opened the bot from the app (or it is a Telegram account). */
+  telegramLinked: boolean;
   username?: string | null;
   firstName?: string | null;
   lastName?: string | null;
@@ -111,6 +116,15 @@ export interface HomeStateDTO {
   trial: TrialDTO | null;
   subscription: SubscriptionDTO | null;
   hasEverHadAccess: boolean;
+}
+
+export type ActivationCodeKind = 'PAID' | 'FREE' | 'GIFT' | 'PROMO';
+
+export interface RedeemResultDTO {
+  kind: ActivationCodeKind;
+  durationDays: number;
+  planName: string | null;
+  expiresAt: string | null;
 }
 
 export interface ApiErrorBody {

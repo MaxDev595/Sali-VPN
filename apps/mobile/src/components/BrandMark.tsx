@@ -1,3 +1,8 @@
-import { Image, StyleSheet, View } from 'react-native';
-export function BrandMark({ size = 38 }: { size?: number }) { return <View style={[styles.frame, { width: size, height: size, borderRadius: size * .25 }]}><Image source={require('../../assets/sali-logo.png')} resizeMode="contain" style={styles.image} /></View>; }
-const styles = StyleSheet.create({ frame: { overflow: 'hidden', backgroundColor: '#fff' }, image: { width: '100%', height: '100%', transform: [{ scale: .86 }] } });
+import { StyleSheet, View } from 'react-native';
+import { LogoMark } from './LogoMark';
+
+/** App-wide brand badge: the original logo on white, like an app icon. */
+export function BrandMark({ size = 38 }: { size?: number }) {
+  return <View style={[styles.frame, { width: size, height: size, borderRadius: size * .28 }]}><LogoMark size={size * .74} tone="dark" /></View>;
+}
+const styles = StyleSheet.create({ frame: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' } });

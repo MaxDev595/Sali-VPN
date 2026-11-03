@@ -36,7 +36,7 @@ export class SupportService {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const text = [
       '🛟 Новое обращение в поддержку',
-      `От: ${user.username ? '@' + user.username : user.telegramId.toString()}`,
+      `От: ${user.username ? '@' + user.username : (user.telegramId ?? user.linkedTelegramId)?.toString() ?? 'приложение'} · Sali ID SL-${user.publicId.slice(0, 4)}-${user.publicId.slice(4)}`,
       `Категория: ${category}`,
       `Сообщение: ${message}`,
     ].join('\n');

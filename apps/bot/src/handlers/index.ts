@@ -1,7 +1,7 @@
 import { Context } from 'telegraf';
 import { BotConfig } from '../config';
 import { api, BotUserState } from '../services/api-client';
-import { accessText, date, genericError, onboarding } from '../messages';
+import { accessText, date, genericError, howItWorks, onboarding } from '../messages';
 import {
   expiredAccessKeyboard,
   faqKeyboard,
@@ -13,11 +13,14 @@ import {
 } from '../keyboards';
 
 const FAQ: Record<string, string> = {
-  faq_connect: '<b>Как подключить VPN?</b>\n\nОткройте Sali VPN, нажмите кнопку подключения и следуйте короткой инструкции для вашего устройства.',
-  faq_not_connecting: '<b>VPN не подключается</b>\n\nПроверьте интернет, отключите другой VPN и попробуйте подключиться снова. Если не помогло — напишите в поддержку.',
+  faq_how: howItWorks,
+  faq_code: '<b>Куда вводить код?</b>\n\nОткройте приложение Sali VPN → на главном экране кнопка «Ввести код» (или Аккаунт → «Ввести код»). Регистр и дефисы не важны. Код одноразовый: после активации он привязывается к устройству.',
+  faq_link: '<b>Как привязать устройство?</b>\n\nВ приложении нажмите «Привязать Telegram» — откроется этот бот, и устройство запомнится автоматически. Или пришлите сюда Sali ID из приложения: <code>SL-XXXX-XXXX</code>.',
+  faq_connect: '<b>Как подключить VPN?</b>\n\nОткройте Sali VPN, нажмите большую кнопку подключения и разрешите VPN-профиль.',
+  faq_not_connecting: '<b>VPN не подключается</b>\n\nПроверьте, что тариф активен («📱 Мои устройства»), отключите другие VPN и попробуйте снова. Если не помогло — напишите в поддержку и укажите ваш Sali ID.',
   faq_server: '<b>Как сменить сервер?</b>\n\nОткройте Sali VPN и выберите доступный сервер в приложении.',
-  faq_buy: '<b>Как купить подписку?</b>\n\nОткройте раздел «Подписка» в Sali VPN и выберите тариф.',
-  faq_payment: '<b>Проблемы с оплатой</b>\n\nНе повторяйте платёж много раз. Проверьте его статус в Sali VPN, затем обратитесь в поддержку.',
+  faq_buy: '<b>Как купить подписку?</b>\n\nНажмите «💎 Купить подписку», выберите месяц или год и способ оплаты. Бот пришлёт код.',
+  faq_payment: '<b>Проблемы с оплатой</b>\n\nНе оплачивайте повторно. Код всегда сохраняется в «🔑 Мои коды». Для USDT нажмите «Я оплатил — проверить». Если кода нет через 10 минут — напишите в поддержку.',
 };
 
 function profile(ctx: Context) {
@@ -115,7 +118,7 @@ export function createHandlers(config: BotConfig) {
           : state.trial?.status === 'ACTIVE'
             ? `<b>Подписка</b>\n\nСейчас действует бесплатный период.\nОсталось: ${Math.ceil(state.trial.secondsRemaining / 60)} мин.`
             : '<b>Подписка</b>\n\nАктивной подписки нет.';
-        await ctx.replyWithHTML(text, openAppKeyboard(config.subscriptionUrl, state.subscription?.status === 'EXPIRED' ? '💎 Продлить подписку' : '💎 Купить подписку'));
+        await ctx.replyWithHTML(text, expiredAccessKeyboard(config.miniAppUrl));
       } catch (error) {
         console.error('Failed to show subscription', error);
         await ctx.reply(genericError);
@@ -123,7 +126,7 @@ export function createHandlers(config: BotConfig) {
     },
 
     tariffs: async (ctx: Context) => {
-      await ctx.reply('Выберите подходящий тариф', openAppKeyboard(config.tariffsUrl, 'Открыть тарифы'));
+      await ctx.reply('Тарифы и оплата — в разделе «💎 Купить подписку».', expiredAccessKeyboard(config.miniAppUrl));
     },
 
     servers: async (ctx: Context) => {
@@ -166,7 +169,7 @@ export function createHandlers(config: BotConfig) {
         const telegram = state.user.username ? `@${state.user.username}` : state.user.firstName || 'Telegram';
         const tariff = state.subscription?.plan.name ?? (state.trial?.status === 'ACTIVE' ? 'Бесплатный' : 'Нет активного тарифа');
         await ctx.reply(
-          ['Аккаунт', '', `Telegram: ${telegram}`, `Sali ID: ${state.user.publicId}`, `Статус: ${state.state === 'BLOCKED' ? 'ограничен' : 'активен'}`, `Тариф: ${tariff}`, ...(state.subscription ? [`Действует до: ${date(state.subscription.expiresAt)}`] : [])].join('\n'),
+          ['Аккаунт', '', `Telegram: ${telegram}`, `Sali ID: SL-${state.user.publicId.slice(0, 4)}-${state.user.publicId.slice(4)}`, `Статус: ${state.state === 'BLOCKED' ? 'ограничен' : 'активен'}`, `Тариф: ${tariff}`, ...(state.subscription ? [`Действует до: ${date(state.subscription.expiresAt)}`] : [])].join('\n'),
           openAppKeyboard(config.accountUrl, 'Открыть аккаунт'),
         );
       } catch (error) {

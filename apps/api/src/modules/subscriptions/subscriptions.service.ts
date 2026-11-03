@@ -72,6 +72,42 @@ export class SubscriptionsService {
     return updated;
   }
 
+  /**
+   * Adds days of access (activation codes). Stacks on top of an active
+   * subscription, otherwise starts a new one from now.
+   */
+  async grantDays(userId: string, planId: string, days: number, provider: string) {
+    const now = new Date();
+    const active = await this.getActiveForUser(userId);
+    const subscription = active
+      ? await this.prisma.subscription.update({
+          where: { id: active.id },
+          data: { expiresAt: new Date((active.expiresAt && active.expiresAt > now ? active.expiresAt : now).getTime() + days * 86_400_000) },
+        })
+      : await this.prisma.subscription.create({
+          data: { userId, planId, provider, status: SubscriptionStatus.ACTIVE, startedAt: now, expiresAt: new Date(now.getTime() + days * 86_400_000), autoRenew: false },
+        });
+    await this.vpn.ensureAccountForUser(userId);
+    await this.vpn.enable(userId);
+    return subscription;
+  }
+
+  /** Reminds customers 3 days before access ends (once per subscription period). */
+  @Cron(CronExpression.EVERY_HOUR)
+  async remindExpiringSoon() {
+    const now = new Date();
+    const soon = await this.prisma.subscription.findMany({
+      where: { status: SubscriptionStatus.ACTIVE, expiresAt: { gt: now, lte: new Date(now.getTime() + 3 * 86_400_000) } },
+      select: { userId: true, expiresAt: true },
+    });
+    for (const sub of soon) {
+      const alreadySent = await this.prisma.notification.findFirst({
+        where: { userId: sub.userId, type: 'SUBSCRIPTION_EXPIRING_SOON', createdAt: { gt: new Date(now.getTime() - 4 * 86_400_000) } },
+      });
+      if (!alreadySent) await this.notifications.enqueue(sub.userId, 'SUBSCRIPTION_EXPIRING_SOON');
+    }
+  }
+
   /** Server-authoritative expiry sweep — never trust a client-side clock. */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async sweepExpiredSubscriptions() {

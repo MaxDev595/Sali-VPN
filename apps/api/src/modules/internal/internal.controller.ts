@@ -118,7 +118,7 @@ export class InternalController {
       state,
       registered,
       user: {
-        publicId: user.id.slice(0, 8).toUpperCase(),
+        publicId: user.publicId,
         username: user.username,
         firstName: user.firstName,
         isBlocked: user.isBlocked,

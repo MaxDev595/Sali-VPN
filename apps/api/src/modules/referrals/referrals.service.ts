@@ -85,7 +85,7 @@ export class ReferralsService {
     ]);
 
     return {
-      link: this.buildReferralLink(user.telegramId),
+      link: this.buildReferralLink(user.telegramId ?? user.linkedTelegramId ?? 0n),
       totalInvited,
       totalRewarded: rewards.length,
       availableDiscounts: rewards.filter((reward) => !reward.paymentId && !reward.consumedAt).length,

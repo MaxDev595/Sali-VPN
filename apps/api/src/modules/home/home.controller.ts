@@ -1,4 +1,5 @@
-import { Controller, Get, Headers, Post, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Headers, Post, UseGuards, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { formatPublicId } from '../codes/code-format';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthTokenPayload } from '../auth/auth.service';
@@ -39,7 +40,9 @@ export class HomeController {
     return {
       user: {
         id: user.id,
-        telegramId: user.telegramId.toString(),
+        telegramId: user.telegramId?.toString() ?? null,
+        publicId: formatPublicId(user.publicId),
+        telegramLinked: Boolean(user.telegramId ?? user.linkedTelegramId),
         username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -102,6 +105,11 @@ export class HomeController {
 
     const activeSub = access.activeSub;
     if (!activeSub) {
+      // Store-app accounts get the free tariff only through a FREE code from the bot.
+      const user = await this.users.findById(authUser.sub);
+      if (!user.telegramId && !(await this.trials.getTrial(authUser.sub))) {
+        throw new ForbiddenException('Нет активного тарифа. Получите код в Telegram-боте и введите его в приложении');
+      }
       await this.trials.assertAvailable(authUser.sub);
     }
     await this.vpn.enable(authUser.sub);

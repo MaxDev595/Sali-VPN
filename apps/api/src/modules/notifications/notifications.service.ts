@@ -8,8 +8,8 @@ const MESSAGES: Record<NotificationType, string> = {
   TRIAL_EXPIRED:
     'Ваш бесплатный период закончился.\n\nЧтобы продолжить пользоваться Sali VPN, оформите подписку.',
   SUBSCRIPTION_ACTIVATED: 'Подписка Sali VPN активирована.',
-  SUBSCRIPTION_EXPIRING_SOON: '⏳ Ваша подписка Sali Pro скоро закончится. Продлите, чтобы остаться на связи.',
-  SUBSCRIPTION_EXPIRED: 'Срок действия подписки Sali Pro истёк. VPN отключён.',
+  SUBSCRIPTION_EXPIRING_SOON: '⏳ Подписка Sali VPN закончится через 3 дня. Купите новый код в боте и введите его в приложении — дни добавятся к текущим.',
+  SUBSCRIPTION_EXPIRED: 'Срок действия подписки Sali VPN истёк. VPN отключён. Новый код можно купить здесь, в боте.',
   PAYMENT_FAILED: 'Не удалось провести оплату. Попробуйте ещё раз.',
   REFERRAL_REWARD: 'Друг зарегистрировался по вашей ссылке. Вам начислена скидка 10% на следующую оплату.',
 };
@@ -48,19 +48,21 @@ export class NotificationsService {
     if (!botToken) return;
 
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (!this.chatIdFor(user)) return;
     try {
       const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: user.telegramId.toString(),
+          chat_id: this.chatIdFor(user),
           text: 'Спасибо, что выбрали Sali VPN!\n\nВаш аккаунт создан. Желаем приятного и безопасного использования!',
           reply_markup: {
             keyboard: [
-              [{ text: 'Подключить VPN' }],
-              [{ text: 'Моя подписка' }, { text: 'Тарифы' }],
-              [{ text: 'Серверы' }, { text: 'Пригласить друга' }],
-              [{ text: 'Поддержка' }, { text: 'Настройки' }],
+              [{ text: '💎 Купить подписку' }],
+              [{ text: '🎁 Бесплатный тариф' }, { text: '🔑 Мои коды' }],
+              [{ text: '📱 Мои устройства' }, { text: '📲 Скачать приложение' }],
+              [{ text: '👥 Пригласить друга' }, { text: '💬 Поддержка' }],
+              [{ text: '⚙️ Аккаунт' }],
             ],
             resize_keyboard: true,
             is_persistent: true,
@@ -73,18 +75,44 @@ export class NotificationsService {
     }
   }
 
+  /** Telegram chat of the account: its own Telegram id, or the one that linked this app installation. */
+  private chatIdFor(user: { telegramId: bigint | null; linkedTelegramId: bigint | null }) {
+    return (user.telegramId ?? user.linkedTelegramId)?.toString() ?? null;
+  }
+
+  /** Free-form HTML message (activation codes, link confirmations). */
+  async sendHtml(userId: string, html: string, replyMarkup?: unknown) {
+    const botToken = this.config.get<string>('TELEGRAM_BOT_TOKEN');
+    if (!botToken) return false;
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const chatId = this.chatIdFor(user);
+    if (!chatId) return false;
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: html, parse_mode: 'HTML', ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }),
+    });
+    if (!response.ok) throw new Error(`Telegram sendMessage returned ${response.status}`);
+    return true;
+  }
+
   private async deliver(userId: string, type: NotificationType) {
     const botToken = this.config.get<string>('TELEGRAM_BOT_TOKEN');
     if (!botToken) return; // no-op if bot isn't configured (e.g. isolated API tests)
 
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     if (!user.notificationsEnabled) return;
+    const chatId = this.chatIdFor(user);
+    if (!chatId) return; // store-app account not linked to Telegram yet
     const text = MESSAGES[type];
+    const buyButton = ['TRIAL_EXPIRED', 'SUBSCRIPTION_EXPIRING_SOON', 'SUBSCRIPTION_EXPIRED', 'PAYMENT_FAILED'].includes(type)
+      ? { inline_keyboard: [[{ text: '💎 Купить код', callback_data: 'menu_buy' }]] }
+      : undefined;
 
     const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: user.telegramId.toString(), text }),
+      body: JSON.stringify({ chat_id: chatId, text, ...(buyButton ? { reply_markup: buyButton } : {}) }),
     });
     if (!response.ok) {
       throw new Error(`Telegram sendMessage returned ${response.status}`);

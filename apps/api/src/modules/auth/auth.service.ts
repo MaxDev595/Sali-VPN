@@ -67,13 +67,20 @@ export class AuthService {
       await this.notifications.sendWelcome(user.id);
     }
 
-    const token = await this.signToken(user.id, user.telegramId.toString());
+    const token = await this.signToken(user.id, telegramId.toString());
     return { token, startParam: parsed.startParam };
   }
 
   async signToken(userId: string, telegramId: string): Promise<string> {
     const payload: AuthTokenPayload = { sub: userId, tid: telegramId };
     return this.jwt.signAsync(payload);
+  }
+
+  /** Store app (APK / App Store): no Telegram, the installation key is the identity. */
+  async loginApp(deviceKey: string) {
+    const user = await this.users.findOrCreateAppUser(deviceKey);
+    if (user.isBlocked) throw new UnauthorizedException('Аккаунт заблокирован');
+    return { token: await this.signToken(user.id, ''), publicId: user.publicId };
   }
 
   async loginLocalDevice() {

@@ -1,0 +1,317 @@
+import { Context, Markup } from 'telegraf';
+import { BotConfig } from '../config';
+import { api, ApiRejection, TelegramProfile } from '../services/api-client';
+import {
+  checkPaymentKeyboard,
+  chooseDeviceKeyboard,
+  codeKeyboard,
+  downloadKeyboard,
+  enabledMethods,
+  mainReplyKeyboard,
+  methodsKeyboard,
+  PayMethod,
+  plansKeyboard,
+  welcomeKeyboard,
+} from '../keyboards';
+import {
+  codesListMessage,
+  devicesMessage,
+  freeCodeMessage,
+  genericError,
+  howItWorks,
+  linkResultMessage,
+  paidCodeMessage,
+  redeemedMessage,
+} from '../messages';
+
+/** Sali ID typed by the customer: SL-7K4P-Q2M9, sl7k4pq2m9, 7K4P Q2M9… */
+export const SALI_ID_PATTERN = /^\s*(?:SL[-\s]?)?([0-9A-Za-z]{4})[-\s]?([0-9A-Za-z]{4})\s*$/i;
+/** Activation code pasted into the chat. */
+export const CODE_PATTERN = /^\s*(?:SALI[-\s]?)?([0-9A-Za-z]{4})[-\s]?([0-9A-Za-z]{4})[-\s]?([0-9A-Za-z]{4})\s*$/i;
+
+function profile(ctx: Context): TelegramProfile | null {
+  if (!ctx.from) return null;
+  return {
+    telegramId: ctx.from.id,
+    username: ctx.from.username,
+    firstName: ctx.from.first_name,
+    lastName: ctx.from.last_name,
+    languageCode: ctx.from.language_code,
+  };
+}
+
+async function fail(ctx: Context, error: unknown, where: string) {
+  if (error instanceof ApiRejection) {
+    await ctx.reply(error.message);
+    return;
+  }
+  console.error(`Bot billing error in ${where}`, error);
+  await ctx.reply(genericError);
+}
+
+function callbackData(ctx: Context) {
+  return ctx.callbackQuery && 'data' in ctx.callbackQuery ? ctx.callbackQuery.data : '';
+}
+
+export function createBillingHandlers(config: BotConfig) {
+  const handlers = {
+    /** /start: registers the customer; start=link_<SaliID> claims the app installation ("фиксация клиента"). */
+    start: async (ctx: Context, startParam?: string): Promise<void> => {
+      const me = profile(ctx);
+      if (!me) return;
+      try {
+        const result = await api.start(me, startParam);
+        if (result.isBlocked) {
+          await ctx.reply('Доступ к аккаунту ограничен. Обратитесь в поддержку.');
+          return;
+        }
+        if (result.link) {
+          await ctx.replyWithHTML(linkResultMessage(result.link.status, result.link.publicId), mainReplyKeyboard);
+          if (result.link.status === 'linked' || result.link.status === 'already') {
+            await ctx.replyWithHTML(
+              result.freeUsed ? 'Осталось выбрать тариф 👇' : 'Начните с бесплатного тарифа или сразу выберите подписку 👇',
+              welcomeKeyboard(result.freeUsed),
+            );
+          }
+          return;
+        }
+        if (startParam === 'buy') return handlers.buy(ctx);
+        if (startParam === 'free') return handlers.free(ctx);
+        await ctx.replyWithHTML(
+          [
+            '<b>Sali VPN</b> — быстрый и приватный VPN в одно нажатие.',
+            '',
+            `Ваш Sali ID в боте: <code>${result.publicId}</code>`,
+            '',
+            howItWorks,
+          ].join('\n'),
+          mainReplyKeyboard,
+        );
+        await ctx.reply('С чего начнём?', welcomeKeyboard(result.freeUsed));
+      } catch (error) {
+        await fail(ctx, error, 'start');
+      }
+    },
+
+    buy: async (ctx: Context): Promise<void> => {
+      try {
+        const plans = await api.plans();
+        await ctx.replyWithHTML(
+          [
+            '<b>Подписка Sali VPN</b>',
+            '',
+            '• все серверы и максимальная скорость',
+            `• до ${plans[0]?.maxDevices ?? 3} устройств`,
+            '• без рекламы и логов',
+            '',
+            'После оплаты вы получите код — введите его в приложении. Если подписка уже есть, дни добавятся к текущим.',
+          ].join('\n'),
+          plansKeyboard(plans),
+        );
+      } catch (error) {
+        await fail(ctx, error, 'buy');
+      }
+    },
+
+    /** buy_<planCode> → choose how to pay. */
+    choosePlan: async (ctx: Context): Promise<void> => {
+      const planCode = callbackData(ctx).replace(/^buy_/, '');
+      await ctx.answerCbQuery().catch(() => undefined);
+      const methods = enabledMethods();
+      if (methods.length === 1) return handlers.pay(ctx, methods[0], planCode);
+      await ctx.reply('Как удобнее оплатить?', methodsKeyboard(planCode));
+    },
+
+    /** pay_<method>_<planCode> */
+    payCallback: async (ctx: Context) => {
+      const [, method, ...rest] = callbackData(ctx).split('_');
+      await ctx.answerCbQuery().catch(() => undefined);
+      await handlers.pay(ctx, method as PayMethod, rest.join('_'));
+    },
+
+    pay: async (ctx: Context, method: PayMethod, planCode: string): Promise<void> => {
+      const me = profile(ctx);
+      if (!me) return;
+      try {
+        const purchase = await api.purchase(me, planCode, method);
+        if (purchase.method === 'stars') {
+          await ctx.replyWithInvoice({
+            title: purchase.title,
+            description: purchase.description,
+            payload: purchase.paymentId,
+            provider_token: '',
+            currency: 'XTR',
+            prices: [{ label: purchase.title, amount: purchase.stars }],
+          });
+          return;
+        }
+        if (purchase.cryptoInvoice) {
+          const invoice = purchase.cryptoInvoice;
+          const until = new Date(invoice.expiresAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+          await ctx.replyWithHTML(
+            [
+              `<b>Оплата ${invoice.asset} · сеть ${invoice.network}</b>`,
+              '',
+              `Сумма (точно): <code>${invoice.amount}</code> ${invoice.asset}`,
+              `Адрес: <code>${invoice.address}</code>`,
+              ...(invoice.reference ? [`Комментарий (обязательно): <code>${invoice.reference}</code>`] : []),
+              '',
+              `Счёт действует до ${until} UTC. Код придёт сюда автоматически сразу после подтверждения сети.`,
+            ].join('\n'),
+            checkPaymentKeyboard(purchase.paymentId, invoice.paymentUrl, '👛 Открыть кошелёк'),
+          );
+          return;
+        }
+        if (purchase.checkoutUrl) {
+          await ctx.reply('Оплата картой откроется на защищённой странице. Код придёт сюда после оплаты.', checkPaymentKeyboard(purchase.paymentId, purchase.checkoutUrl, '💳 Перейти к оплате'));
+          return;
+        }
+        await ctx.reply(genericError);
+      } catch (error) {
+        await fail(ctx, error, 'pay');
+      }
+    },
+
+    preCheckout: async (ctx: Context) => {
+      if (!('pre_checkout_query' in ctx.update)) return;
+      const query = ctx.update.pre_checkout_query;
+      try {
+        const result = await api.precheck(query.from.id, query.invoice_payload, query.total_amount, query.currency);
+        await ctx.answerPreCheckoutQuery(result.ok, result.error);
+      } catch (error) {
+        console.error('pre_checkout_query failed', error);
+        await ctx.answerPreCheckoutQuery(false, 'Не получилось проверить счёт. Попробуйте ещё раз через минуту.');
+      }
+    },
+
+    successfulPayment: async (ctx: Context) => {
+      if (!ctx.message || !('successful_payment' in ctx.message) || !ctx.from) return;
+      const payment = ctx.message.successful_payment;
+      try {
+        if (payment.currency !== 'XTR') {
+          // Legacy invoices created before the code flow.
+          await api.confirmPayment(payment.invoice_payload);
+          await ctx.reply('Оплата прошла успешно. Подписка активирована.');
+          return;
+        }
+        const result = await api.starsPaid(ctx.from.id, payment.invoice_payload, payment.total_amount, payment.currency, payment.telegram_payment_charge_id);
+        if (result.code) await ctx.replyWithHTML(paidCodeMessage(result.code), codeKeyboard(result.code));
+        else await ctx.reply('Оплата получена. Код появится в разделе «Мои коды» через минуту.');
+      } catch (error) {
+        console.error('Failed to confirm Stars payment', error);
+        await ctx.reply('Оплата получена ✅ Код появится в разделе «🔑 Мои коды». Если его нет через 5 минут — напишите в поддержку.');
+      }
+    },
+
+    /** chk_<paymentId> */
+    checkPayment: async (ctx: Context) => {
+      const paymentId = callbackData(ctx).replace(/^chk_/, '');
+      if (!ctx.from) return;
+      try {
+        const result = await api.paymentStatus(ctx.from.id, paymentId);
+        if (result.status === 'SUCCEEDED' && result.code) {
+          await ctx.answerCbQuery('Оплата найдена ✅').catch(() => undefined);
+          await ctx.replyWithHTML(paidCodeMessage(result.code), codeKeyboard(result.code));
+        } else if (result.status === 'FAILED') {
+          await ctx.answerCbQuery('Счёт истёк или платёж не прошёл', { show_alert: true }).catch(() => undefined);
+        } else {
+          await ctx.answerCbQuery('Пока не видим оплату. Сеть может подтверждать до пары минут.', { show_alert: true }).catch(() => undefined);
+        }
+      } catch (error) {
+        await ctx.answerCbQuery().catch(() => undefined);
+        await fail(ctx, error, 'checkPayment');
+      }
+    },
+
+    free: async (ctx: Context): Promise<void> => {
+      if (!ctx.from) return;
+      try {
+        const code = await api.freeCode(ctx.from.id);
+        await ctx.replyWithHTML(freeCodeMessage(code, code.alreadyIssued), codeKeyboard(code));
+      } catch (error) {
+        if (error instanceof ApiRejection && error.status === 404) {
+          await api.start(profile(ctx)!).catch(() => undefined);
+          return handlers.free(ctx);
+        }
+        if (error instanceof ApiRejection) {
+          await ctx.reply(`${error.message}. Выберите подписку на месяц или год 👇`, Markup.inlineKeyboard([[Markup.button.callback('💎 Купить подписку', 'menu_buy')]]));
+          return;
+        }
+        await fail(ctx, error, 'free');
+      }
+    },
+
+    codes: async (ctx: Context) => {
+      if (!ctx.from) return;
+      try {
+        await ctx.replyWithHTML(codesListMessage(await api.codes(ctx.from.id)));
+      } catch (error) {
+        await fail(ctx, error, 'codes');
+      }
+    },
+
+    devices: async (ctx: Context) => {
+      if (!ctx.from) return;
+      try {
+        await ctx.replyWithHTML(devicesMessage(await api.devices(ctx.from.id)), downloadKeyboard());
+      } catch (error) {
+        await fail(ctx, error, 'devices');
+      }
+    },
+
+    download: async (ctx: Context) => {
+      await ctx.replyWithHTML(
+        [
+          '<b>Приложение Sali VPN</b>',
+          '',
+          'После установки откройте приложение и нажмите «Привязать Telegram» — устройство появится в «📱 Мои устройства», а коды можно будет активировать одной кнопкой.',
+        ].join('\n'),
+        downloadKeyboard(),
+      );
+    },
+
+    /** apply_<code> and at_<code>_<SaliID>: redeem a code onto a linked device without typing. */
+    apply: async (ctx: Context) => {
+      const data = callbackData(ctx);
+      const [, code, publicId] = data.split('_');
+      if (!ctx.from || !code) return;
+      await ctx.answerCbQuery().catch(() => undefined);
+      try {
+        const result = await api.apply(ctx.from.id, code, publicId);
+        if (result.chooseDevice) {
+          await ctx.reply('На какое устройство активировать?', chooseDeviceKeyboard(code, result.chooseDevice));
+          return;
+        }
+        await ctx.replyWithHTML(redeemedMessage(result));
+      } catch (error) {
+        await fail(ctx, error, 'apply');
+      }
+    },
+
+    /** Free text: a Sali ID links a device, an activation code gets an "activate" button. */
+    text: async (ctx: Context, next: () => Promise<void>) => {
+      if (!ctx.message || !('text' in ctx.message) || !ctx.from) return next();
+      const text = ctx.message.text;
+      const code = text.match(CODE_PATTERN);
+      if (code) {
+        const raw = code.slice(1).join('').toUpperCase();
+        await ctx.reply(`Код SALI-${code[1]}-${code[2]}-${code[3]}`.toUpperCase(), Markup.inlineKeyboard([[Markup.button.callback('⚡ Активировать на моём устройстве', `apply_${raw}`)]]));
+        return;
+      }
+      const id = text.match(SALI_ID_PATTERN);
+      if (id && /\d/.test(text) && /^\s*SL/i.test(text)) {
+        try {
+          const result = await api.link(ctx.from.id, `${id[1]}${id[2]}`);
+          await ctx.replyWithHTML(linkResultMessage(result.status, result.publicId));
+        } catch (error) {
+          await fail(ctx, error, 'link');
+        }
+        return;
+      }
+      return next();
+    },
+
+    openMiniApp: config.miniAppUrl,
+  };
+  return handlers;
+}

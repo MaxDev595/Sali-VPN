@@ -16,7 +16,19 @@ datasource db {
 
 model User {
   id            String   @id @default(uuid())
-  telegramId    BigInt   @unique
+  /// Short human-readable account number shown in the app, bot and support
+  /// (e.g. "SL-7K4P-Q2M9" is stored as "7K4PQ2M9").
+  publicId      String   @unique
+  /// Telegram identity. Null for accounts created by the store app before the
+  /// customer opened the bot.
+  telegramId    BigInt?  @unique
+  /// Store-app installation identity (hashed ANDROID_ID / iOS keychain id).
+  appDeviceKey  String?  @unique
+  /// Telegram account that "claimed" this app installation via the bot
+  /// (t.me/<bot>?start=link_<publicId>). Used for notifications and to show
+  /// the customer their devices in the bot.
+  linkedTelegramId BigInt?
+  linkedAt      DateTime?
   username      String?
   firstName     String?
   lastName      String?
@@ -46,7 +58,11 @@ model User {
 
   referralRewards ReferralReward[]
 
+  activationCodesOwned    ActivationCode[] @relation("CodeOwner")
+  activationCodesRedeemed ActivationCode[] @relation("CodeRedeemer")
+
   @@index([telegramId])
+  @@index([linkedTelegramId])
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +180,7 @@ model Plan {
 
   subscriptions  Subscription[]
   payments       Payment[]
+  activationCodes ActivationCode[]
 }
 
 enum SubscriptionStatus {
@@ -227,11 +244,15 @@ model Payment {
   currency         String        @default("USD")
   status           PaymentStatus @default(PENDING)
   failureReason    String?
+  /// Bot purchases do not activate anything directly: on success an
+  /// ActivationCode is issued and sent to the buyer in Telegram.
+  deliverAsCode    Boolean       @default(false)
 
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
   cryptoInvoice    CryptoInvoice?
+  activationCode   ActivationCode?
 
   @@index([userId, status])
   @@index([externalPaymentId])
@@ -406,4 +427,55 @@ model Notification {
   payload   Json?
   sentAt    DateTime?
   createdAt DateTime         @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Activation codes
+// ---------------------------------------------------------------------------
+// The only way access reaches the store app: the bot sells (or gives for free)
+// a one-time code, the customer types it into the app.
+
+enum ActivationCodeKind {
+  PAID   // bought in the bot (Stars / USDT / card)
+  FREE   // free tariff, one per Telegram account
+  GIFT   // issued by an admin or bought as a gift
+  PROMO  // marketing campaigns
+}
+
+enum ActivationCodeStatus {
+  ISSUED
+  REDEEMED
+  REVOKED
+}
+
+model ActivationCode {
+  id            String               @id @default(uuid())
+  /// Canonical form without dashes, Crockford base32 (no I, L, O, U).
+  code          String               @unique
+  kind          ActivationCodeKind
+  status        ActivationCodeStatus @default(ISSUED)
+  /// Days of access granted. 0 for FREE codes (they unlock the free trial).
+  durationDays  Int
+
+  planId        String?
+  plan          Plan?                @relation(fields: [planId], references: [id])
+
+  ownerId       String
+  owner         User                 @relation("CodeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  paymentId     String?              @unique
+  payment       Payment?             @relation(fields: [paymentId], references: [id])
+
+  redeemedById  String?
+  redeemedBy    User?                @relation("CodeRedeemer", fields: [redeemedById], references: [id])
+  redeemedAt    DateTime?
+
+  /// A code must be activated before this date.
+  expiresAt     DateTime
+  note          String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([ownerId, status])
+  @@index([redeemedById])
 }

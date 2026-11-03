@@ -1,3 +1,4 @@
+import { LogoBadge, LogoWordmark } from '../landing/AnimatedLogo';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { HomeStateDTO } from '@sali/types';
@@ -48,8 +49,8 @@ export function HomeScreen() {
     Boolean(state?.trial?.isRunning),
   );
 
-  if (loading) return <div className="px-5 pt-4 pb-8 space-y-5 screen-enter"><h1 className="text-2xl font-semibold tracking-tight">SALi VPN</h1><DownloadOptions /><div className="-mx-5"><HomeSkeleton /></div></div>;
-  if (error || !state) return <div className="px-5 pt-4 pb-8 space-y-5 screen-enter"><h1 className="text-2xl font-semibold tracking-tight">SALi VPN</h1><DownloadOptions /><Card><p className="text-lg font-medium">Подключение в один шаг</p><p className="mt-2 text-sm leading-6 text-sali-gray-400">Установите удобное приложение, получите конфигурацию Sali и включите защищённое соединение.</p></Card></div>;
+  if (loading) return <div className="px-5 pt-4 pb-8 space-y-5 screen-enter"><h1 className="flex items-center gap-2.5" aria-label="Sali VPN"><LogoBadge className="h-9 w-9" /><LogoWordmark vpn={false} className="h-6 w-auto" /></h1><DownloadOptions /><div className="-mx-5"><HomeSkeleton /></div></div>;
+  if (error || !state) return <div className="px-5 pt-4 pb-8 space-y-5 screen-enter"><h1 className="flex items-center gap-2.5" aria-label="Sali VPN"><LogoBadge className="h-9 w-9" /><LogoWordmark vpn={false} className="h-6 w-auto" /></h1><DownloadOptions /><Card><p className="text-lg font-medium">Подключение в один шаг</p><p className="mt-2 text-sm leading-6 text-sali-gray-400">Установите удобное приложение, получите конфигурацию Sali и включите защищённое соединение.</p></Card></div>;
 
   const isProvisioned = state.vpn?.status === 'ACTIVE';
   const trialActive = state.trial?.status === 'ACTIVE' && state.trial.secondsRemaining > 0;
@@ -84,7 +85,7 @@ export function HomeScreen() {
 
   return (
     <div className="px-5 pt-4 pb-8 space-y-5 screen-enter">
-      <h1 className="text-2xl font-semibold tracking-tight">SALi VPN</h1>
+      <h1 className="flex items-center gap-2.5" aria-label="Sali VPN"><LogoBadge className="h-9 w-9" /><LogoWordmark vpn={false} className="h-6 w-auto" /></h1>
 
       <DownloadOptions />
 

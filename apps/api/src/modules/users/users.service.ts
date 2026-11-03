@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { newPublicId, normalizePublicId } from '../codes/code-format';
 
 export interface TelegramProfile {
   telegramId: bigint;
@@ -44,6 +46,7 @@ export class UsersService {
         isAdmin,
       },
       create: {
+        publicId: newPublicId(),
         telegramId: profile.telegramId,
         username: profile.username,
         firstName: profile.firstName,
@@ -52,6 +55,42 @@ export class UsersService {
         isAdmin,
       },
     });
+  }
+
+  /**
+   * Store-app account: created silently on first launch, identified by the
+   * installation key. Access only ever arrives through activation codes.
+   */
+  async findOrCreateAppUser(appDeviceKey: string) {
+    const existing = await this.prisma.user.findUnique({ where: { appDeviceKey } });
+    if (existing) return existing;
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.prisma.user.create({ data: { publicId: newPublicId(), appDeviceKey, preferredLanguage: 'ru' } });
+      } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002' || attempt >= 4) throw error;
+        const raced = await this.prisma.user.findUnique({ where: { appDeviceKey } });
+        if (raced) return raced;
+      }
+    }
+  }
+
+  async findByPublicId(publicId: string) {
+    return this.prisma.user.findUnique({ where: { publicId: normalizePublicId(publicId) } });
+  }
+
+  /** "Фиксация клиента": the bot ties a store-app installation to a Telegram account. */
+  async linkAppToTelegram(publicId: string, telegramId: bigint) {
+    const app = await this.findByPublicId(publicId);
+    if (!app || !app.appDeviceKey) return { status: 'not_found' as const };
+    if (app.linkedTelegramId && app.linkedTelegramId !== telegramId) return { status: 'linked_elsewhere' as const, app };
+    if (app.linkedTelegramId === telegramId) return { status: 'already' as const, app };
+    const updated = await this.prisma.user.update({ where: { id: app.id }, data: { linkedTelegramId: telegramId, linkedAt: new Date() } });
+    return { status: 'linked' as const, app: updated };
+  }
+
+  async listLinkedApps(telegramId: bigint) {
+    return this.prisma.user.findMany({ where: { linkedTelegramId: telegramId }, orderBy: { linkedAt: 'desc' } });
   }
 
   async findByTelegramId(telegramId: bigint) {

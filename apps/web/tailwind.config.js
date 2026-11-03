@@ -4,27 +4,33 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Sali brand: navy ink + peach pen cap (see logo / salivpn.com)
+        black: '#040913',
         sali: {
-          black: '#000000',
+          black: '#040913',
+          navy: '#06101F',
           white: '#FFFFFF',
           gray: {
-            950: '#0A0A0A',
-            900: '#111111',
-            800: '#1C1C1C',
-            700: '#2A2A2A',
-            600: '#3D3D3D',
-            500: '#6B6B6B',
-            400: '#9A9A9A',
-            300: '#C7C7C7',
-            200: '#E4E4E4',
-            100: '#F2F2F2',
+            950: '#0A1222',
+            900: '#101A2E',
+            800: '#18233A',
+            700: '#26324B',
+            600: '#36445F',
+            500: '#5E6A85',
+            400: '#8792AB',
+            300: '#B7C0D4',
+            200: '#D6DEEE',
+            100: '#EEF2FA',
           },
-          accent: '#00E38A', // used sparingly: active/connected state only
-          danger: '#FF5C5C',
+          accent: '#FFC587', // peach: primary actions
+          success: '#5BE0A8', // connected / active
+          danger: '#FF7A7A',
         },
       },
       fontFamily: {
+        display: ['Outfit', 'Inter', 'sans-serif'],
         sans: [
+          '"Inter"',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Inter"',
@@ -33,9 +39,9 @@ export default {
         ],
       },
       borderRadius: {
-        md: '12px',
-        lg: '16px',
-        xl: '20px',
+        md: '14px',
+        lg: '18px',
+        xl: '24px',
       },
       transitionTimingFunction: {
         'ease-out-fast': 'cubic-bezier(0.16, 1, 0.3, 1)',

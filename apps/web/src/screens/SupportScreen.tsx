@@ -28,7 +28,7 @@ export function SupportScreen() {
   return (
     <div className="px-5 pt-4 pb-8 space-y-5 screen-enter">
       <h1 className="text-2xl font-semibold tracking-tight">Поддержка</h1>
-      <div className="space-y-2">{CATEGORIES.map((category) => <button key={category.code} onClick={() => setSelected(category.code)} className={`press-feedback w-full text-left px-5 py-4 rounded-lg border text-[15px] ${selected === category.code ? 'bg-white text-black border-white' : 'bg-sali-gray-950 border-sali-gray-800 text-white'}`}>{category.label}</button>)}</div>
+      <div className="space-y-2">{CATEGORIES.map((category) => <button key={category.code} onClick={() => setSelected(category.code)} className={`press-feedback w-full text-left px-5 py-4 rounded-lg border text-[15px] ${selected === category.code ? 'bg-sali-accent text-sali-navy border-white' : 'bg-sali-gray-950 border-sali-gray-800 text-white'}`}>{category.label}</button>)}</div>
       {selected && <Card><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Опишите проблему…" rows={4} className="w-full bg-transparent outline-none text-[15px] placeholder:text-sali-gray-500 resize-none mb-4" /><Button onClick={handleSend} disabled={sending || !message.trim()}>{sending ? 'Отправка…' : 'Написать в поддержку'}</Button></Card>}
     </div>
   );

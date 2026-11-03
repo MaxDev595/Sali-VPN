@@ -1,5 +1,7 @@
 # Trial, devices and billing
 
+> Актуальная схема оплаты (только через Telegram-бот, коды активации): см. [`bot-structure.md`](bot-structure.md).
+
 ## Access lifecycle
 
 1. Login creates/loads the user, but does not start a trial.

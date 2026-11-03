@@ -9,6 +9,7 @@ import { TelegramStarsPaymentProvider } from './providers/telegram-stars.provide
 import { PaddlePaymentProvider } from './providers/paddle.provider';
 import { CryptoPaymentProvider } from './providers/crypto.provider';
 import { GooglePlayService } from './google-play.service';
+import { CodesService, IssuedCode } from '../codes/codes.service';
 
 @Injectable()
 export class PaymentsService {
@@ -21,6 +22,7 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly subscriptions: SubscriptionsService,
     private readonly notifications: NotificationsService,
+    private readonly codes: CodesService,
   ) {}
 
   async verifyGooglePlay(userId: string, planId: string, productId: string, purchaseToken: string) {
@@ -50,7 +52,8 @@ export class PaymentsService {
     return provider;
   }
 
-  async initiatePurchase(userId: string, planId: string, providerName?: string) {
+  async initiatePurchase(userId: string, planId: string, providerName?: string, options: { deliverAsCode?: boolean } = {}) {
+    const deliverAsCode = Boolean(options.deliverAsCode);
     const provider = this.selectProvider(providerName);
     const plan = await this.prisma.plan.findUniqueOrThrow({ where: { id: planId } });
     const fullAmount = Number(plan.priceUsd);
@@ -60,14 +63,16 @@ export class PaymentsService {
         where: { userId, kind: 'discount_percent', paymentId: null, consumedAt: null },
         orderBy: { grantedAt: 'asc' },
       });
-      const subscription = await tx.subscription.create({
+      // Bot purchases produce a code instead of a subscription on this account.
+      const subscription = deliverAsCode ? null : await tx.subscription.create({
         data: { userId, planId, status: SubscriptionStatus.PENDING_PAYMENT },
       });
       const payment = await tx.payment.create({
         data: {
           userId,
           planId,
-          subscriptionId: subscription.id,
+          deliverAsCode,
+          subscriptionId: subscription?.id ?? null,
           provider: provider.name,
           amountUsd: plan.priceUsd,
           status: PaymentStatus.PENDING,
@@ -117,10 +122,10 @@ export class PaymentsService {
   }
 
   /** Step 2: called by a webhook / bot successful_payment update / admin confirmation. */
-  async confirmByExternalId(externalPaymentId: string) {
+  async confirmByExternalId(externalPaymentId: string, options: { silent?: boolean } = {}) {
     const payment = await this.prisma.payment.findFirst({ where: { externalPaymentId } });
     if (!payment) throw new NotFoundException('Payment not found');
-    return this.confirmSucceeded(payment.id);
+    return this.confirmSucceeded(payment.id, options);
   }
 
   /** Used by the admin API to manually confirm a "manual" provider payment. */
@@ -128,12 +133,36 @@ export class PaymentsService {
     return this.confirmSucceeded(paymentId);
   }
 
-  async confirmSucceeded(paymentId: string) {
+  /**
+   * Telegram Stars: the bot sends the invoice itself, so the payment row is
+   * created here without going through a checkout provider.
+   */
+  async createStarsPayment(userId: string, planId: string) {
+    const plan = await this.prisma.plan.findUniqueOrThrow({ where: { id: planId } });
+    const payment = await this.prisma.payment.create({
+      data: { userId, planId, provider: 'telegram_stars', currency: 'XTR', amountUsd: plan.priceUsd, deliverAsCode: true, status: PaymentStatus.PENDING },
+    });
+    return this.prisma.payment.update({ where: { id: payment.id }, data: { externalPaymentId: payment.id }, include: { plan: true } });
+  }
+
+  /** Activation code issued for a paid bot purchase, if any. */
+  async codeForPayment(paymentId: string): Promise<IssuedCode | null> {
+    const payment = await this.prisma.payment.findUnique({ where: { id: paymentId } });
+    if (!payment?.deliverAsCode || payment.status !== PaymentStatus.SUCCEEDED) return null;
+    return this.codes.issueForPayment(paymentId);
+  }
+
+  async confirmSucceeded(paymentId: string, options: { silent?: boolean } = {}) {
     const current = await this.prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, include: { plan: true } });
     if (current.status === PaymentStatus.SUCCEEDED) return current;
     const payment = await this.prisma.payment.update({ where: { id: paymentId }, data: { status: PaymentStatus.SUCCEEDED }, include: { plan: true } });
 
-    if (payment.subscriptionId) {
+    if (payment.deliverAsCode) {
+      const code = await this.codes.issueForPayment(payment.id);
+      if (!options.silent) {
+        await this.notifications.sendHtml(payment.userId, activationCodeMessage(code), activationCodeKeyboard(code)).catch(() => false);
+      }
+    } else if (payment.subscriptionId) {
       await this.subscriptions.activate(payment.subscriptionId, payment.plan.durationDays);
       await this.notifications.enqueue(payment.userId, 'SUBSCRIPTION_ACTIVATED');
     }
@@ -261,4 +290,29 @@ export class PaymentsService {
     await this.prisma.paymentWebhookEvent.update({ where: { id: inserted.id }, data: { processedAt: new Date() } });
     return { received: true };
   }
+}
+
+/** Message the buyer receives in Telegram after any successful bot payment. */
+export function activationCodeMessage(code: IssuedCode) {
+  const period = code.durationDays >= 360 ? '1 год' : code.durationDays >= 28 ? `${Math.round(code.durationDays / 30)} мес.` : `${code.durationDays} дн.`;
+  return [
+    '✅ <b>Оплата прошла</b>',
+    '',
+    `Ваш код активации на <b>${period}</b>:`,
+    `<code>${code.display}</code>`,
+    '',
+    'Откройте приложение Sali VPN → «Ввести код» и вставьте его.',
+    'Нажмите на код, чтобы скопировать. Код одноразовый и действует 90 дней — его можно подарить.',
+  ].join('\n');
+}
+
+export function activationCodeKeyboard(code: IssuedCode) {
+  const appUrl = process.env.APP_ACTIVATE_URL;
+  return {
+    inline_keyboard: [
+      [{ text: '📋 Скопировать код', copy_text: { text: code.display } }],
+      ...(appUrl ? [[{ text: '📲 Открыть приложение', url: `${appUrl}?code=${code.code}` }]] : []),
+      [{ text: '⚡ Активировать на моём устройстве', callback_data: `apply_${code.code}` }],
+    ],
+  };
 }

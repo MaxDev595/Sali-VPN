@@ -72,6 +72,9 @@ export const api = {
     request<{ id: string; status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; failureReason?: string }>(
       `/payments/${encodeURIComponent(paymentId)}`,
     ),
+  /** Activation code bought in the bot (works for Telegram and store-app accounts alike). */
+  redeemCode: (code: string) =>
+    request<{ kind: 'PAID' | 'FREE' | 'GIFT' | 'PROMO'; durationDays: number; planName: string | null; expiresAt: string | null }>('/codes/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
   getDevices: () => request<DevicesStateDTO>('/devices'),
   registerCurrentDevice: (device: { deviceKey: string; name: string; platform: string }) =>
     request<DeviceDTO>('/devices/current', { method: 'POST', body: JSON.stringify(device) }),

@@ -11,9 +11,10 @@ import { CryptoWatcherService } from './crypto-watcher.service';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { GooglePlayService } from './google-play.service';
+import { CodesModule } from '../codes/codes.module';
 
 @Module({
-  imports: [ConfigModule, SubscriptionsModule, NotificationsModule],
+  imports: [ConfigModule, SubscriptionsModule, NotificationsModule, CodesModule],
   controllers: [PaymentsController],
   providers: [
     ManualPaymentProvider,

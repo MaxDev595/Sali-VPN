@@ -4,7 +4,9 @@ import privacyRu from '../landing/privacy.ru.md?raw';
 import privacyEn from '../landing/privacy.en.md?raw';
 import termsRu from '../landing/terms.ru.md?raw';
 import termsEn from '../landing/terms.en.md?raw';
-import { LanguageSwitch, SaliMark } from '../landing/components';
+import { LanguageSwitch } from '../landing/components';
+import { LogoBadge, LogoWordmark } from '../landing/AnimatedLogo';
+import '../landing/landing.css';
 import { useLandingLanguage } from '../landing/i18n';
 
 function inline(text: string): ReactNode[] {
@@ -44,8 +46,8 @@ export function LegalPage({ type }: { type: 'privacy' | 'terms' }) {
   const { language, setLanguage } = useLandingLanguage();
   const source = type === 'privacy' ? (language === 'ru' ? privacyRu : privacyEn) : (language === 'ru' ? termsRu : termsEn);
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [type, language]);
-  return <main className="sali-landing sl-legal-page">
-    <header className="sl-legal-nav"><div className="sl-container"><Link className="sl-logo" to="/" aria-label={language === 'ru' ? 'На главную' : 'Back to home'}><SaliMark/><span>sali <small>VPN</small></span></Link><div><Link to="/">← {language === 'ru' ? 'На главную' : 'Back home'}</Link><LanguageSwitch language={language} onChange={setLanguage}/></div></div></header>
-    <div className="sl-legal-layout sl-container"><aside><span>LEGAL / {type.toUpperCase()}</span><nav><Link className={type === 'privacy' ? 'active' : ''} to="/privacy">{language === 'ru' ? 'Политика конфиденциальности' : 'Privacy Policy'}</Link><Link className={type === 'terms' ? 'active' : ''} to="/terms">{language === 'ru' ? 'Условия использования' : 'Terms of Use'}</Link></nav></aside><MarkdownDocument source={source}/></div>
+  return <main className="sv-legal">
+    <header className="sv-legal-nav"><div className="sv-wrap"><Link className="sv-brand" to="/" aria-label={language === 'ru' ? 'На главную' : 'Back to home'}><LogoBadge className="sv-brand-mark"/><LogoWordmark vpn={false} className="sv-brand-word"/></Link><div><Link to="/">← {language === 'ru' ? 'На главную' : 'Back home'}</Link><LanguageSwitch language={language} onChange={setLanguage}/></div></div></header>
+    <div className="sl-legal-layout sv-wrap"><aside><span>LEGAL / {type.toUpperCase()}</span><nav><Link className={type === 'privacy' ? 'active' : ''} to="/privacy">{language === 'ru' ? 'Политика конфиденциальности' : 'Privacy Policy'}</Link><Link className={type === 'terms' ? 'active' : ''} to="/terms">{language === 'ru' ? 'Условия использования' : 'Terms of Use'}</Link></nav></aside><MarkdownDocument source={source}/></div>
   </main>;
 }

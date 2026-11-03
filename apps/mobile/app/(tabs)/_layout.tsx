@@ -18,7 +18,7 @@ function TabIcon({ name, color, focused }: { name: IconName; color: string; focu
 
 export default function TabsLayout() {
   const { t } = useI18n();
-  return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: theme.colors.accent, tabBarInactiveTintColor: '#6B6B6B', tabBarHideOnKeyboard: true, tabBarStyle: styles.tabBar, tabBarItemStyle: styles.tabItem, tabBarLabelStyle: styles.tabLabel }}>
+  return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: theme.colors.accent, tabBarInactiveTintColor: '#6F7FA3', tabBarHideOnKeyboard: true, tabBarStyle: styles.tabBar, tabBarItemStyle: styles.tabItem, tabBarLabelStyle: styles.tabLabel }}>
     <Tabs.Screen name="index" options={{ title: 'VPN', tabBarIcon: ({ color, focused }) => <TabIcon name="shield" color={color} focused={focused} /> }} />
     <Tabs.Screen name="servers" options={{ title: t.servers, tabBarIcon: ({ color, focused }) => <TabIcon name="servers" color={color} focused={focused} /> }} />
     <Tabs.Screen name="devices" options={{ title: 'Устройства', tabBarIcon: ({ color, focused }) => <TabIcon name="devices" color={color} focused={focused} /> }} /><Tabs.Screen name="subscription" options={{ href: null }} />
@@ -26,4 +26,4 @@ export default function TabsLayout() {
   </Tabs>;
 }
 
-const styles = StyleSheet.create({ tabBar: { backgroundColor: '#000000', borderTopColor: theme.colors.border, height: 76, paddingTop: 7, paddingBottom: 8 }, tabItem: { borderRadius: 16, marginHorizontal: 2 }, tabLabel: { fontSize: 12, lineHeight: 15, fontWeight: '600', marginTop: 2 }, iconBox: { width: 34, height: 30, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }, iconBoxActive: { backgroundColor: '#1C1C1C' } });
+const styles = StyleSheet.create({ tabBar: { backgroundColor: theme.colors.tabBar, borderTopColor: theme.colors.border, height: 76, paddingTop: 7, paddingBottom: 8 }, tabItem: { borderRadius: 16, marginHorizontal: 2 }, tabLabel: { fontSize: 12, lineHeight: 15, fontWeight: '600', marginTop: 2 }, iconBox: { width: 34, height: 30, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }, iconBoxActive: { backgroundColor: theme.colors.glow } });

@@ -19,6 +19,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AdminModule } from './modules/admin/admin.module';
 import { HomeModule } from './modules/home/home.module';
 import { InternalModule } from './modules/internal/internal.module';
+import { CodesModule } from './modules/codes/codes.module';
+import { BotApiModule } from './modules/bot-api/bot-api.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { InternalModule } from './modules/internal/internal.module';
     AdminModule,
     HomeModule,
     InternalModule,
+    CodesModule,
+    BotApiModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

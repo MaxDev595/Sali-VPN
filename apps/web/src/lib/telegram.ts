@@ -21,8 +21,8 @@ export const telegram = {
     WebApp.ready();
     WebApp.expand();
     if (supports('6.1')) {
-      WebApp.setHeaderColor('#000000');
-      WebApp.setBackgroundColor('#000000');
+      WebApp.setHeaderColor('#040913');
+      WebApp.setBackgroundColor('#040913');
     }
     if (supports('6.2')) {
       WebApp.enableClosingConfirmation();
@@ -46,6 +46,19 @@ export const telegram = {
     error() {
       if (telegram.isAvailable) WebApp.HapticFeedback.notificationOccurred('error');
     },
+  },
+
+  /**
+   * Payments happen in the bot chat: open it with a start parameter
+   * (buy / free) and close the Mini App so the customer lands in the chat.
+   */
+  openBot(startParam?: string) {
+    const base = (import.meta.env.VITE_TELEGRAM_BOT_URL ?? 'https://t.me/SaliVPNOfficialBot').replace(/\/$/, '');
+    const url = startParam ? `${base}?start=${startParam}` : base;
+    if (this.isAvailable) {
+      WebApp.openTelegramLink(url);
+      setTimeout(() => WebApp.close(), 150);
+    } else window.location.assign(url);
   },
 
   showMainButton(text: string, onClick: () => void) {

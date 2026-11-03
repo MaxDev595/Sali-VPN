@@ -1,4 +1,5 @@
 import { BotUserState } from './services/api-client';
+import type { IssuedCode, LinkedDevice, OwnedCode } from './services/api-client';
 
 export const genericError = 'Сервис временно перезапускается. Повторите команду через несколько секунд.';
 
@@ -42,4 +43,93 @@ export function accessText(state: BotUserState) {
     return '<b>Пробный период закончился</b>\n\nЧтобы продолжить пользоваться Sali VPN, подключите подписку.';
   }
   return '<b>Sali VPN</b>\n\nVPN доступ: неактивен';
+}
+
+// ---------------------------------------------------------------------------
+// Activation codes & purchases
+// ---------------------------------------------------------------------------
+
+export function period(days: number) {
+  if (days >= 360) return '1 год';
+  if (days >= 28) return `${Math.round(days / 30)} мес.`;
+  return `${days} дн.`;
+}
+
+export const howItWorks = [
+  '<b>Как это работает</b>',
+  '',
+  '1️⃣ Установите приложение Sali VPN',
+  '2️⃣ В приложении нажмите «Привязать Telegram» — мы запомним ваше устройство',
+  '3️⃣ Здесь, в боте, получите бесплатный тариф или оплатите месяц / год',
+  '4️⃣ Бот пришлёт код <code>SALI-XXXX-XXXX-XXXX</code> — введите его в приложении',
+  '',
+  'Если устройство привязано, код можно активировать одной кнопкой прямо из бота.',
+].join('\n');
+
+export function paidCodeMessage(code: IssuedCode) {
+  return [
+    '✅ <b>Оплата прошла</b>',
+    '',
+    `Ваш код активации на <b>${period(code.durationDays)}</b>:`,
+    `<code>${code.display}</code>`,
+    '',
+    'Откройте Sali VPN → «Ввести код» и вставьте его.',
+    'Нажмите на код, чтобы скопировать. Код одноразовый, действует до ' + date(code.expiresAt) + ' — его можно подарить.',
+  ].join('\n');
+}
+
+export function freeCodeMessage(code: IssuedCode, again: boolean) {
+  const minutes = Number(process.env.TRIAL_DURATION_MINUTES ?? 60);
+  return [
+    again ? '🎁 <b>Ваш бесплатный код</b> (выдан ранее)' : '🎁 <b>Бесплатный тариф</b>',
+    '',
+    `<code>${code.display}</code>`,
+    '',
+    `Даёт ${minutes} минут VPN, чтобы проверить скорость. Таймер идёт только пока VPN включён.`,
+    'Введите код в приложении Sali VPN → «Ввести код».',
+  ].join('\n');
+}
+
+export function redeemedMessage(result: { publicId?: string; expiresAt?: string | null; kind?: string }) {
+  const until = result.expiresAt ? `\nДоступ до: <b>${date(result.expiresAt)}</b>` : '';
+  const what = result.kind === 'FREE' ? 'Бесплатный тариф включён' : 'Подписка активирована';
+  return `✅ <b>${what}</b> на устройстве <b>${result.publicId ?? ''}</b>.${until}\n\nОткройте приложение и нажмите кнопку подключения.`;
+}
+
+export function codesListMessage(codes: OwnedCode[]) {
+  if (!codes.length) return '<b>Мои коды</b>\n\nКодов пока нет. Получите бесплатный тариф или купите подписку.';
+  const lines = codes.map((code) => {
+    const what = code.kind === 'FREE' ? 'бесплатный' : period(code.durationDays);
+    if (code.status === 'REDEEMED') return `✅ <s>${code.display}</s> · ${what}\n     активирован на ${code.redeemedOn ?? '—'} ${date(code.redeemedAt)}`;
+    return `🟢 <code>${code.display}</code> · ${what}\n     не активирован, действует до ${date(code.expiresAt)}`;
+  });
+  return ['<b>Мои коды</b>', '', ...lines, '', 'Нажмите на код, чтобы скопировать.'].join('\n');
+}
+
+export function devicesMessage(devices: LinkedDevice[]) {
+  if (!devices.length) {
+    return [
+      '<b>Мои устройства</b>',
+      '',
+      'Пока ни одно устройство не привязано.',
+      '',
+      'Откройте приложение Sali VPN → «Привязать Telegram». Или просто пришлите сюда ваш Sali ID — он выглядит так: <code>SL-XXXX-XXXX</code>.',
+    ].join('\n');
+  }
+  const lines = devices.map((device) => {
+    const status = device.active
+      ? device.until ? `🟢 ${device.tariff} до ${date(device.until)}` : `🟢 ${device.tariff}${device.secondsLeft ? `, осталось ${duration(device.secondsLeft)}` : ''}`
+      : '⚪️ нет активного тарифа';
+    return `📱 <b>${device.publicId}</b>\n     ${status}`;
+  });
+  return ['<b>Мои устройства</b>', '', ...lines, '', 'Чтобы добавить ещё одно, пришлите его Sali ID.'].join('\n');
+}
+
+export function linkResultMessage(status: string, publicId?: string | null) {
+  switch (status) {
+    case 'linked': return `🔗 <b>Устройство ${publicId} привязано</b>\n\nТеперь коды, напоминания об окончании подписки и ответы поддержки будут приходить сюда.`;
+    case 'already': return `Устройство ${publicId} уже привязано к этому Telegram 👌`;
+    case 'linked_elsewhere': return 'Это устройство уже привязано к другому Telegram-аккаунту. Если это ошибка — напишите в поддержку.';
+    default: return 'Не нашли устройство с таким Sali ID. Проверьте номер в приложении: Аккаунт → Sali ID.';
+  }
 }
