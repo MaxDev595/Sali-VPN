@@ -73,12 +73,50 @@ process.on('SIGINT', () => shutdown(0));
 const localApi = `http://127.0.0.1:${port}`;
 start('API', path.join(apiDir, 'dist/main.js'), { API_PORT: port }, { essential: true });
 
+/** Removes the usual copy-paste damage from a bot token: spaces, quotes, a "bot" prefix. */
+function cleanToken(raw) {
+  return String(raw ?? '').trim().replace(/^["'`]+|["'`]+$/g, '').replace(/^bot(?=\d)/i, '').trim();
+}
+
+/** Asks Telegram whether a token is valid, so a wrong token is reported once, clearly. */
+async function checkToken(label, token) {
+  if (!/^\d{5,}:[A-Za-z0-9_-]{30,}$/.test(token)) {
+    console.error(`[render] ${label}: the token has a wrong format (expected 1234567890:AA...). Copy it again from @BotFather → /mybots → API Token.`);
+    return false;
+  }
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+    const body = await res.json().catch(() => ({}));
+    if (body.ok) {
+      console.log(`[render] ${label}: token OK → @${body.result.username}`);
+      return true;
+    }
+    console.error(`[render] ${label}: Telegram rejected the token for bot id ${token.split(':')[0]} (${res.status} ${body.description ?? ''}). It is wrong or was revoked — take the current one from @BotFather → /mybots → API Token and put it in Render → Environment.`);
+    return false;
+  } catch (error) {
+    console.warn(`[render] ${label}: could not reach Telegram to check the token (${error.message}); starting anyway.`);
+    return true;
+  }
+}
+
 // Give the API a moment to bind before the bots start calling it.
-setTimeout(() => {
-  start('Bot', path.join(root, 'apps/bot/dist/index.js'), { API_URL: localApi, TELEGRAM_MODE: 'polling' });
-  if (process.env.SUPPORT_BOT_TOKEN) {
-    start('Support bot', path.join(root, 'apps/support-bot/dist/index.js'), { API_URL: localApi });
+setTimeout(async () => {
+  const botToken = cleanToken(process.env.TELEGRAM_BOT_TOKEN);
+  if (await checkToken('Bot', botToken)) {
+    start('Bot', path.join(root, 'apps/bot/dist/index.js'), { API_URL: localApi, TELEGRAM_MODE: 'polling', TELEGRAM_BOT_TOKEN: botToken });
   } else {
+    console.error('[render] Bot not started until the token is fixed (changing it in Render redeploys automatically).');
+  }
+
+  const supportToken = cleanToken(process.env.SUPPORT_BOT_TOKEN);
+  if (!supportToken) {
     console.log('[render] SUPPORT_BOT_TOKEN is not set — support bot skipped.');
+  } else if (await checkToken('Support bot', supportToken)) {
+    start('Support bot', path.join(root, 'apps/support-bot/dist/index.js'), {
+      API_URL: localApi,
+      SUPPORT_BOT_TOKEN: supportToken,
+      SUPPORT_EMAIL: process.env.SUPPORT_EMAIL || 'support@salivpn.com',
+      SUPPORT_BOT_STATE_FILE: process.env.SUPPORT_BOT_STATE_FILE || '/tmp/sali-support-state.json',
+    });
   }
 }, 4000);
