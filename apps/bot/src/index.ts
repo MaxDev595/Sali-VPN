@@ -17,7 +17,7 @@ loadEnv({ path: resolve(__dirname, '../../../.env') });
  *
  *   /start [link_<SaliID> | buy | free | ref_<id>]
  *     ├─ 💎 Купить подписку → месяц / год → Stars | USDT | карта → код SALI-XXXX-XXXX-XXXX
- *     ├─ 🎁 Бесплатный день → FREE-код (один на Telegram)
+ *     ├─ 🎁 24 часа бесплатно → FREE-код (один на Telegram)
  *     ├─ 🔑 Мои коды       → все купленные коды и где активированы
  *     ├─ 📱 Мои устройства → привязанные приложения и их тариф
  *     ├─ 📲 Скачать приложение
@@ -53,7 +53,7 @@ async function main() {
   bot.command('help', handlers.help);
 
   bot.hears(menuLabels.buy, billing.buy);
-  bot.hears([menuLabels.free, '🎁 Бесплатный тариф'], billing.free);
+  bot.hears([menuLabels.free, '🎁 Бесплатный день', '🎁 Бесплатный тариф'], billing.free);
   bot.hears(menuLabels.codes, billing.codes);
   bot.hears(menuLabels.devices, billing.devices);
   bot.hears(menuLabels.download, billing.download);
@@ -100,7 +100,7 @@ async function main() {
   await bot.telegram.setMyCommands([
     { command: 'start', description: 'Открыть Sali VPN' },
     { command: 'buy', description: 'Купить подписку' },
-    { command: 'free', description: 'Бесплатный день' },
+    { command: 'free', description: '24 часа бесплатно' },
     { command: 'codes', description: 'Мои коды' },
     { command: 'devices', description: 'Мои устройства' },
     { command: 'account', description: 'Аккаунт' },

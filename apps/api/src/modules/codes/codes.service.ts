@@ -151,7 +151,7 @@ export class CodesService {
       return {
         kind: row.kind,
         durationDays: row.kind === ActivationCodeKind.FREE ? 1 : row.durationDays,
-        planName: row.plan?.name ?? (row.kind === ActivationCodeKind.FREE ? 'Бесплатный день' : null),
+        planName: row.plan?.name ?? (row.kind === ActivationCodeKind.FREE ? '24 часа бесплатно' : null),
         expiresAt: expiresAt?.toISOString() ?? null,
       };
     } catch (error) {

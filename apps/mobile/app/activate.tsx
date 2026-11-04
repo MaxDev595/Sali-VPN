@@ -23,7 +23,7 @@ function formatInput(raw: string) {
 const isComplete = (value: string) => value.replace(ALPHABET, '').length === 16;
 
 function describe(result: RedeemResult) {
-  if (result.kind === 'FREE') return { title: 'Бесплатный день включён', text: 'Можно подключаться: 24 часа VPN без ограничений с этого момента.' };
+  if (result.kind === 'FREE') return { title: 'Бесплатные 24 часа включены', text: 'Можно подключаться: 24 часа VPN без ограничений с этого момента.' };
   const until = result.expiresAt ? new Date(result.expiresAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   return { title: 'Подписка активирована', text: until ? `Доступ открыт до ${until}. Все серверы уже ваши.` : 'Все серверы уже ваши.' };
 }
@@ -98,7 +98,7 @@ export default function ActivateScreen() {
 
           <View style={styles.help}>
             <Text style={styles.helpTitle}>Где взять код?</Text>
-            <Text style={styles.helpText}>Бесплатный день и подписка выдаются в нашем Telegram-боте. Ваш ID устройства: <Text style={styles.id}>{home?.user.publicId ?? '—'}</Text></Text>
+            <Text style={styles.helpText}>Бесплатные 24 часа и подписка выдаются в нашем Telegram-боте. Ваш ID устройства: <Text style={styles.id}>{home?.user.publicId ?? '—'}</Text></Text>
             <Pressable onPress={openBot} style={({ pressed }) => [styles.link, pressed && { opacity: .7 }]}><Text style={styles.linkText}>Открыть Telegram-бот ›</Text></Pressable>
           </View>
         </>}

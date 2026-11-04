@@ -53,7 +53,7 @@ export default function VpnScreen() {
     </ScrollView>
 
     <SaliModal visible={needsCode} title="Нужен тариф" onClose={clearError}>
-      <Text style={styles.modalText}>Чтобы подключиться, активируйте код. Бесплатный день и коды выдаёт наш Telegram-бот.</Text>
+      <Text style={styles.modalText}>Чтобы подключиться, активируйте код. Бесплатные 24 часа и коды выдаёт наш Telegram-бот.</Text>
       <View style={{ gap: 10, marginTop: 20 }}>
         <SaliButton title="Ввести код" onPress={() => { clearError(); router.push('/activate'); }} />
         <SaliButton secondary title="Открыть Telegram-бот" onPress={() => { clearError(); openBot(); }} />

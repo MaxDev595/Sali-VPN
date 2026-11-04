@@ -16,7 +16,7 @@ export function TelegramLinkCard({ compact = false }: { compact?: boolean }) {
     <View style={styles.icon}><Text style={styles.iconText}>✈︎</Text></View>
     <View style={styles.copy}>
       <Text style={styles.title}>Привяжите Telegram</Text>
-      {!compact && <Text style={styles.text}>Бесплатный день, коды и напоминания придут в бот Sali. Ваш ID: <Text style={styles.id}>{home.user.publicId}</Text></Text>}
+      {!compact && <Text style={styles.text}>Бесплатные 24 часа, коды и напоминания придут в бот Sali. Ваш ID: <Text style={styles.id}>{home.user.publicId}</Text></Text>}
     </View>
     <Text style={styles.chevron}>›</Text>
   </Pressable>;

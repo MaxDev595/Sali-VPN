@@ -3,7 +3,7 @@ import type { BotPlan, IssuedCode } from '../services/api-client';
 
 export const menuLabels = {
   buy: '💎 Купить подписку',
-  free: '🎁 Бесплатный день',
+  free: '🎁 24 часа бесплатно',
   codes: '🔑 Мои коды',
   devices: '📱 Мои устройства',
   download: '📲 Скачать приложение',
@@ -48,7 +48,7 @@ export function openAppKeyboard(url: string, label = '⚡ Открыть Sali VP
 
 export function welcomeKeyboard(freeUsed: boolean) {
   return Markup.inlineKeyboard([
-    ...(freeUsed ? [] : [[Markup.button.callback('🎁 Получить бесплатный день', 'menu_free')]]),
+    ...(freeUsed ? [] : [[Markup.button.callback('🎁 Получить 24 часа бесплатно', 'menu_free')]]),
     [Markup.button.callback('💎 Купить подписку', 'menu_buy')],
     [Markup.button.callback('📲 Скачать приложение', 'menu_download')],
   ]);

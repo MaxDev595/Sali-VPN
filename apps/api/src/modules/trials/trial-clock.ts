@@ -1,5 +1,5 @@
 /**
- * The free tariff is one calendar day of access: it starts when the FREE code is
+ * The free tariff is 24 hours of access: it starts when the FREE code is
  * activated and runs on the wall clock (not only while the VPN is on).
  * TRIAL_DURATION_HOURS overrides the length (default 24).
  */

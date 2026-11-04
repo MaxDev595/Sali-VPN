@@ -9,14 +9,14 @@ const messages = {
     myDevices: 'Мои устройства', connectedDevices: 'Подключённые устройства', noDevices: 'Нет подключённых устройств.', active: 'Активно', remove: 'Удалить',
     language: 'Язык', notifications: 'Уведомления', notificationsHint: 'Получать важные сообщения о подписке и VPN', faq: 'Частые вопросы', terms: 'Условия использования', privacy: 'Политика конфиденциальности', invite: 'Пригласить друга',
     free: 'Бесплатный', premium: 'Premium', closest: 'Ближайший', availableWithSubscription: 'Доступен с подпиской', load: 'нагрузка',
-    vpnOn: 'VPN активен', vpnOff: 'VPN выключен', connected: 'Подключено', disconnected: 'Нет подключения', connect: 'Подключить VPN', disconnect: 'Отключить', connecting: 'Подключение…', currentSession: 'Текущая сессия', trialLeft: 'Бесплатный день, осталось:', buy: 'Купить подписку', trialEnded: 'Бесплатный день закончился', enjoy: 'Приятного пользования!',
+    vpnOn: 'VPN активен', vpnOff: 'VPN выключен', connected: 'Подключено', disconnected: 'Нет подключения', connect: 'Подключить VPN', disconnect: 'Отключить', connecting: 'Подключение…', currentSession: 'Текущая сессия', trialLeft: 'Бесплатно, осталось:', buy: 'Купить подписку', trialEnded: 'Бесплатные 24 часа закончились', enjoy: 'Приятного пользования!',
   },
   en: {
     home: 'Home', subscription: 'Plan', devices: 'Devices', servers: 'Servers', settings: 'Settings',
     myDevices: 'My devices', connectedDevices: 'Connected devices', noDevices: 'No connected devices.', active: 'Active', remove: 'Remove',
     language: 'Language', notifications: 'Notifications', notificationsHint: 'Receive important subscription and VPN updates', faq: 'FAQ', terms: 'Terms of use', privacy: 'Privacy policy', invite: 'Invite a friend',
     free: 'Free', premium: 'Premium', closest: 'Closest', availableWithSubscription: 'Available with subscription', load: 'load',
-    vpnOn: 'VPN is active', vpnOff: 'VPN is off', connected: 'Connected', disconnected: 'Not connected', connect: 'Connect VPN', disconnect: 'Disconnect', connecting: 'Connecting…', currentSession: 'Current session', trialLeft: 'Free day, time left:', buy: 'Buy subscription', trialEnded: 'Your free day has ended', enjoy: 'Enjoy your privacy!',
+    vpnOn: 'VPN is active', vpnOff: 'VPN is off', connected: 'Connected', disconnected: 'Not connected', connect: 'Connect VPN', disconnect: 'Disconnect', connecting: 'Connecting…', currentSession: 'Current session', trialLeft: 'Free 24 hours, time left:', buy: 'Buy subscription', trialEnded: 'Your free 24 hours have ended', enjoy: 'Enjoy your privacy!',
   },
 } as const;
 

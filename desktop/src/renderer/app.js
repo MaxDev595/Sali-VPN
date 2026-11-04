@@ -56,11 +56,11 @@ function render() {
 
   el.access.className = 'pill ' + (a.kind === 'paid' ? 'ok' : a.kind === 'trial' ? 'trial' : a.kind === 'none' ? 'none' : '');
   if (a.kind === 'paid') el.accessText.innerHTML = `${escapeHtml(a.plan || 'Подписка')} до <b>${a.until ? new Date(a.until).toLocaleDateString('ru-RU') : '—'}</b>`;
-  else if (a.kind === 'trial') el.accessText.innerHTML = `Бесплатный день: осталось <b>${hms(a.left)}</b>`;
+  else if (a.kind === 'trial') el.accessText.innerHTML = `Бесплатно: осталось <b>${hms(a.left)}</b>`;
   else if (a.kind === 'none') el.accessText.textContent = a.hadTrial ? 'Доступ закончился — продлите в боте' : 'Нет активного тарифа';
   else el.accessText.textContent = 'Проверяем доступ…';
 
-  el.getCodeLabel.textContent = a.kind === 'none' && !a.hadTrial ? 'Бесплатный день' : a.kind === 'none' ? 'Купить в боте' : 'Мои коды в боте';
+  el.getCodeLabel.textContent = a.kind === 'none' && !a.hadTrial ? '24 часа бесплатно' : a.kind === 'none' ? 'Купить в боте' : 'Мои коды в боте';
   el.server.textContent = vpn.serverLocation || 'Автовыбор';
   el.flag.src = `assets/${flagFor(vpn.serverLocation)}.png`;
   el.linkCard.hidden = !home || Boolean(home.user && home.user.telegramLinked);
@@ -120,7 +120,7 @@ el.form.addEventListener('submit', async (event) => {
   if (!response.ok) { el.error.textContent = response.error; el.error.hidden = false; return; }
   closeSheet();
   const r = response.result;
-  toast(r.kind === 'FREE' ? 'Бесплатный день включён — 24 часа VPN. Можно подключаться!' : `Подписка активирована${r.expiresAt ? ` до ${new Date(r.expiresAt).toLocaleDateString('ru-RU')}` : ''}.`, 'ok');
+  toast(r.kind === 'FREE' ? 'Бесплатные 24 часа включены. Можно подключаться!' : `Подписка активирована${r.expiresAt ? ` до ${new Date(r.expiresAt).toLocaleDateString('ru-RU')}` : ''}.`, 'ok');
   await loadHome({ quiet: true });
 });
 

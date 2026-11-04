@@ -116,7 +116,7 @@ export function createHandlers(config: BotConfig) {
               `Действует до: ${date(state.subscription.expiresAt)}`,
             ].join('\n')
           : state.trial?.status === 'ACTIVE'
-            ? `<b>Подписка</b>\n\nСейчас действует бесплатный день.\nОсталось: ${duration(state.trial.secondsRemaining)}`
+            ? `<b>Подписка</b>\n\nСейчас действуют бесплатные 24 часа.\nОсталось: ${duration(state.trial.secondsRemaining)}`
             : '<b>Подписка</b>\n\nАктивной подписки нет.';
         await ctx.replyWithHTML(text, expiredAccessKeyboard(config.miniAppUrl));
       } catch (error) {
@@ -167,7 +167,7 @@ export function createHandlers(config: BotConfig) {
         const state = await stateFor(ctx);
         if (!state) return;
         const telegram = state.user.username ? `@${state.user.username}` : state.user.firstName || 'Telegram';
-        const tariff = state.subscription?.plan.name ?? (state.trial?.status === 'ACTIVE' ? 'Бесплатный день' : 'Нет активного тарифа');
+        const tariff = state.subscription?.plan.name ?? (state.trial?.status === 'ACTIVE' ? '24 часа бесплатно' : 'Нет активного тарифа');
         await ctx.reply(
           ['Аккаунт', '', `Telegram: ${telegram}`, `Sali ID: SL-${state.user.publicId.slice(0, 4)}-${state.user.publicId.slice(4)}`, `Статус: ${state.state === 'BLOCKED' ? 'ограничен' : 'активен'}`, `Тариф: ${tariff}`, ...(state.subscription ? [`Действует до: ${date(state.subscription.expiresAt)}`] : [])].join('\n'),
           openAppKeyboard(config.accountUrl, 'Открыть аккаунт'),
