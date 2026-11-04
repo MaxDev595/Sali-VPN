@@ -1,5 +1,5 @@
 const { spawn } = require('node:child_process');
-const { existsSync } = require('node:fs');
+const { existsSync, mkdirSync } = require('node:fs');
 const net = require('node:net');
 const path = require('node:path');
 
@@ -142,7 +142,9 @@ async function main() {
     VPN_PROVIDER: process.env.VPN_PROVIDER || 'wireguard',
   };
   const { default: EmbeddedPostgres } = await import('embedded-postgres');
-  const databaseDir = path.join(process.env.TEMP || process.env.TMP || root, 'sali-vpn-postgres');
+  // Keep the database out of %TEMP%: Windows cleans Temp and the data would be lost.
+  // The path must be ASCII-only (PostgreSQL's Windows binaries fail on Cyrillic paths).
+  const databaseDir = process.env.LOCAL_POSTGRES_DIR || 'C:\\sali-data\\postgres';
   database = new EmbeddedPostgres({
     // PostgreSQL's Windows binaries cannot initialize inside a path containing
     // Cyrillic characters, so use Windows' ASCII 8.3 temp path on this machine.
@@ -155,6 +157,7 @@ async function main() {
     // Prisma/PostgreSQL migrations and JSON payloads require UTF-8.
     initdbFlags: ['--encoding=UTF8', '--locale=C'],
   });
+  mkdirSync(path.dirname(databaseDir), { recursive: true });
   if (!existsSync(path.join(databaseDir, 'PG_VERSION'))) {
     await database.initialise();
   }
