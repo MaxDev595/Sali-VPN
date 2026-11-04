@@ -191,6 +191,8 @@ async function main() {
     const publicApiUrl = await startTunnel();
     console.log(`Public API: ${publicApiUrl}`);
     await run(...npm(['run', 'build', '--workspace=apps/web']), { env: { VITE_API_URL: publicApiUrl } });
+    // Apps (Android, Windows) discover the current API address from salivpn.com/config.json.
+    require('node:fs').writeFileSync(path.join(root, 'apps', 'web', 'dist', 'config.json'), JSON.stringify({ apiUrl: publicApiUrl, updatedAt: new Date().toISOString() }));
     await run(...npx(['wrangler', 'deploy']));
   }
 

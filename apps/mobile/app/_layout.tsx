@@ -10,6 +10,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { router } from 'expo-router';
 import { theme } from '../src/theme';
+import { fontAssets } from '../src/theme/fonts';
 import { handleDeepLink } from '../src/services/deepLinks';
 import { usePreferencesStore } from '../src/store/preferencesStore';
 import { useAccountStore } from '../src/store/accountStore';
@@ -34,10 +35,7 @@ function AppBootstrap() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({
-    'Outfit-Bold': require('../assets/fonts/Outfit-Bold.ttf'),
-    'Outfit-SemiBold': require('../assets/fonts/Outfit-SemiBold.ttf'),
-  });
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
   const ready = fontsLoaded || Boolean(fontError);
   const [introDone, setIntroDone] = useState(false);
   const finishIntro = useCallback(() => setIntroDone(true), []);

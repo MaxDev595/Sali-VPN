@@ -3,7 +3,7 @@ import type { BotPlan, IssuedCode } from '../services/api-client';
 
 export const menuLabels = {
   buy: '💎 Купить подписку',
-  free: '🎁 Бесплатный тариф',
+  free: '🎁 Бесплатный день',
   codes: '🔑 Мои коды',
   devices: '📱 Мои устройства',
   download: '📲 Скачать приложение',
@@ -48,7 +48,7 @@ export function openAppKeyboard(url: string, label = '⚡ Открыть Sali VP
 
 export function welcomeKeyboard(freeUsed: boolean) {
   return Markup.inlineKeyboard([
-    ...(freeUsed ? [] : [[Markup.button.callback('🎁 Получить бесплатный тариф', 'menu_free')]]),
+    ...(freeUsed ? [] : [[Markup.button.callback('🎁 Получить бесплатный день', 'menu_free')]]),
     [Markup.button.callback('💎 Купить подписку', 'menu_buy')],
     [Markup.button.callback('📲 Скачать приложение', 'menu_download')],
   ]);
@@ -104,13 +104,16 @@ export function chooseDeviceKeyboard(code: string, devices: string[]) {
   return Markup.inlineKeyboard(devices.map((publicId) => [Markup.button.callback(`📱 ${publicId}`, `at_${code}_${publicId}`)]));
 }
 
+const RELEASES = 'https://github.com/MaxDev595/Sali-VPN/releases/download';
+
 export function downloadKeyboard() {
-  const rows = [
-    ...(process.env.ANDROID_STORE_URL ? [[Markup.button.url('🤖 Google Play', process.env.ANDROID_STORE_URL)]] : []),
-    ...(process.env.IOS_STORE_URL ? [[Markup.button.url('🍏 App Store', process.env.IOS_STORE_URL)]] : []),
-    ...(process.env.APK_DOWNLOAD_URL ? [[Markup.button.url('⬇️ Скачать APK', process.env.APK_DOWNLOAD_URL)]] : []),
-  ];
-  return Markup.inlineKeyboard(rows.length ? rows : [[Markup.button.url('🌐 salivpn.com', 'https://salivpn.com')]]);
+  const apk = process.env.APK_DOWNLOAD_URL || `${RELEASES}/apk-latest/sali-vpn.apk`;
+  const windows = process.env.WINDOWS_DOWNLOAD_URL || `${RELEASES}/desktop-latest/SaliVPN-Setup.exe`;
+  return Markup.inlineKeyboard([
+    [Markup.button.url('📱 Android (APK)', apk), Markup.button.url('💻 Windows', windows)],
+    ...(process.env.ANDROID_STORE_URL ? [[Markup.button.url('Google Play', process.env.ANDROID_STORE_URL)]] : []),
+    [Markup.button.url('📖 Инструкция по установке', process.env.DOWNLOAD_PAGE_URL || 'https://salivpn.com/download')],
+  ]);
 }
 
 export const faqKeyboard = (supportUrl?: string) =>

@@ -5,11 +5,17 @@ import { LanguageSwitch } from '../landing/components';
 import { useLandingLanguage } from '../landing/i18n';
 import { copy, PRICES } from '../landing/copy';
 import '../landing/landing.css';
+import { DOWNLOADS } from '../lib/downloads';
 
 const env = import.meta.env as Record<string, string | undefined>;
-const BOT_URL = (env.VITE_TELEGRAM_BOT_URL ?? 'https://t.me/SaliVPNOfficialBot').replace(/\/$/, '');
-const SUPPORT_URL = env.VITE_SUPPORT_URL ?? 'https://t.me/SaliVPNHelpBot';
-const STORE_URL = env.VITE_ANDROID_STORE_URL ?? 'https://play.google.com/store/apps/details?id=app.sali.vpn';
+const BOT_URL = DOWNLOADS.bot;
+const SUPPORT_URL = DOWNLOADS.support;
+void env;
+
+/** PNG icon from /assets/icons (replaces emoji everywhere on the landing). */
+export function Icon({ name, className = '' }: { name: string; className?: string }) {
+  return <img src={`/assets/icons/${name}.png`} alt="" aria-hidden="true" className={`sv-ico ${className}`} draggable={false} />;
+}
 
 /** Fades sections in as they scroll into view. */
 function useReveal() {
@@ -31,7 +37,7 @@ function PhoneMock() {
       <div className="sv-phone-button"><span className="sv-phone-halo" /><div className="sv-phone-ring"><div className="sv-phone-core"><LogoMarkStatic ink="#F3F6FC" className="sv-phone-core-logo" /><b>В сети</b><small>ЗАЩИЩЕНО</small></div></div></div>
       <div className="sv-phone-pill"><i />Подписка до <b>03.12.2026</b></div>
       <div className="sv-phone-stats"><div><b>94</b><small>↓ МБИТ/С</small></div><div><b>41</b><small>↑ МБИТ/С</small></div><div><b>32</b><small>ПИНГ МС</small></div></div>
-      <div className="sv-phone-server"><span>🇳🇱</span><div><small>ТЕКУЩИЙ СЕРВЕР</small><b>Нидерланды</b><em>Амстердам · 32 мс</em></div><i>›</i></div>
+      <div className="sv-phone-server"><span><Icon name="flag-nl" /></span><div><small>ТЕКУЩИЙ СЕРВЕР</small><b>Нидерланды</b><em>Амстердам · 32 мс</em></div><i>›</i></div>
     </div>
   </div>;
 }
@@ -52,7 +58,7 @@ export function LandingPage() {
     <header className={`sv-nav${scrolled ? ' scrolled' : ''}`}>
       <div className="sv-wrap sv-nav-inner">
         <button className="sv-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><LogoBadge className="sv-brand-mark" /><LogoWordmark vpn={false} className="sv-brand-word" /></button>
-        <nav>{c.nav.map(([id, label]) => <button key={id} onClick={() => go(id)}>{label}</button>)}</nav>
+        <nav>{c.nav.map(([id, label]) => <button key={id} onClick={() => go(id)}>{label}</button>)}<Link to="/download">{c.downloadNav}</Link></nav>
         <LanguageSwitch language={language} onChange={setLanguage} />
         <a className="sv-btn sv-btn-dark sv-nav-cta" href={BOT_URL}>{c.openBot}</a>
       </div>
@@ -67,8 +73,8 @@ export function LandingPage() {
           <h1>{c.heroTitle[0]}<br /><span>{c.heroTitle[1]}</span></h1>
           <p className="sv-lead">{c.heroText}</p>
           <div className="sv-actions">
-            <a className="sv-btn sv-btn-peach" href={STORE_URL}>▶ {c.download}</a>
-            <a className="sv-btn sv-btn-ghost" href={`${BOT_URL}?start=free`}>✈︎ {c.openBot}</a>
+            <Link className="sv-btn sv-btn-peach" to="/download"><Icon name="download-glyph-dark" />{c.download}</Link>
+            <a className="sv-btn sv-btn-ghost" href={`${BOT_URL}?start=free`}><Icon name="telegram-glyph" />{c.openBot}</a>
           </div>
           <ul className="sv-trust">{c.trust.map((item) => <li key={item}>{item}</li>)}</ul>
         </div>
@@ -87,7 +93,7 @@ export function LandingPage() {
       <div className="sv-wrap">
         <div className="sv-head sv-reveal"><p className="sv-eyebrow">{c.plansEyebrow}</p><h2>{c.plansTitle}</h2><p>{c.plansText}</p></div>
         <div className="sv-plans">
-          <article className="sv-plan sv-reveal"><h3>{c.free}</h3><p className="sv-price"><strong>{PRICES.freeMinutes}</strong><s style={{ textDecoration: "none" }}>{language === "ru" ? "мин" : "min"}</s><span>{c.freeText}</span></p><a className="sv-btn sv-btn-ghost-dark" href={`${BOT_URL}?start=free`}>{c.freeCta}</a></article>
+          <article className="sv-plan sv-reveal"><h3>{c.free}</h3><p className="sv-price"><strong>{PRICES.freeDays}</strong><s style={{ textDecoration: "none" }}>{c.dayWord}</s><span>{c.freeText}</span></p><a className="sv-btn sv-btn-ghost-dark" href={`${BOT_URL}?start=free`}>{c.freeCta}</a></article>
           <article className="sv-plan sv-reveal"><h3>{c.month}</h3><p className="sv-price"><strong>${PRICES.month}</strong><s>${PRICES.monthOld}</s></p><ul>{c.benefits.map((b) => <li key={b}>{b}</li>)}</ul><a className="sv-btn sv-btn-dark" href={`${BOT_URL}?start=buy`}>{c.buyCta}</a></article>
           <article className="sv-plan sv-plan-best sv-reveal"><em>{c.best} · −{saving}%</em><h3>{c.year}</h3><p className="sv-price"><strong>${PRICES.year}</strong><s>${PRICES.yearOld}</s><span>${monthlyOfYear}{c.perMonth}</span></p><ul>{c.benefits.map((b) => <li key={b}>{b}</li>)}</ul><a className="sv-btn sv-btn-peach" href={`${BOT_URL}?start=buy`}>{c.buyCta}</a></article>
         </div>
@@ -98,7 +104,7 @@ export function LandingPage() {
     <section className="sv-section" id="features">
       <div className="sv-wrap">
         <div className="sv-head sv-reveal"><p className="sv-eyebrow">{c.featuresEyebrow}</p><h2>{c.featuresTitle}</h2></div>
-        <div className="sv-features">{c.features.map(([icon, title, body], index) => <article className="sv-reveal" style={{ transitionDelay: `${(index % 3) * 70}ms` }} key={title}><span>{icon}</span><h3>{title}</h3><p>{body}</p></article>)}</div>
+        <div className="sv-features">{c.features.map(([icon, title, body], index) => <article className="sv-reveal" style={{ transitionDelay: `${(index % 3) * 70}ms` }} key={title}><span><Icon name={icon} /></span><h3>{title}</h3><p>{body}</p></article>)}</div>
       </div>
     </section>
 
@@ -113,10 +119,10 @@ export function LandingPage() {
       <div className="sv-wrap sv-reveal">
         <div className="sv-cta-card"><AnimatedLogo className="sv-cta-logo" replayKey={replay} /></div>
         <h2>{c.ctaTitle}</h2><p>{c.ctaText}</p>
-        <div className="sv-actions sv-actions-center"><a className="sv-btn sv-btn-peach" href={STORE_URL}>▶ {c.download}</a><a className="sv-btn sv-btn-ghost" href={`${BOT_URL}?start=free`}>✈︎ {c.openBot}</a></div>
+        <div className="sv-actions sv-actions-center"><Link className="sv-btn sv-btn-peach" to="/download"><Icon name="download-glyph-dark" />{c.download}</Link><a className="sv-btn sv-btn-ghost" href={`${BOT_URL}?start=free`}><Icon name="telegram-glyph" />{c.openBot}</a></div>
       </div>
     </section>
 
-    <footer className="sv-footer"><div className="sv-wrap sv-footer-inner"><div className="sv-brand"><LogoBadge className="sv-brand-mark" /><LogoWordmark vpn={false} className="sv-brand-word" /></div><p>{c.footer}</p><nav><a href={SUPPORT_URL}>{c.support}</a><Link to="/privacy">{c.privacy}</Link><Link to="/terms">{c.terms}</Link><a href={BOT_URL}>Telegram</a></nav><small>© {new Date().getFullYear()} Sali VPN</small></div></footer>
+    <footer className="sv-footer"><div className="sv-wrap sv-footer-inner"><div className="sv-brand"><LogoBadge className="sv-brand-mark" /><LogoWordmark vpn={false} className="sv-brand-word" /></div><p>{c.footer}</p><nav><Link to="/download">{c.downloadNav}</Link><a href={SUPPORT_URL}>{c.support}</a><Link to="/privacy">{c.privacy}</Link><Link to="/terms">{c.terms}</Link><a href={BOT_URL}>Telegram</a></nav><small>© {new Date().getFullYear()} Sali VPN</small></div></footer>
   </main>;
 }

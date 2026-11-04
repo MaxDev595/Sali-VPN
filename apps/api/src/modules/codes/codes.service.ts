@@ -140,10 +140,9 @@ export class CodesService {
     try {
       let expiresAt: Date | null = null;
       if (row.kind === ActivationCodeKind.FREE) {
-        await this.trials.startTrialIfNeeded(userId);
+        const trial = await this.trials.startTrialIfNeeded(userId);
+        expiresAt = trial.expiresAt;
       } else {
-        // A running trial timer must not switch VPN off under a paid subscription.
-        await this.trials.pauseSession(userId).catch(() => undefined);
         const plan = row.plan ?? await this.prisma.plan.findUniqueOrThrow({ where: { code: DEFAULT_PLAN_CODE } });
         const subscription = await this.subscriptions.grantDays(userId, plan.id, row.durationDays, 'code');
         expiresAt = subscription.expiresAt;
@@ -151,8 +150,8 @@ export class CodesService {
       void this.notifyRedeemed(row.ownerId, userId, row.code, row.kind, expiresAt);
       return {
         kind: row.kind,
-        durationDays: row.durationDays,
-        planName: row.plan?.name ?? (row.kind === ActivationCodeKind.FREE ? 'Бесплатный' : null),
+        durationDays: row.kind === ActivationCodeKind.FREE ? 1 : row.durationDays,
+        planName: row.plan?.name ?? (row.kind === ActivationCodeKind.FREE ? 'Бесплатный день' : null),
         expiresAt: expiresAt?.toISOString() ?? null,
       };
     } catch (error) {

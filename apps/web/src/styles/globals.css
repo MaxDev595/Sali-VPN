@@ -1,4 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap');
+/* Sali Sans: the logo's lettering (Outfit) for Latin + Jost for Cyrillic, merged into one
+   self-hosted family so Russian and English text look the same as the logo. OFL fonts. */
+@font-face { font-family:'Sali Sans'; src:url('/fonts/SaliSans-Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
+@font-face { font-family:'Sali Sans'; src:url('/fonts/SaliSans-Medium.woff2') format('woff2'); font-weight:500; font-display:swap; }
+@font-face { font-family:'Sali Sans'; src:url('/fonts/SaliSans-SemiBold.woff2') format('woff2'); font-weight:600; font-display:swap; }
+@font-face { font-family:'Sali Sans'; src:url('/fonts/SaliSans-Bold.woff2') format('woff2'); font-weight:700 900; font-display:swap; }
 
 @tailwind base;
 @tailwind components;
@@ -7,7 +12,7 @@
 :root { color-scheme:dark; --ease-out:cubic-bezier(.23,1,.32,1); --ease-in-out:cubic-bezier(.77,0,.175,1); }
 html,body,#root { min-height:100%; background:#040913; }
 html { scroll-behavior:smooth; }
-body { -webkit-font-smoothing:antialiased; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); font-family:Inter,Arial,sans-serif; }
+body { -webkit-font-smoothing:antialiased; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); font-family:'Sali Sans',system-ui,sans-serif; }
 button,input,select,textarea { font:inherit; }
 * { -webkit-tap-highlight-color:transparent; }
 .screen-enter { animation:screen-fade-in 220ms cubic-bezier(.16,1,.3,1); }
@@ -19,8 +24,8 @@ button,input,select,textarea { font:inherit; }
 ::-webkit-scrollbar { width:8px;height:8px } ::-webkit-scrollbar-track{background:#040913} ::-webkit-scrollbar-thumb{background:#26324B;border-radius:4px}
 
 
-/* Mini App headings use the brand face */
-h1,h2{font-family:Outfit,Inter,sans-serif}
+/* Everything uses the brand face (Sali Sans). */
+h1,h2{font-family:'Sali Sans',system-ui,sans-serif}
 
 /* The logo always sits on white: a white tile with the original-colour mark. */
 .sali-badge{display:inline-grid;place-items:center;flex:none;background:#fff;border-radius:28%;box-shadow:0 6px 18px -8px rgba(0,0,0,.6)}

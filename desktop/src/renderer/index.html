@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; font-src 'self'; script-src 'self'" />
+  <title>Sali VPN</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="drag"></div>
+  <main class="app" id="app">
+    <header class="top">
+      <span class="badge"><img src="assets/mark.svg" alt="" /></span>
+      <img class="word" src="assets/wordmark.svg" alt="Sali" />
+      <button class="id-chip" id="idChip" title="Скопировать Sali ID"><small>ID</small><b id="publicId">…</b></button>
+    </header>
+
+    <section class="status">
+      <p class="status-title" id="statusTitle">Загрузка…</p>
+      <p class="status-sub" id="statusSub">&nbsp;</p>
+    </section>
+
+    <section class="power-wrap">
+      <button class="power" id="power" aria-label="Подключить VPN">
+        <span class="halo"></span>
+        <span class="ring"><span class="core"><img src="assets/mark.svg" alt="" class="core-mark" /><b id="powerLabel">Подключить</b><small id="powerSub">НАЖМИТЕ</small></span></span>
+      </button>
+      <p class="timer" id="timer">&nbsp;</p>
+    </section>
+
+    <section class="cards">
+      <div class="pill" id="access"><i></i><span id="accessText">Проверяем доступ…</span></div>
+      <div class="server"><img id="flag" src="assets/globe-glyph.png" alt="" /><div><small>СЕРВЕР</small><b id="server">Автовыбор</b></div></div>
+    </section>
+
+    <section class="actions">
+      <button class="btn btn-peach" id="enterCode"><img src="assets/key-glyph.png" alt="" />Ввести код</button>
+      <button class="btn btn-ghost" id="getCode"><img src="assets/telegram-glyph.png" alt="" /><span id="getCodeLabel">Получить код в боте</span></button>
+    </section>
+
+    <section class="link-card" id="linkCard" hidden>
+      <img src="assets/link-glyph.png" alt="" />
+      <div><b>Привяжите Telegram</b><span>Бот запомнит этот компьютер — коды можно будет активировать одной кнопкой.</span></div>
+      <button class="btn-small" id="linkBtn">Привязать</button>
+    </section>
+
+    <footer class="foot">
+      <button id="support"><img src="assets/chat-glyph.png" alt="" />Поддержка</button>
+      <button id="phone"><img src="assets/download-glyph.png" alt="" />Sali на телефон</button>
+      <span id="version"></span>
+    </footer>
+  </main>
+
+  <div class="sheet-backdrop" id="sheet" hidden>
+    <form class="sheet" id="codeForm" autocomplete="off">
+      <h2>Активация кода</h2>
+      <p>Код приходит в Telegram-боте Sali после оплаты или как бесплатный день.</p>
+      <div class="code-field">
+        <input id="codeInput" spellcheck="false" placeholder="SALI-XXXX-XXXX-XXXX" maxlength="19" />
+        <button type="button" id="paste" class="btn-small">Вставить</button>
+      </div>
+      <p class="form-error" id="codeError" hidden></p>
+      <button class="btn btn-peach" id="codeSubmit" type="submit">Активировать</button>
+      <button class="btn btn-ghost" type="button" id="codeCancel">Отмена</button>
+    </form>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

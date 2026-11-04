@@ -45,7 +45,7 @@ export function SubscriptionScreen() {
       const result = await api.redeemCode(code);
       telegram.haptic.success();
       setCode('');
-      setMessage({ ok: true, text: result.kind === 'FREE' ? 'Бесплатный тариф включён.' : `Подписка активирована${result.expiresAt ? ` до ${new Date(result.expiresAt).toLocaleDateString('ru-RU')}` : ''}.` });
+      setMessage({ ok: true, text: result.kind === 'FREE' ? 'Бесплатный день включён — 24 часа VPN.' : `Подписка активирована${result.expiresAt ? ` до ${new Date(result.expiresAt).toLocaleDateString('ru-RU')}` : ''}.` });
       await load();
     } catch (cause) {
       telegram.haptic.error();
@@ -68,7 +68,7 @@ export function SubscriptionScreen() {
         <div className="flex items-center gap-3">
           <span className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-sali-success shadow-[0_0_12px_#5BE0A8]' : 'bg-sali-gray-600'}`} />
           <div className="flex-1">
-            <p className="text-[15px] font-semibold">{active ? subscription!.plan.name : home?.trial?.status === 'ACTIVE' ? 'Бесплатный тариф' : 'Нет активного тарифа'}</p>
+            <p className="text-[15px] font-semibold">{active ? subscription!.plan.name : home?.trial?.status === 'ACTIVE' ? 'Бесплатный день' : 'Нет активного тарифа'}</p>
             <p className="text-sm text-sali-gray-400">{active ? `Действует до ${subscription!.expiresAt ? new Date(subscription!.expiresAt).toLocaleDateString('ru-RU') : '—'}` : 'Оплата и коды — в чате с ботом'}</p>
           </div>
         </div>
@@ -86,7 +86,7 @@ export function SubscriptionScreen() {
         })}
         <ul className="space-y-2 px-1 pt-1">{FEATURES.map((item) => <li key={item} className="flex gap-3 text-[15px] text-sali-gray-200"><span className="text-sali-accent">✓</span>{item}</li>)}</ul>
         <Button onClick={() => telegram.openBot('buy')}>Купить в боте · Stars, USDT, карта</Button>
-        {!active && !home?.trial && <Button variant="secondary" onClick={() => telegram.openBot('free')}>🎁 Бесплатный тариф</Button>}
+        {!active && !home?.trial && <Button variant="secondary" onClick={() => telegram.openBot('free')}>Бесплатный день</Button>}
       </div>
 
       <Card>

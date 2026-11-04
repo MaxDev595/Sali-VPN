@@ -13,6 +13,12 @@ declare global {
   }
 }
 
+// Pretty URLs (salivpn.com/download) map onto the hash router; Cloudflare serves index.html for them.
+const PRETTY = ['/download', '/privacy', '/terms'];
+if (!window.location.hash && PRETTY.includes(window.location.pathname.replace(/\/$/, ''))) {
+  window.history.replaceState(null, '', `/${window.location.search}#${window.location.pathname.replace(/\/$/, '')}`);
+}
+
 const paddleToken = import.meta.env.VITE_PADDLE_CLIENT_TOKEN;
 if (paddleToken) {
   const script = document.createElement('script');

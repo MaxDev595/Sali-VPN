@@ -11,9 +11,10 @@ import { SupportScreen } from './screens/SupportScreen';
 import { ServersScreen } from './screens/ServersScreen';
 import { LandingPage } from './screens/LandingPage';
 import { LegalPage } from './screens/LegalPage';
+import { DownloadPage } from './screens/DownloadPage';
 
 export function App() {
-  return <Routes><Route path="/" element={<LandingPage />} /><Route path="/privacy" element={<LegalPage type="privacy" />} /><Route path="/terms" element={<LegalPage type="terms" />} /><Route path="/app/*" element={<MiniApp />} /></Routes>;
+  return <Routes><Route path="/" element={<LandingPage />} /><Route path="/download" element={<DownloadPage />} /><Route path="/privacy" element={<LegalPage type="privacy" />} /><Route path="/terms" element={<LegalPage type="terms" />} /><Route path="/app/*" element={<MiniApp />} /></Routes>;
 }
 
 function MiniApp() {

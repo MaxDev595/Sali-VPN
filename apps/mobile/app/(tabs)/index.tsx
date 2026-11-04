@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -52,7 +53,7 @@ export default function VpnScreen() {
     </ScrollView>
 
     <SaliModal visible={needsCode} title="Нужен тариф" onClose={clearError}>
-      <Text style={styles.modalText}>Чтобы подключиться, активируйте код. Бесплатный тариф и коды выдаёт наш Telegram-бот.</Text>
+      <Text style={styles.modalText}>Чтобы подключиться, активируйте код. Бесплатный день и коды выдаёт наш Telegram-бот.</Text>
       <View style={{ gap: 10, marginTop: 20 }}>
         <SaliButton title="Ввести код" onPress={() => { clearError(); router.push('/activate'); }} />
         <SaliButton secondary title="Открыть Telegram-бот" onPress={() => { clearError(); openBot(); }} />
@@ -66,19 +67,19 @@ const styles = StyleSheet.create({
   screen: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 18, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brand: { flexDirection: 'row', gap: 11, alignItems: 'center' },
-  logo: { color: theme.colors.textPrimary, fontSize: 19, fontFamily: 'Outfit-Bold' },
+  logo: { color: theme.colors.textPrimary, fontSize: 19, fontFamily: 'SaliSans-Bold' },
   sub: { color: theme.colors.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 1.1 },
   codeButton: { paddingHorizontal: 14, height: 38, borderRadius: theme.radius.pill, borderWidth: 1, borderColor: 'rgba(255,197,138,.4)', backgroundColor: theme.colors.glow, justifyContent: 'center' },
   codeButtonText: { color: theme.colors.accent, fontSize: 13, fontWeight: '800' },
   hero: { flex: 1, minHeight: 440, justifyContent: 'center', gap: 18 },
   status: { color: theme.colors.textSecondary, fontSize: 16, fontWeight: '600', textAlign: 'center' },
-  timer: { color: theme.colors.textPrimary, fontSize: 20, fontFamily: 'Outfit-SemiBold', fontVariant: ['tabular-nums'], textAlign: 'center' },
+  timer: { color: theme.colors.textPrimary, fontSize: 20, fontFamily: 'SaliSans-SemiBold', fontVariant: ['tabular-nums'], textAlign: 'center' },
   error: { color: theme.colors.error, textAlign: 'center', fontSize: 14, lineHeight: 20, paddingHorizontal: 20 },
   serverCard: { minHeight: 88, borderRadius: theme.radius.lg, padding: 15, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', gap: 13 },
   pressed: { opacity: .85, transform: [{ scale: .99 }] },
   flag: { width: 50, height: 50, borderRadius: 16, backgroundColor: theme.colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' },
   caption: { color: theme.colors.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 1.1 },
-  server: { color: theme.colors.textPrimary, fontSize: 17, fontFamily: 'Outfit-SemiBold', marginTop: 2 },
+  server: { color: theme.colors.textPrimary, fontSize: 17, fontFamily: 'SaliSans-SemiBold', marginTop: 2 },
   city: { color: theme.colors.textSecondary, fontSize: 13, marginTop: 2 },
   chevron: { color: theme.colors.textSecondary, fontSize: 30 },
   modalText: { color: theme.colors.textSecondary, fontSize: 16, lineHeight: 23, textAlign: 'center' },

@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { VpnService } from '../vpn/vpn.service';
 import { TrialStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { trialDurationSeconds, trialSecondsLeft } from './trial-clock';
 
 @Injectable()
 export class TrialsService {
@@ -18,67 +19,34 @@ export class TrialsService {
   ) {}
 
   /**
-   * Starts the free trial the first time a user connects. Idempotent: if a
-   * trial already exists, the existing one is returned untouched — trial
-   * duration can never be extended by calling this again.
+   * Starts the free tariff (one day, wall clock) the first time it is activated.
+   * Idempotent: an existing trial is returned untouched, so it can never be extended
+   * by activating again.
    */
   async startTrialIfNeeded(userId: string) {
-    const minutes = Number(this.config.get('TRIAL_DURATION_MINUTES', 60));
-    if (!Number.isFinite(minutes) || minutes <= 0) {
-      throw new Error('TRIAL_DURATION_MINUTES must be a positive number');
-    }
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + minutes * 60_000);
-
+    const expiresAt = new Date(now.getTime() + trialDurationSeconds() * 1000);
     return this.prisma.trial.upsert({
       where: { userId },
       update: {},
-      create: { userId, startedAt: now, expiresAt, activeSince: null, status: TrialStatus.ACTIVE },
+      create: { userId, startedAt: now, expiresAt, activeSince: now, status: TrialStatus.ACTIVE },
     });
-  }
-
-  private limitSeconds(bonusSeconds = 0) {
-    return Number(this.config.get('TRIAL_DURATION_MINUTES', 60)) * 60 + bonusSeconds;
   }
 
   async assertAvailable(userId: string) {
     const trial = await this.startTrialIfNeeded(userId);
-    const runningSeconds = trial.activeSince
-      ? Math.max(0, Math.floor((Date.now() - trial.activeSince.getTime()) / 1000))
-      : 0;
-    if (trial.status === TrialStatus.EXPIRED || trial.usedSeconds + runningSeconds >= this.limitSeconds(trial.bonusSeconds)) {
-      throw new ForbiddenException('Пробный период закончился');
-    }
+    if (trialSecondsLeft(trial) <= 0) throw new ForbiddenException('Бесплатный день закончился');
     return trial;
   }
 
+  /** The free day runs on the wall clock, so connecting only checks it is still valid. */
   async startSession(userId: string) {
-    const trial = await this.assertAvailable(userId);
-    if (trial.activeSince) return trial;
-
-    const now = new Date();
-    const remainingSeconds = this.limitSeconds(trial.bonusSeconds) - trial.usedSeconds;
-    return this.prisma.trial.update({
-      where: { userId },
-      data: { activeSince: now, expiresAt: new Date(now.getTime() + remainingSeconds * 1000) },
-    });
+    return this.assertAvailable(userId);
   }
 
+  /** Disconnecting does not pause the free day. Kept for callers that used the old usage timer. */
   async pauseSession(userId: string) {
-    const trial = await this.getTrial(userId);
-    if (!trial?.activeSince) return trial;
-
-    const elapsed = Math.max(0, Math.floor((Date.now() - trial.activeSince.getTime()) / 1000));
-    const limitSeconds = this.limitSeconds(trial.bonusSeconds);
-    const usedSeconds = Math.min(limitSeconds, trial.usedSeconds + elapsed);
-    return this.prisma.trial.update({
-      where: { userId },
-      data: {
-        usedSeconds,
-        activeSince: null,
-        status: usedSeconds >= limitSeconds ? TrialStatus.EXPIRED : TrialStatus.ACTIVE,
-      },
-    });
+    return this.getTrial(userId);
   }
 
   async getTrial(userId: string) {
@@ -94,6 +62,12 @@ export class TrialsService {
       where: { id: trialId },
       data: { status: TrialStatus.EXPIRED },
     });
+    // A paid subscription activated during the free day keeps the VPN on.
+    const paid = await this.prisma.subscription.findFirst({
+      where: { userId, status: 'ACTIVE', OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+      select: { id: true },
+    });
+    if (paid) return;
     await this.vpn.disable(userId).catch((err) => {
       this.logger.error(`Failed to disable VPN for expired trial user=${userId}`, err);
     });
@@ -105,7 +79,7 @@ export class TrialsService {
   async sweepExpiredTrials() {
     const now = new Date();
     const expired = await this.prisma.trial.findMany({
-      where: { status: TrialStatus.ACTIVE, activeSince: { not: null }, expiresAt: { lte: now } },
+      where: { status: TrialStatus.ACTIVE, expiresAt: { lte: now } },
       select: { id: true, userId: true },
     });
 

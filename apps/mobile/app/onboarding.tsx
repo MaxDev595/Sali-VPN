@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../src/components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
@@ -15,7 +16,7 @@ import { theme } from '../src/theme';
 const pages = [
   { glyph: '01', title: 'Приватность без сложностей', text: 'Sali защищает весь трафик устройства. Никаких ручных настроек — всё готово к работе.' },
   { glyph: '02', title: 'Одно нажатие', text: 'Выберите сервер и нажмите большую кнопку. Остальное приложение сделает само.' },
-  { glyph: '03', title: 'Тариф — через Telegram', text: 'Бесплатный тариф и подписку выдаёт бот Sali. Он пришлёт код, который вы введёте здесь.' },
+  { glyph: '03', title: 'Тариф — через Telegram', text: 'Бесплатный день и подписку выдаёт бот Sali. Он пришлёт код, который вы введёте здесь.' },
   { glyph: 'ID', title: 'Ваш Sali ID', text: 'Это номер устройства. Привяжите Telegram — бот запомнит устройство, и коды можно будет активировать одной кнопкой.' },
 ];
 
@@ -64,13 +65,13 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.background, paddingTop: 8 },
   header: { minHeight: 70, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  brandName: { color: theme.colors.textPrimary, fontSize: 18, fontFamily: 'Outfit-Bold', flex: 1 },
+  brandName: { color: theme.colors.textPrimary, fontSize: 18, fontFamily: 'SaliSans-Bold', flex: 1 },
   skip: { color: theme.colors.accent, fontSize: 15, fontWeight: '800' },
   content: { flex: 1, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' },
   badge: { minWidth: 136, height: 136, paddingHorizontal: 24, borderRadius: 68, borderWidth: 1, borderColor: 'rgba(255,197,138,.35)', backgroundColor: theme.colors.glow, alignItems: 'center', justifyContent: 'center', marginBottom: 38 },
-  glyph: { color: theme.colors.accent, fontSize: 38, fontFamily: 'Outfit-Bold' },
-  idText: { color: theme.colors.accent, fontSize: 22, fontFamily: 'Outfit-Bold', letterSpacing: 1 },
-  title: { color: theme.colors.textPrimary, fontSize: 30, lineHeight: 38, fontFamily: 'Outfit-Bold', textAlign: 'center' },
+  glyph: { color: theme.colors.accent, fontSize: 38, fontFamily: 'SaliSans-Bold' },
+  idText: { color: theme.colors.accent, fontSize: 22, fontFamily: 'SaliSans-Bold', letterSpacing: 1 },
+  title: { color: theme.colors.textPrimary, fontSize: 30, lineHeight: 38, fontFamily: 'SaliSans-Bold', textAlign: 'center' },
   text: { color: theme.colors.textSecondary, fontSize: 17, lineHeight: 26, textAlign: 'center', marginTop: 14, maxWidth: 340 },
   footer: { paddingHorizontal: 24, paddingBottom: 10, gap: 22 },
   dots: { flexDirection: 'row', gap: 6, alignSelf: 'center', minHeight: 24, alignItems: 'center' },

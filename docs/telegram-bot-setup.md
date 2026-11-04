@@ -16,7 +16,8 @@ Required for the bot:
 - `SUPPORT_URL` — public support chat/account URL;
 - `BOT_API_TIMEOUT_MS` — internal API timeout, default `8000`.
 
-`TRIAL_DURATION_MINUTES` is read by the API. A trial is created atomically only
+`TRIAL_DURATION_HOURS` (default 24) is read by the API: the free tariff is one wall-clock day
+from the moment the FREE code is activated. A trial is created atomically only
 after the API validates Telegram Mini App `initData`.
 
 ## BotFather

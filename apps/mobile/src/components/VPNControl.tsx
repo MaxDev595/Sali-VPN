@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import Animated, { Easing, interpolate, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import { theme } from '../theme';
@@ -44,6 +45,6 @@ const styles = StyleSheet.create({
   core: { flex: 1, borderRadius: SIZE, backgroundColor: theme.colors.surfaceElevated, alignItems: 'center', justifyContent: 'center', gap: 6 },
   coreActive: { backgroundColor: '#0B2A2A' },
   eyebrow: { color: theme.colors.textSecondary, fontSize: 11, letterSpacing: 2.4, fontWeight: '700' },
-  label: { color: theme.colors.textPrimary, fontSize: 22, fontFamily: 'Outfit-SemiBold', marginTop: 4 },
+  label: { color: theme.colors.textPrimary, fontSize: 22, fontFamily: 'SaliSans-SemiBold', marginTop: 4 },
   labelActive: { color: theme.colors.success },
 });

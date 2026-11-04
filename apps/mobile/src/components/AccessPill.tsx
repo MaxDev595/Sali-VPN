@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { router } from 'expo-router';
 import { useAccountStore } from '../store/accountStore';
 import { theme } from '../theme';
@@ -22,7 +23,7 @@ export function AccessPill({ status }: { status: VPNStatus }) {
   }
   if (access === 'trial' && home?.trial) {
     const elapsed = home.trial.isRunning ? (now - syncedAt.current) / 1000 : 0;
-    return <View style={styles.root}><View style={[styles.dot, styles.dotTrial]} /><Text style={styles.text}>Бесплатное время <Text style={[styles.strong, styles.mono]}>{formatRemaining(home.trial.secondsRemaining - elapsed)}</Text></Text></View>;
+    return <View style={styles.root}><View style={[styles.dot, styles.dotTrial]} /><Text style={styles.text}>Бесплатный день <Text style={[styles.strong, styles.mono]}>{formatRemaining(home.trial.secondsRemaining - elapsed)}</Text></Text></View>;
   }
   return <Pressable accessibilityRole="button" onPress={() => router.push('/activate')} style={({ pressed }) => [styles.root, styles.cta, pressed && { opacity: .8 }]}>
     <Text style={styles.ctaText}>{access === 'expired' ? 'Тариф закончился · ' : 'Нет тарифа · '}<Text style={styles.ctaStrong}>Ввести код</Text></Text>

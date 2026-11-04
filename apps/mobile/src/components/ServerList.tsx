@@ -1,4 +1,5 @@
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import type { VPNServer } from '../types';
 import { theme } from '../theme';
 import { useI18n } from '../i18n';

@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { Text } from './Text';
 import { theme } from '../theme';
 
 export function SaliButton({ title, onPress, loading = false, secondary = false, disabled = false, icon }: { title: string; onPress(): void; loading?: boolean; secondary?: boolean; disabled?: boolean; icon?: string }) {
@@ -11,6 +12,6 @@ const styles = StyleSheet.create({
   secondary: { backgroundColor: theme.colors.surfaceElevated, borderWidth: 1, borderColor: theme.colors.border, shadowOpacity: 0, elevation: 0 },
   disabled: { opacity: .45 },
   pressed: { transform: [{ scale: .975 }], opacity: .9 },
-  text: { color: theme.colors.onPrimary, fontSize: 16, fontFamily: 'Outfit-SemiBold' },
+  text: { color: theme.colors.onPrimary, fontSize: 16, fontFamily: 'SaliSans-SemiBold' },
   secondaryText: { color: theme.colors.textPrimary },
 });

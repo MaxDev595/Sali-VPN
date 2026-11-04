@@ -3,6 +3,7 @@ import { InternalServiceGuard } from '../../common/guards/internal-service.guard
 import { UsersService } from '../users/users.service';
 import { VpnService } from '../vpn/vpn.service';
 import { TrialsService } from '../trials/trials.service';
+import { trialSecondsLeft } from '../trials/trial-clock';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { ReferralsService } from '../referrals/referrals.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -89,14 +90,7 @@ export class InternalController {
       this.subscriptions.getLatestForUser(user.id),
       this.referrals.getStats(user.id),
     ]);
-    const now = Date.now();
-    const trialSessionSeconds = trial?.activeSince
-      ? Math.max(0, Math.floor((now - trial.activeSince.getTime()) / 1000))
-      : 0;
-    const trialLimitSeconds = Number(process.env.TRIAL_DURATION_MINUTES ?? 60) * 60 + (trial?.bonusSeconds ?? 0);
-    const trialSecondsRemaining = trial
-      ? Math.max(0, trialLimitSeconds - trial.usedSeconds - trialSessionSeconds)
-      : 0;
+    const trialSecondsRemaining = trial ? trialSecondsLeft(trial) : 0;
     const trialActive = Boolean(trial && trial.status === 'ACTIVE' && trialSecondsRemaining > 0);
     const subscription = activeSubscription ?? latestSubscription;
     const registered = Boolean(trial || subscription);

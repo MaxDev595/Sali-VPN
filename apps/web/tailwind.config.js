@@ -28,15 +28,8 @@ export default {
         },
       },
       fontFamily: {
-        display: ['Outfit', 'Inter', 'sans-serif'],
-        sans: [
-          '"Inter"',
-          '-apple-system',
-          'BlinkMacSystemFont',
-          '"Inter"',
-          '"SF Pro Display"',
-          'sans-serif',
-        ],
+        display: ['"Sali Sans"', 'system-ui', 'sans-serif'],
+        sans: ['"Sali Sans"', 'system-ui', '-apple-system', 'sans-serif'],
       },
       borderRadius: {
         md: '14px',

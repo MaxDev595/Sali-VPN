@@ -1,4 +1,5 @@
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { useAccountStore } from '../store/accountStore';
 import { telegramLinkUrl } from '../services/session';
 import { theme } from '../theme';
@@ -15,7 +16,7 @@ export function TelegramLinkCard({ compact = false }: { compact?: boolean }) {
     <View style={styles.icon}><Text style={styles.iconText}>✈︎</Text></View>
     <View style={styles.copy}>
       <Text style={styles.title}>Привяжите Telegram</Text>
-      {!compact && <Text style={styles.text}>Бесплатный тариф, коды и напоминания придут в бот Sali. Ваш ID: <Text style={styles.id}>{home.user.publicId}</Text></Text>}
+      {!compact && <Text style={styles.text}>Бесплатный день, коды и напоминания придут в бот Sali. Ваш ID: <Text style={styles.id}>{home.user.publicId}</Text></Text>}
     </View>
     <Text style={styles.chevron}>›</Text>
   </Pressable>;
@@ -27,7 +28,7 @@ const styles = StyleSheet.create({
   icon: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#2AABEE', alignItems: 'center', justifyContent: 'center' },
   iconText: { color: '#fff', fontSize: 20, marginLeft: -2 },
   copy: { flex: 1 },
-  title: { color: theme.colors.textPrimary, fontSize: 16, fontFamily: 'Outfit-SemiBold' },
+  title: { color: theme.colors.textPrimary, fontSize: 16, fontFamily: 'SaliSans-SemiBold' },
   text: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 2 },
   id: { color: theme.colors.accent, fontWeight: '700' },
   chevron: { color: theme.colors.textSecondary, fontSize: 28 },

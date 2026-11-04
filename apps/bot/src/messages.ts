@@ -34,7 +34,7 @@ export function accessText(state: BotUserState) {
     return `<b>Sali VPN</b>\n\n🟢 VPN доступен\nТариф: ${state.subscription.plan.name}\nДействует до: ${date(state.subscription.expiresAt)}`;
   }
   if (state.state === 'TRIAL_ACTIVE' && state.trial) {
-    return `<b>Sali VPN</b>\n\n🟢 VPN доступен\nТариф: Бесплатный\nОсталось: ${duration(state.trial.secondsRemaining)}`;
+    return `<b>Sali VPN</b>\n\n🟢 VPN доступен\nТариф: Бесплатный день\nОсталось: ${duration(state.trial.secondsRemaining)}`;
   }
   if (state.state === 'SUBSCRIPTION_EXPIRED') {
     return '<b>Подписка закончилась</b>\n\nДля продолжения использования Sali VPN необходимо продлить подписку.';
@@ -60,7 +60,7 @@ export const howItWorks = [
   '',
   '1️⃣ Установите приложение Sali VPN',
   '2️⃣ В приложении нажмите «Привязать Telegram» — мы запомним ваше устройство',
-  '3️⃣ Здесь, в боте, получите бесплатный тариф или оплатите месяц / год',
+  '3️⃣ Здесь, в боте, получите бесплатный день или оплатите месяц / год',
   '4️⃣ Бот пришлёт код <code>SALI-XXXX-XXXX-XXXX</code> — введите его в приложении',
   '',
   'Если устройство привязано, код можно активировать одной кнопкой прямо из бота.',
@@ -79,27 +79,26 @@ export function paidCodeMessage(code: IssuedCode) {
 }
 
 export function freeCodeMessage(code: IssuedCode, again: boolean) {
-  const minutes = Number(process.env.TRIAL_DURATION_MINUTES ?? 60);
   return [
     again ? '🎁 <b>Ваш бесплатный код</b> (выдан ранее)' : '🎁 <b>Бесплатный тариф</b>',
     '',
     `<code>${code.display}</code>`,
     '',
-    `Даёт ${minutes} минут VPN, чтобы проверить скорость. Таймер идёт только пока VPN включён.`,
+    'Даёт <b>1 день</b> VPN без ограничений, чтобы всё проверить. Сутки отсчитываются с момента активации кода.',
     'Введите код в приложении Sali VPN → «Ввести код».',
   ].join('\n');
 }
 
 export function redeemedMessage(result: { publicId?: string; expiresAt?: string | null; kind?: string }) {
   const until = result.expiresAt ? `\nДоступ до: <b>${date(result.expiresAt)}</b>` : '';
-  const what = result.kind === 'FREE' ? 'Бесплатный тариф включён' : 'Подписка активирована';
+  const what = result.kind === 'FREE' ? 'Бесплатный день включён' : 'Подписка активирована';
   return `✅ <b>${what}</b> на устройстве <b>${result.publicId ?? ''}</b>.${until}\n\nОткройте приложение и нажмите кнопку подключения.`;
 }
 
 export function codesListMessage(codes: OwnedCode[]) {
   if (!codes.length) return '<b>Мои коды</b>\n\nКодов пока нет. Получите бесплатный тариф или купите подписку.';
   const lines = codes.map((code) => {
-    const what = code.kind === 'FREE' ? 'бесплатный' : period(code.durationDays);
+    const what = code.kind === 'FREE' ? 'бесплатный день' : period(code.durationDays);
     if (code.status === 'REDEEMED') return `✅ <s>${code.display}</s> · ${what}\n     активирован на ${code.redeemedOn ?? '—'} ${date(code.redeemedAt)}`;
     return `🟢 <code>${code.display}</code> · ${what}\n     не активирован, действует до ${date(code.expiresAt)}`;
   });

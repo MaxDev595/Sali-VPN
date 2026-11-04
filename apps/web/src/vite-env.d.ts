@@ -2,7 +2,6 @@
 
 interface ImportMetaEnv {
   readonly VITE_SALI_ANDROID_URL?: string;
-  readonly VITE_HAPP_ANDROID_URL?: string;
 }
 
 interface ImportMetaEnv {

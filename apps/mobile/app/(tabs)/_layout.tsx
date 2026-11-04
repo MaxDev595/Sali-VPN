@@ -26,4 +26,4 @@ export default function TabsLayout() {
   </Tabs>;
 }
 
-const styles = StyleSheet.create({ tabBar: { backgroundColor: theme.colors.tabBar, borderTopColor: theme.colors.border, height: 76, paddingTop: 7, paddingBottom: 8 }, tabItem: { borderRadius: 16, marginHorizontal: 2 }, tabLabel: { fontSize: 12, lineHeight: 15, fontWeight: '600', marginTop: 2 }, iconBox: { width: 34, height: 30, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }, iconBoxActive: { backgroundColor: theme.colors.glow } });
+const styles = StyleSheet.create({ tabBar: { backgroundColor: theme.colors.tabBar, borderTopColor: theme.colors.border, height: 76, paddingTop: 7, paddingBottom: 8 }, tabItem: { borderRadius: 16, marginHorizontal: 2 }, tabLabel: { fontSize: 12, lineHeight: 15, fontFamily: 'SaliSans-SemiBold', marginTop: 2 }, iconBox: { width: 34, height: 30, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }, iconBoxActive: { backgroundColor: theme.colors.glow } });

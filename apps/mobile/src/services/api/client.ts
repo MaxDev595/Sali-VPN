@@ -1,7 +1,27 @@
 import { secureStorage } from '../secureStorage';
 import type { HomeState, VPNServer } from '../../types';
 
-const baseUrl = String(process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '') + '/api/v1';
+const builtInApi = String(process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+const DISCOVERY_URL = 'https://salivpn.com/config.json';
+let apiBase: Promise<string> | null = null;
+
+/**
+ * The API address can change (tunnels), so the app asks salivpn.com/config.json for the
+ * current one and falls back to the address baked in at build time.
+ */
+function resolveBaseUrl() {
+  apiBase ??= (async () => {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+      const response = await fetch(DISCOVERY_URL, { signal: controller.signal, headers: { 'Cache-Control': 'no-cache' } }).finally(() => clearTimeout(timer));
+      const body = response.ok ? await response.json() as { apiUrl?: string } : {};
+      if (body.apiUrl && /^https:\/\//.test(body.apiUrl)) return body.apiUrl.replace(/\/$/, '') + '/api/v1';
+    } catch { /* offline or no discovery file: use the built-in address */ }
+    return builtInApi + '/api/v1';
+  })();
+  return apiBase;
+}
 export class ApiError extends Error { constructor(message: string, readonly code: string, readonly status: number) { super(message); } }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -9,6 +29,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
   try {
+    const baseUrl = await resolveBaseUrl();
     const response = await fetch(baseUrl + path, {
       ...init,
       signal: controller.signal,
@@ -26,6 +47,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     return response.status === 204 ? undefined as T : response.json() as Promise<T>;
   } catch (error) {
     if (error instanceof ApiError) throw error;
+    apiBase = null; // re-discover the API address on the next request
     throw new ApiError('Нет связи с Sali. Проверьте интернет и попробуйте снова.', 'NETWORK', 0);
   } finally { clearTimeout(timeout); }
 }

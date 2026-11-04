@@ -1,0 +1,89 @@
+# Builds Sali VPN for Windows and publishes it as a download:
+#   https://github.com/MaxDev595/Sali-VPN/releases/download/desktop-latest/SaliVPN-Setup.exe
+#   https://github.com/MaxDev595/Sali-VPN/releases/download/desktop-latest/SaliVPN-Portable.exe
+# Runs on every push to main that touches desktop/, or manually (Actions → Windows app → Run workflow).
+name: Windows app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-app
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Bundle WireGuard for Windows (installed silently on first connect)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path vendor | Out-Null
+          Invoke-WebRequest 'https://download.wireguard.com/windows-client/wireguard-amd64-0.5.3.msi' -OutFile vendor/wireguard-amd64.msi
+          Get-Item vendor/wireguard-amd64.msi | Select-Object Name, Length
+
+      - name: Bake API address (Actions variable EXPO_PUBLIC_API_URL, optional)
+        shell: pwsh
+        env:
+          API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+        run: |
+          if ($env:API_URL) { @{ apiUrl = $env:API_URL } | ConvertTo-Json | Set-Content -Encoding utf8 src/build-config.json }
+
+      - name: Syntax check
+        run: npm run check
+
+      - name: Build installer and portable app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --win nsis portable --x64 --publish never
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem dist/*.exe | ForEach-Object { "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } | Tee-Object dist/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sali-vpn-windows
+          path: |
+            desktop/dist/SaliVPN-Setup.exe
+            desktop/dist/SaliVPN-Portable.exe
+            desktop/dist/SHA256SUMS.txt
+
+      - name: Publish desktop-latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-latest
+          name: Sali VPN for Windows (latest)
+          prerelease: false
+          make_latest: false
+          body: |
+            Sali VPN for Windows 10/11 (64-bit). Built from ${{ github.sha }}.
+            Installer: SaliVPN-Setup.exe · No install: SaliVPN-Portable.exe · Checksums: SHA256SUMS.txt
+            Guide: https://salivpn.com/download
+          files: |
+            desktop/dist/SaliVPN-Setup.exe
+            desktop/dist/SaliVPN-Portable.exe
+            desktop/dist/SHA256SUMS.txt

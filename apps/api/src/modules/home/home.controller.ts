@@ -5,6 +5,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthTokenPayload } from '../auth/auth.service';
 import { VpnService } from '../vpn/vpn.service';
 import { TrialsService } from '../trials/trials.service';
+import { trialLimitSeconds, trialSecondsLeft, trialSecondsUsed } from '../trials/trial-clock';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { UsersService } from '../users/users.service';
 import { HomeStateDTO } from '@sali/types';
@@ -30,12 +31,10 @@ export class HomeController {
       this.subscriptions.getActiveForUser(authUser.sub),
     ]);
 
-    const now = new Date();
-    const sessionSeconds = trial?.activeSince
-      ? Math.max(0, Math.floor((now.getTime() - trial.activeSince.getTime()) / 1000))
-      : 0;
-    const totalSeconds = trial ? trial.usedSeconds + sessionSeconds : 0;
-    const limitSeconds = Number(process.env.TRIAL_DURATION_MINUTES ?? 60) * 60 + (trial?.bonusSeconds ?? 0);
+    const now = Date.now();
+    const secondsRemaining = trial ? trialSecondsLeft(trial, now) : 0;
+    const totalSeconds = trial ? trialSecondsUsed(trial, now) : 0;
+    const limitSeconds = trial ? trialLimitSeconds(trial) : 0;
 
     return {
       user: {
@@ -57,11 +56,11 @@ export class HomeController {
             status: trial.status,
             startedAt: trial.startedAt.toISOString(),
             expiresAt: trial.expiresAt.toISOString(),
-            secondsRemaining: Math.max(0, limitSeconds - totalSeconds),
-            sessionSeconds,
+            secondsRemaining,
+            sessionSeconds: totalSeconds,
             totalSeconds,
             limitSeconds,
-            isRunning: Boolean(trial.activeSince),
+            isRunning: secondsRemaining > 0,
           }
         : null,
       subscription: subscription

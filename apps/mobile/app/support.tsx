@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../src/components/Text';
 import { router } from 'expo-router';
 import { api } from '../src/services/api/client';
 import { SaliModal } from '../src/components/SaliModal';

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState, type ElementRef } from 'react';
+import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../src/components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -22,7 +23,7 @@ function formatInput(raw: string) {
 const isComplete = (value: string) => value.replace(ALPHABET, '').length === 16;
 
 function describe(result: RedeemResult) {
-  if (result.kind === 'FREE') return { title: 'Бесплатный тариф включён', text: 'Можно подключаться. Таймер идёт только пока VPN включён.' };
+  if (result.kind === 'FREE') return { title: 'Бесплатный день включён', text: 'Можно подключаться: 24 часа VPN без ограничений с этого момента.' };
   const until = result.expiresAt ? new Date(result.expiresAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   return { title: 'Подписка активирована', text: until ? `Доступ открыт до ${until}. Все серверы уже ваши.` : 'Все серверы уже ваши.' };
 }
@@ -36,7 +37,7 @@ export default function ActivateScreen() {
   const [result, setResult] = useState<RedeemResult | null>(null);
   const home = useAccountStore(state => state.home);
   const refresh = useAccountStore(state => state.refresh);
-  const input = useRef<TextInput>(null);
+  const input = useRef<ElementRef<typeof TextInput>>(null);
   useEffect(() => { if (params.code) setValue(formatInput(params.code)); }, [params.code]);
 
   const submit = async () => {
@@ -90,14 +91,14 @@ export default function ActivateScreen() {
               style={styles.input}
             />
           </Pressable>
-          {error ? <Animated.Text entering={FadeIn} style={styles.error}>{error}</Animated.Text> : null}
+          {error ? <Animated.Text entering={FadeIn} style={[styles.error, { fontFamily: 'SaliSans-Medium' }]}>{error}</Animated.Text> : null}
 
           <View style={{ height: 18 }} />
           <SaliButton title="Активировать" loading={busy} disabled={!isComplete(value)} onPress={() => void submit()} />
 
           <View style={styles.help}>
             <Text style={styles.helpTitle}>Где взять код?</Text>
-            <Text style={styles.helpText}>Бесплатный тариф и подписка выдаются в нашем Telegram-боте. Ваш ID устройства: <Text style={styles.id}>{home?.user.publicId ?? '—'}</Text></Text>
+            <Text style={styles.helpText}>Бесплатный день и подписка выдаются в нашем Telegram-боте. Ваш ID устройства: <Text style={styles.id}>{home?.user.publicId ?? '—'}</Text></Text>
             <Pressable onPress={openBot} style={({ pressed }) => [styles.link, pressed && { opacity: .7 }]}><Text style={styles.linkText}>Открыть Telegram-бот ›</Text></Pressable>
           </View>
         </>}
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
   kicker: { color: theme.colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1.6 },
   close: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' },
   closeText: { color: theme.colors.textPrimary, fontSize: 28, lineHeight: 30 },
-  title: { color: theme.colors.textPrimary, fontSize: 30, lineHeight: 38, fontFamily: 'Outfit-Bold', textAlign: 'center' },
+  title: { color: theme.colors.textPrimary, fontSize: 30, lineHeight: 38, fontFamily: 'SaliSans-Bold', textAlign: 'center' },
   subtitle: { color: theme.colors.textSecondary, fontSize: 15, lineHeight: 22, textAlign: 'center', marginTop: 8, marginBottom: 26 },
   field: { borderRadius: theme.radius.lg, borderWidth: 1.5, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: 14, minHeight: 68, justifyContent: 'center' },
   fieldReady: { borderColor: theme.colors.accent, backgroundColor: theme.colors.surfaceElevated },
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   input: { color: theme.colors.textPrimary, fontSize: 21, letterSpacing: 1.5, textAlign: 'center', fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }), fontWeight: '700' },
   error: { color: theme.colors.error, fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 12 },
   help: { marginTop: 34, padding: 18, borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
-  helpTitle: { color: theme.colors.textPrimary, fontSize: 16, fontFamily: 'Outfit-SemiBold' },
+  helpTitle: { color: theme.colors.textPrimary, fontSize: 16, fontFamily: 'SaliSans-SemiBold' },
   helpText: { color: theme.colors.textSecondary, fontSize: 14, lineHeight: 21, marginTop: 6 },
   id: { color: theme.colors.accent, fontWeight: '700' },
   link: { marginTop: 12, alignSelf: 'flex-start' },

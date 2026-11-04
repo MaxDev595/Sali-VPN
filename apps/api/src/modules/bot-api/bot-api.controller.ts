@@ -9,6 +9,7 @@ import { CodesService } from '../codes/codes.service';
 import { PaymentsService } from '../payments/payments.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { TrialsService } from '../trials/trials.service';
+import { trialSecondsLeft } from '../trials/trial-clock';
 import { NotificationsService } from '../notifications/notifications.service';
 import { formatPublicId } from '../codes/code-format';
 
@@ -77,10 +78,8 @@ export class BotApiController {
     const [sub, trial] = await Promise.all([this.subscriptions.getActiveForUser(userId), this.trials.getTrial(userId)]);
     if (sub) return { tariff: sub.plan.name, until: sub.expiresAt?.toISOString() ?? null, active: true };
     if (trial) {
-      const running = trial.activeSince ? Math.floor((Date.now() - trial.activeSince.getTime()) / 1000) : 0;
-      const limit = Number(process.env.TRIAL_DURATION_MINUTES ?? 60) * 60 + trial.bonusSeconds;
-      const left = Math.max(0, limit - trial.usedSeconds - running);
-      return { tariff: 'Бесплатный', until: null, active: left > 0 && trial.status === 'ACTIVE', secondsLeft: left };
+      const left = trialSecondsLeft(trial);
+      return { tariff: 'Бесплатный (1 день)', until: trial.expiresAt.toISOString(), active: left > 0, secondsLeft: left };
     }
     return { tariff: null, until: null, active: false };
   }

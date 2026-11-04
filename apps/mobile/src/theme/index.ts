@@ -1,6 +1,6 @@
 /**
  * Sali brand palette (logo / salivpn.com): near-black navy, logo navy, peach pen cap.
- * UI type: Outfit — the closest open font to the logo lettering.
+ * UI type: Sali Sans (src/theme/fonts.ts) — the logo lettering, with Cyrillic.
  */
 export const brand = { navy: '#072142', ink: '#040913', peach: '#FFC587', peachDeep: '#F4A85E', paper: '#F4F7FC' } as const;
 

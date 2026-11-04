@@ -1,0 +1,45 @@
+{
+  "name": "sali-vpn-desktop",
+  "productName": "Sali VPN",
+  "version": "0.4.0",
+  "description": "Sali VPN for Windows",
+  "author": "Sali VPN",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/api.js && node --check src/wireguard.js && node --check src/store.js && node --check src/renderer/app.js",
+    "dist": "electron-builder --win nsis portable --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "38.2.2",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "app.sali.vpn.desktop",
+    "productName": "Sali VPN",
+    "copyright": "© Sali VPN",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["src/**/*", "package.json"],
+    "extraResources": [{ "from": "vendor", "to": "vendor", "filter": ["*.msi"] }],
+    "win": {
+      "icon": "build/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator",
+      "artifactName": "SaliVPN-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sali VPN",
+      "artifactName": "SaliVPN-Setup.${ext}",
+      "uninstallDisplayName": "Sali VPN",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "include": "build/installer.nsh"
+    },
+    "portable": { "artifactName": "SaliVPN-Portable.${ext}" }
+  }
+}
