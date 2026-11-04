@@ -74,8 +74,12 @@ export class TrialsService {
     await this.notifications.enqueue(userId, 'TRIAL_EXPIRED');
   }
 
-  /** Runs every minute; disables VPN access for any trial whose time is up. */
-  @Cron(CronExpression.EVERY_MINUTE)
+  /**
+   * Every 15 minutes: disables VPN access for trials whose time is up. Connecting is
+   * always checked live, so this only cleans up; running it rarely lets the Neon
+   * database sleep between runs instead of staying awake (and billed) 24/7.
+   */
+  @Cron('0 */15 * * * *')
   async sweepExpiredTrials() {
     const now = new Date();
     const expired = await this.prisma.trial.findMany({

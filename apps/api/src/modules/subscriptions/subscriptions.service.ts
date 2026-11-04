@@ -108,8 +108,8 @@ export class SubscriptionsService {
     }
   }
 
-  /** Server-authoritative expiry sweep — never trust a client-side clock. */
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  /** Server-authoritative expiry sweep — never trust a client-side clock. Every 15 min so Neon can sleep. */
+  @Cron('5 */15 * * * *')
   async sweepExpiredSubscriptions() {
     const now = new Date();
     const expired = await this.prisma.subscription.findMany({
