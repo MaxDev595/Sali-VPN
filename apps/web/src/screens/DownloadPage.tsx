@@ -53,7 +53,7 @@ const t = {
     trouble: [
       ['Не устанавливается APK', 'Проверьте, что разрешили установку из браузера (Настройки → Приложения → Специальный доступ → Установка неизвестных приложений). Если стоит старая версия из другого источника — удалите её.'],
       ['Windows блокирует файл', 'В окне SmartScreen нажмите «Подробнее» → «Выполнить в любом случае». Антивирус может попросить подтверждение — добавьте Sali VPN в исключения.'],
-      ['Код не принимается', 'Код вводится без пробелов, регистр и дефисы не важны. Если пишет «уже активирован» — проверьте раздел «🔑 Мои коды» в боте.'],
+      ['Код не принимается', 'Код вводится без пробелов, регистр и дефисы не важны. Если пишет «уже активирован» — проверьте раздел «Мои коды» в боте.'],
       ['VPN подключился, но сайты не открываются', 'Смените сервер в приложении и переподключитесь. На Windows закройте другие VPN-программы.'],
       ['Как удалить Sali VPN?', 'Android — как обычное приложение. Windows — «Параметры → Приложения → Sali VPN → Удалить».'],
     ] as [string, string][],
@@ -100,7 +100,7 @@ const t = {
     trouble: [
       ['The APK will not install', 'Make sure your browser may install apps (Settings → Apps → Special access → Install unknown apps). Remove an older version from another source first.'],
       ['Windows blocks the file', 'In SmartScreen click "More info" → "Run anyway". If your antivirus asks, add Sali VPN to its exceptions.'],
-      ['The code is rejected', 'Case and dashes do not matter. If it says "already activated", check "🔑 My codes" in the bot.'],
+      ['The code is rejected', 'Case and dashes do not matter. If it says "already activated", check "My codes" in the bot.'],
       ['Connected but sites do not open', 'Switch the server in the app and reconnect. On Windows, close other VPN apps.'],
       ['How do I uninstall?', 'Android — like any app. Windows — Settings → Apps → Sali VPN → Uninstall.'],
     ] as [string, string][],
