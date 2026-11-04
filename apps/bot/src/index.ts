@@ -3,6 +3,7 @@ import { resolve } from 'path';
 import { Context, Telegraf } from 'telegraf';
 import { loadConfig } from './config';
 import { createHandlers } from './handlers';
+import * as admin from './handlers/admin';
 import { createBillingHandlers } from './handlers/billing';
 import { genericError } from './messages';
 import { menuLabels } from './keyboards';
@@ -51,6 +52,11 @@ async function main() {
   bot.command('subscription', handlers.subscription);
   bot.command('account', handlers.account);
   bot.command('help', handlers.help);
+  bot.command('myid', admin.myId);
+  bot.command('addserver', admin.addServer);
+  bot.command('nodes', admin.nodes);
+  bot.command('node_off', admin.nodeOff);
+  bot.command('node_on', admin.nodeOn);
 
   bot.hears(menuLabels.buy, billing.buy);
   bot.hears([menuLabels.free, '🎁 Бесплатный день', '🎁 Бесплатный тариф'], billing.free);

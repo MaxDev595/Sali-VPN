@@ -91,10 +91,37 @@ model VpnServer {
   premiumOnly  Boolean  @default(false)
   pingMs       Int      @default(35)
 
+  // Sali node agent (infrastructure/vpn-node). Null for legacy/demo rows.
+  hostname     String?
+  agentUrl     String?
+  agentKeyEnc  String?   // encrypted with JWT_SECRET
+  agentCertPem String?   // self-signed agent certificate, pinned
+  wgPublicKey  String?
+  awgPublicKey String?
+  awgPort      Int?
+  awgParams    Json?
+  online       Boolean  @default(false)
+  lastSeenAt   DateTime?
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   vpnAccounts  VpnAccount[]
+}
+
+/// One-time token printed by the bot's /addserver: lets a fresh VPS register itself.
+model NodeEnrollToken {
+  id          String    @id @default(uuid())
+  tokenHash   String    @unique
+  name        String
+  location    String
+  countryCode String
+  city        String
+  createdBy   String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  serverId    String?
+  createdAt   DateTime  @default(now())
 }
 
 model VpnAccount {

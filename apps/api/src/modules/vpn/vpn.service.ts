@@ -2,8 +2,9 @@ import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs
 import { ConfigService } from '@nestjs/config';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../../prisma/prisma.service';
-import { VPN_PROVIDER, VPNProvider } from './providers/vpn-provider.interface';
+import { VPN_PROVIDER, VPNProvider, VpnProtocol } from './providers/vpn-provider.interface';
 import { encryptSecret, decryptSecret } from './crypto.util';
+import { wgPublicKeyOf } from './nodes/node-client';
 import { VpnAccountStatus } from '@prisma/client';
 
 @Injectable()
@@ -16,12 +17,73 @@ export class VpnService {
     private readonly config: ConfigService,
   ) {}
 
-  /** Picks the least-loaded active server. MVP: single server is fine too. */
-  private async pickServer() {
+  private get nodesMode() {
+    return this.config.get<string>('VPN_PROVIDER') === 'nodes';
+  }
+
+  /** Least-loaded active server; with Sali nodes only nodes that answered recently. */
+  private async pickServer(exceptId?: string) {
+    if (this.nodesMode) {
+      const nodes = await this.prisma.vpnServer.findMany({
+        where: { isActive: true, agentUrl: { not: null }, ...(exceptId ? { id: { not: exceptId } } : {}) },
+        orderBy: [{ online: 'desc' }, { currentLoad: 'asc' }],
+      });
+      for (const node of nodes) {
+        const status = await this.provider.getServerStatus(node.id).catch(() => null);
+        if (status?.isOnline) return node;
+      }
+      throw new ServiceUnavailableException('Все VPN-серверы сейчас недоступны. Попробуйте через минуту.');
+    }
     return this.prisma.vpnServer.findFirstOrThrow({
       where: { isActive: true },
       orderBy: { currentLoad: 'asc' },
     });
+  }
+
+  /**
+   * Moves a user's VPN account to another (healthy) node, keeping their keys, so a dead
+   * server or a legacy/demo row never blocks connecting.
+   */
+  private async moveAccount(userId: string, toServerId?: string) {
+    const account = await this.prisma.vpnAccount.findUniqueOrThrow({ where: { userId }, include: { server: true } });
+    const target = toServerId
+      ? await this.prisma.vpnServer.findUniqueOrThrow({ where: { id: toServerId } })
+      : await this.pickServer(account.serverId);
+    const secret = this.config.getOrThrow<string>('JWT_SECRET');
+    const privateKey = decryptSecret(account.privateKeyEncrypted, secret);
+    const keys = { privateKey, publicKey: wgPublicKeyOf(privateKey) };
+    const created = await this.provider.createUser({ userId, serverId: target.id, keys });
+    if (account.server.agentUrl && account.serverId !== target.id) {
+      await this.provider.deleteUser(account.externalId, account.serverId).catch((err) => this.logger.warn(`old peer not removed: ${err.message}`));
+    }
+    const moved = await this.prisma.vpnAccount.update({
+      where: { userId },
+      data: { serverId: target.id, externalId: created.externalId, publicKey: created.publicKey, allocatedIp: created.allocatedIp, provider: this.provider.name },
+    });
+    await this.prisma.vpnServer.update({ where: { id: target.id }, data: { currentLoad: { increment: 1 } } });
+    if (account.serverId !== target.id) {
+      await this.prisma.vpnServer.updateMany({ where: { id: account.serverId, currentLoad: { gt: 0 } }, data: { currentLoad: { decrement: 1 } } });
+    }
+    this.logger.log(`moved user ${userId} from ${account.server.name} to ${target.name}`);
+    return moved;
+  }
+
+  /** In nodes mode: make sure the account sits on a live node (migrating legacy/dead ones). */
+  async ensureHealthyAccount(userId: string, preferredServerId?: string) {
+    const account = await this.ensureAccountForUser(userId);
+    if (!this.nodesMode) return account;
+    const server = await this.prisma.vpnServer.findUniqueOrThrow({ where: { id: account.serverId } });
+    if (preferredServerId && preferredServerId !== server.id) {
+      const preferred = await this.prisma.vpnServer.findFirst({ where: { id: preferredServerId, isActive: true, agentUrl: { not: null } } });
+      if (preferred && (await this.provider.getServerStatus(preferred.id)).isOnline) return this.moveAccount(userId, preferred.id);
+    }
+    if (!server.agentUrl || !server.isActive) return this.moveAccount(userId);
+    const status = await this.provider.getServerStatus(server.id).catch(() => null);
+    if (!status?.isOnline) return this.moveAccount(userId);
+    // Re-create the peer if the node lost it (e.g. it was reinstalled).
+    const peer = await this.provider.getUser(account.externalId, account.serverId);
+    if (!peer) return this.moveAccount(userId, server.id);
+    return account;
   }
 
   private async assertServerOnline(serverId: string) {
@@ -66,7 +128,7 @@ export class VpnService {
     return account;
   }
 
-  async getConnectionConfig(userId: string) {
+  async getConnectionConfig(userId: string, protocol?: VpnProtocol) {
     const account = await this.prisma.vpnAccount.findUniqueOrThrow({ where: { userId } });
     const secret = this.config.getOrThrow<string>('JWT_SECRET');
     const privateKey = decryptSecret(account.privateKeyEncrypted, secret);
@@ -75,6 +137,7 @@ export class VpnService {
       privateKey,
       allocatedIp: account.allocatedIp,
       serverId: account.serverId,
+      protocol,
     });
 
     const qrCodeDataUrl = await QRCode.toDataURL(config.configText);

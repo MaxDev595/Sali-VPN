@@ -50,7 +50,7 @@ export class InternalController {
     const user = await this.users.findByTelegramId(BigInt(dto.telegramId));
     if (!user) throw new Error('User not found — call users/sync first');
 
-    const account = await this.vpn.ensureAccountForUser(user.id);
+    const account = await this.vpn.ensureHealthyAccount(user.id);
     const trial = await this.trials.startTrialIfNeeded(user.id);
     await this.referrals.rewardIfEligible(user.id);
 
@@ -59,7 +59,8 @@ export class InternalController {
       await this.vpn.enable(user.id);
     }
 
-    const config = await this.vpn.getConnectionConfig(user.id);
+    // Config for the official AmneziaWG app (works where plain WireGuard is blocked).
+    const config = await this.vpn.getConnectionConfig(user.id, 'awg');
     return { account, trial, config };
   }
 

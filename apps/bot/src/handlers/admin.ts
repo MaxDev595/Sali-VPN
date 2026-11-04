@@ -1,0 +1,48 @@
+import type { Context } from 'telegraf';
+import { api, ApiRejection } from '../services/api-client';
+
+const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+const args = (ctx: Context) => (((ctx.message as { text?: string } | undefined)?.text ?? '').split(/\s+/).slice(1));
+const fail = (ctx: Context, error: unknown) =>
+  ctx.reply(error instanceof ApiRejection ? `⚠️ ${error.message}` : '⚠️ Не получилось, попробуйте ещё раз.');
+
+/** /myid — anyone: shows the Telegram ID (needed for ADMIN_TELEGRAM_IDS). */
+export async function myId(ctx: Context) {
+  await ctx.replyWithHTML(`Ваш Telegram ID: <code>${ctx.from!.id}</code>`);
+}
+
+/** /addserver DE [City] — one-time install command for a new VPS. */
+export async function addServer(ctx: Context) {
+  const [country, ...city] = args(ctx);
+  if (!country) {
+    await ctx.replyWithHTML('Использование: <code>/addserver DE</code> или <code>/addserver FI Helsinki</code>\nКод страны — две буквы.');
+    return;
+  }
+  try {
+    const { name, command } = await api.nodeToken(ctx.from!.id, country, city.join(' ') || undefined);
+    await ctx.replyWithHTML(
+      `<b>${esc(name)}</b>\n\n1. Откройте консоль нового сервера (Ubuntu 24.04) под root.\n2. Вставьте одну команду:\n\n<code>${esc(command)}</code>\n\nУстановка займёт 2–4 минуты. В конце будет «Готово: ${esc(name)} подключён». Команда одноразовая и действует 24 часа.`,
+    );
+  } catch (error) { await fail(ctx, error); }
+}
+
+/** /nodes — live state of all VPN servers. */
+export async function nodes(ctx: Context) {
+  try {
+    const list = await api.nodes(ctx.from!.id);
+    if (!list.length) { await ctx.reply('Серверов пока нет. Добавьте первый: /addserver DE'); return; }
+    const lines = list.map((n) => `${n.online ? '🟢' : '🔴'} <b>${esc(n.name)}</b> ${n.country} · ${n.host}${n.active ? '' : ' · выключен'}\n     пользователей: ${n.users ?? '—'}, сейчас онлайн: ${n.connectedNow ?? '—'}, нагрузка: ${n.load ?? '—'}`);
+    await ctx.replyWithHTML(`<b>VPN-серверы</b>\n\n${lines.join('\n')}\n\nВыключить/включить: /node_off Sali DE-1 · /node_on Sali DE-1`);
+  } catch (error) { await fail(ctx, error); }
+}
+
+export async function nodeOff(ctx: Context) { await toggle(ctx, false); }
+export async function nodeOn(ctx: Context) { await toggle(ctx, true); }
+async function toggle(ctx: Context, isActive: boolean) {
+  const name = args(ctx).join(' ');
+  if (!name) { await ctx.reply(`Использование: /node_${isActive ? 'on' : 'off'} Sali DE-1`); return; }
+  try {
+    const { updated } = await api.nodeActive(ctx.from!.id, name, isActive);
+    await ctx.reply(updated ? `${name}: ${isActive ? 'включён' : 'выключен для новых подключений'}` : `Сервер «${name}» не найден`);
+  } catch (error) { await fail(ctx, error); }
+}

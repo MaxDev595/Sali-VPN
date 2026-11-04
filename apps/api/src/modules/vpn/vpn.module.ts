@@ -4,6 +4,9 @@ import { VpnService } from './vpn.service';
 import { VPN_PROVIDER } from './providers/vpn-provider.interface';
 import { WireGuardProvider } from './providers/wireguard.provider';
 import { MockVpnProvider } from './providers/mock.provider';
+import { NodesProvider } from './providers/nodes.provider';
+import { NodesBotController, NodesController } from './nodes/nodes.controller';
+import { NodesService } from './nodes/nodes.service';
 import { ServersController } from './servers.controller';
 
 @Module({
@@ -11,17 +14,20 @@ import { ServersController } from './servers.controller';
   providers: [
     WireGuardProvider,
     MockVpnProvider,
+    NodesProvider,
     {
       provide: VPN_PROVIDER,
-      useFactory: (config: ConfigService, wg: WireGuardProvider, mock: MockVpnProvider) => {
+      // nodes = Sali node agents (AmneziaWG + WireGuard, many servers); wireguard = legacy single agent.
+      useFactory: (config: ConfigService, wg: WireGuardProvider, mock: MockVpnProvider, nodes: NodesProvider) => {
         const selected = config.get<string>('VPN_PROVIDER', 'wireguard');
-        return selected === 'mock' ? mock : wg;
+        return selected === 'mock' ? mock : selected === 'nodes' ? nodes : wg;
       },
-      inject: [ConfigService, WireGuardProvider, MockVpnProvider],
+      inject: [ConfigService, WireGuardProvider, MockVpnProvider, NodesProvider],
     },
     VpnService,
+    NodesService,
   ],
-  controllers: [ServersController],
-  exports: [VpnService],
+  controllers: [ServersController, NodesController, NodesBotController],
+  exports: [VpnService, NodesService],
 })
 export class VpnModule {}

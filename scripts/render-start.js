@@ -86,9 +86,14 @@ process.on('SIGINT', () => shutdown(0));
 const localApi = `http://127.0.0.1:${port}`;
 start('API', path.join(apiDir, 'dist/main.js'), { API_PORT: port }, { essential: true });
 
-/** Removes the usual copy-paste damage from a bot token: spaces, quotes, a "bot" prefix. */
+/**
+ * Pulls the bot token out of whatever was pasted: spaces, quotes, a "bot" prefix,
+ * "TELEGRAM_BOT_TOKEN=..." or a whole BotFather message around it.
+ */
 function cleanToken(raw) {
-  return String(raw ?? '').trim().replace(/^["'`]+|["'`]+$/g, '').replace(/^bot(?=\d)/i, '').trim();
+  const text = String(raw ?? '');
+  const match = text.match(/\d{5,}:[A-Za-z0-9_-]{30,}/);
+  return match ? match[0] : text.trim().replace(/^["'`]+|["'`]+$/g, '').replace(/^bot(?=\d)/i, '').trim();
 }
 
 /** Asks Telegram whether a token is valid, so a wrong token is reported once, clearly. */

@@ -6,10 +6,15 @@
  * zero changes anywhere else.
  */
 
+/** awg = AmneziaWG (obfuscated, works where WireGuard is blocked); wg = plain WireGuard. */
+export type VpnProtocol = 'awg' | 'wg';
+
 export interface CreateVpnUserInput {
   /** Internal Sali user id — used to build a stable, human-traceable external id */
   userId: string;
   serverId: string;
+  /** Re-use an existing keypair (moving a user to another server). */
+  keys?: { privateKey: string; publicKey: string };
 }
 
 export interface CreateVpnUserResult {
@@ -24,6 +29,7 @@ export interface VpnConnectionConfig {
   configText: string;
   serverPublicHost: string;
   serverPublicPort: number;
+  protocol?: VpnProtocol;
 }
 
 export interface VpnServerStatus {
@@ -46,6 +52,7 @@ export interface VPNProvider {
     privateKey: string;
     allocatedIp: string;
     serverId: string;
+    protocol?: VpnProtocol;
   }): Promise<VpnConnectionConfig>;
 
   getServerStatus(serverId: string): Promise<VpnServerStatus>;

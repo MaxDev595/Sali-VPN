@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, Post, UseGuards, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, UseGuards, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { formatPublicId } from '../codes/code-format';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -95,12 +95,17 @@ export class HomeController {
   async connect(
     @CurrentUser() authUser: AuthTokenPayload,
     @Headers('x-device-key') deviceKey?: string,
+    @Headers('x-vpn-protocol') protocolHeader?: string,
+    @Body() body?: { serverId?: string },
   ) {
+    // Apps that speak AmneziaWG send "X-VPN-Protocol: awg"; older ones get plain WireGuard.
+    const protocol = protocolHeader === 'awg' ? 'awg' : 'wg';
     if (!deviceKey || deviceKey.length < 16 || deviceKey.length > 128) {
       throw new BadRequestException('Сначала зарегистрируйте это устройство');
     }
     const access = await this.devices.assertCanConnect(authUser.sub, deviceKey);
-    const account = await this.vpn.ensureAccountForUser(authUser.sub);
+    const serverId = typeof body?.serverId === 'string' && body.serverId.length <= 40 ? body.serverId : undefined;
+    const account = await this.vpn.ensureHealthyAccount(authUser.sub, serverId);
 
     const activeSub = access.activeSub;
     if (!activeSub) {
@@ -114,7 +119,7 @@ export class HomeController {
     await this.vpn.enable(authUser.sub);
     if (!activeSub) await this.trials.startSession(authUser.sub);
 
-    const config = await this.vpn.getConnectionConfig(authUser.sub);
+    const config = await this.vpn.getConnectionConfig(authUser.sub, protocol);
     return { account, config };
   }
 

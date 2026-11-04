@@ -166,4 +166,12 @@ export const api = {
   codes: (telegramId: number) => call<OwnedCode[]>('/bot/codes', { telegramId }),
   apply: (telegramId: number, code: string, publicId?: string) =>
     call<{ chooseDevice?: string[]; kind?: string; durationDays?: number; planName?: string | null; expiresAt?: string | null; publicId?: string }>('/bot/apply', { telegramId, code, publicId }, 0),
+
+  // --- Admin: VPN nodes ----------------------------------------------------
+  nodeToken: (telegramId: number, countryCode: string, city?: string) =>
+    call<{ name: string; command: string }>('/bot/nodes/token', { telegramId, countryCode, city }, 0),
+  nodes: (telegramId: number) =>
+    call<Array<{ name: string; host: string; country: string; active: boolean; online: boolean; users: number | null; connectedNow: number | null; load: number | null }>>('/bot/nodes/list', { telegramId }, 0),
+  nodeActive: (telegramId: number, name: string, isActive: boolean) =>
+    call<{ updated: number }>('/bot/nodes/active', { telegramId, name, isActive }, 0),
 };
