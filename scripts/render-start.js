@@ -4,6 +4,7 @@
 //   3. starts the main bot and the support bot; they talk to the API over localhost
 // If the API dies the whole service exits so Render restarts it; bots restart on their own.
 const { spawn, spawnSync } = require('node:child_process');
+const { writeFileSync } = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
@@ -31,6 +32,16 @@ runOnce('Applying database migrations', [prismaCli, 'migrate', 'deploy'], apiDir
 runOnce('Seeding plans and servers', ['prisma/seed.js'], apiDir);
 
 const children = new Map();
+
+// Bot states for GET /api/v1/health/bots (the API reads this file).
+const STATUS_FILE = process.env.SALI_BOT_STATUS_FILE || '/tmp/sali-bots.json';
+process.env.SALI_BOT_STATUS_FILE = STATUS_FILE;
+const botStatus = {};
+function setStatus(label, state, extra = {}) {
+  botStatus[label] = { state, at: new Date().toISOString(), ...extra };
+  try { writeFileSync(STATUS_FILE, JSON.stringify(botStatus)); } catch { /* status is best-effort */ }
+  console.log(`[render] status ${label}: ${state}${extra.detail ? ` — ${extra.detail}` : ''}`);
+}
 let stopping = false;
 
 // The API is essential: if it dies, the whole service exits and Render restarts it.
@@ -45,6 +56,7 @@ function start(label, script, extraEnv, { essential = false, attempt = 0 } = {})
   const startedAt = Date.now();
   children.set(label, child);
   console.log(`[render] ${label} started (pid ${child.pid})`);
+  if (!essential) setStatus(label, 'running', { username: extraEnv.SALI_BOT_USERNAME });
   child.on('exit', (code, signal) => {
     children.delete(label);
     if (stopping) return;
@@ -54,6 +66,7 @@ function start(label, script, extraEnv, { essential = false, attempt = 0 } = {})
       shutdown(1);
       return;
     }
+    setStatus(label, 'crashed', { detail: why });
     const next = Date.now() - startedAt > 60_000 ? 0 : attempt + 1;
     const delay = Math.min(5 * 60_000, 5_000 * 2 ** next);
     console.error(`[render] ${label} stopped (${why}) — restarting in ${Math.round(delay / 1000)}s.`);
@@ -82,19 +95,22 @@ function cleanToken(raw) {
 async function checkToken(label, token) {
   if (!/^\d{5,}:[A-Za-z0-9_-]{30,}$/.test(token)) {
     console.error(`[render] ${label}: the token has a wrong format (expected 1234567890:AA...). Copy it again from @BotFather → /mybots → API Token.`);
+    setStatus(label, 'bad-token', { detail: 'wrong format' });
     return false;
   }
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`, { signal: AbortSignal.timeout(10_000) });
     const body = await res.json().catch(() => ({}));
     if (body.ok) {
       console.log(`[render] ${label}: token OK → @${body.result.username}`);
-      return true;
+      return body.result.username;
     }
     console.error(`[render] ${label}: Telegram rejected the token for bot id ${token.split(':')[0]} (${res.status} ${body.description ?? ''}). It is wrong or was revoked — take the current one from @BotFather → /mybots → API Token and put it in Render → Environment.`);
+    setStatus(label, 'bad-token', { detail: `Telegram ${res.status} for bot id ${token.split(':')[0]}` });
     return false;
   } catch (error) {
     console.warn(`[render] ${label}: could not reach Telegram to check the token (${error.message}); starting anyway.`);
+    setStatus(label, 'starting', { detail: 'token not verified: ' + error.message });
     return true;
   }
 }
@@ -102,8 +118,9 @@ async function checkToken(label, token) {
 // Give the API a moment to bind before the bots start calling it.
 setTimeout(async () => {
   const botToken = cleanToken(process.env.TELEGRAM_BOT_TOKEN);
-  if (await checkToken('Bot', botToken)) {
-    start('Bot', path.join(root, 'apps/bot/dist/index.js'), { API_URL: localApi, TELEGRAM_MODE: 'polling', TELEGRAM_BOT_TOKEN: botToken });
+  const botName = await checkToken('Bot', botToken);
+  if (botName) {
+    start('Bot', path.join(root, 'apps/bot/dist/index.js'), { API_URL: localApi, TELEGRAM_MODE: 'polling', TELEGRAM_BOT_TOKEN: botToken, SALI_BOT_USERNAME: botName === true ? undefined : botName });
   } else {
     console.error('[render] Bot not started until the token is fixed (changing it in Render redeploys automatically).');
   }
@@ -111,6 +128,7 @@ setTimeout(async () => {
   const supportToken = cleanToken(process.env.SUPPORT_BOT_TOKEN);
   if (!supportToken) {
     console.log('[render] SUPPORT_BOT_TOKEN is not set — support bot skipped.');
+    setStatus('Support bot', 'not-configured');
   } else if (await checkToken('Support bot', supportToken)) {
     start('Support bot', path.join(root, 'apps/support-bot/dist/index.js'), {
       API_URL: localApi,
