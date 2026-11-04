@@ -39,16 +39,17 @@ call npm run build --workspace=packages/types || exit /b 1
 echo [3/4] Building release APK ...
 if exist "%ANDROID_HOME%" (echo sdk.dir=%ANDROID_HOME:\=/%> "%DST%\apps\mobile\android\local.properties")
 cd /d "%DST%\apps\mobile"
-set OUT=%DST%\apps\mobile\android\app\build\generated
-if not exist "%OUT%\assets\react\release" mkdir "%OUT%\assets\react\release"
-if not exist "%OUT%\res\react\release" mkdir "%OUT%\res\react\release"
+set OUT=%TEMP%\sali-rnbundle
+set SALI_PREBUILT_BUNDLE=%OUT%
+if not exist "%OUT%\assets" mkdir "%OUT%\assets"
+if not exist "%OUT%\res" mkdir "%OUT%\res"
 for /f "delims=" %%i in ('node -p "require.resolve('expo/bin/cli')"') do set EXPO_CLI=%%i
 for /f "delims=" %%i in ('node -p "require.resolve('expo-router/entry')"') do set ENTRY=%%i
 for /f "delims=" %%i in ('node -p "require('path').dirname(require.resolve('react-native/package.json'))"') do set RN=%%i
 set NODE_PATH=%DST%\apps\mobile\node_modules;%DST%\node_modules
 echo Bundling JS ...
-call node "%EXPO_CLI%" export:embed --platform android --dev false --reset-cache --entry-file "%ENTRY%" --bundle-output "%TEMP%\sali-index.android.js" --assets-dest "%OUT%\res\react\release" || exit /b 1
-"%RN%\sdks\hermesc\win64-bin\hermesc.exe" -emit-binary -O -max-diagnostic-width=80 -out "%OUT%\assets\react\release\index.android.bundle" "%TEMP%\sali-index.android.js" || exit /b 1
+call node "%EXPO_CLI%" export:embed --platform android --dev false --reset-cache --entry-file "%ENTRY%" --bundle-output "%TEMP%\sali-index.android.js" --assets-dest "%OUT%\res" || exit /b 1
+"%RN%\sdks\hermesc\win64-bin\hermesc.exe" -emit-binary -O -max-diagnostic-width=80 -out "%OUT%\assets\index.android.bundle" "%TEMP%\sali-index.android.js" || exit /b 1
 cd /d "%DST%\apps\mobile\android"
 call gradlew.bat assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon -I "%DST%\scripts\use-prebuilt-mobile-bundle.gradle" || exit /b 1
 

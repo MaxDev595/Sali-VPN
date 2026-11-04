@@ -1,10 +1,21 @@
-// Used by the local release script after Expo has produced the bundle itself.
-// The task remains in Gradle's dependency graph so generated asset/res paths
-// are available to Android packaging, but its duplicate Metro action is skipped.
+// The JS bundle is produced outside Gradle (expo export:embed + hermesc) because
+// Metro can't resolve the monorepo's hoisted modules from inside Gradle.
+// The Gradle bundle task stays in the graph so Android packaging picks up its output
+// folders, but instead of running Metro it copies the prebuilt bundle from
+// $SALI_PREBUILT_BUNDLE/{assets,res} into those folders (Gradle may clear them first).
 gradle.projectsEvaluated {
     allprojects {
-        tasks.matching { it.name == 'createBundleReleaseJsAndAssets' }.configureEach {
-            actions.clear()
+        tasks.matching { it.name == 'createBundleReleaseJsAndAssets' }.configureEach { t ->
+            t.actions.clear()
+            def src = System.getenv('SALI_PREBUILT_BUNDLE')
+            if (!src) throw new GradleException('SALI_PREBUILT_BUNDLE is not set')
+            t.doLast {
+                def bundleDir = t.jsBundleDir.get().asFile
+                def resDir = t.resourcesDir.get().asFile
+                t.project.copy { from("${src}/assets"); into(bundleDir) }
+                t.project.copy { from("${src}/res"); into(resDir) }
+                if (!new File(bundleDir, 'index.android.bundle').exists()) throw new GradleException("JS bundle missing in ${bundleDir}")
+            }
         }
     }
 }

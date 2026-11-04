@@ -59,16 +59,18 @@ jobs:
       - name: Bundle JS and compile Hermes bytecode
         working-directory: apps/mobile
         run: |
-          OUT="$PWD/android/app/build/generated"
-          mkdir -p "$OUT/assets/react/release" "$OUT/res/react/release"
+          OUT="$RUNNER_TEMP/rnbundle"
+          mkdir -p "$OUT/assets" "$OUT/res"
+          echo "SALI_PREBUILT_BUNDLE=$OUT" >> "$GITHUB_ENV"
           NODE_PATH="$PWD/node_modules" node node_modules/expo/bin/cli export:embed \
             --platform android --dev false --reset-cache \
             --entry-file "$PWD/node_modules/expo-router/entry.js" \
             --bundle-output "$RUNNER_TEMP/index.android.js" \
-            --assets-dest "$OUT/res/react/release"
+            --assets-dest "$OUT/res"
           RN="$(node -p "require('path').dirname(require.resolve('react-native/package.json'))")"
           "$RN/sdks/hermesc/linux64-bin/hermesc" -emit-binary -O -max-diagnostic-width=80 \
-            -out "$OUT/assets/react/release/index.android.bundle" "$RUNNER_TEMP/index.android.js"
+            -out "$OUT/assets/index.android.bundle" "$RUNNER_TEMP/index.android.js"
+          ls -la "$OUT/assets"
 
       - name: Build release APK
         working-directory: apps/mobile/android
@@ -80,6 +82,7 @@ jobs:
           ls -la app/build/outputs/apk/release/
           APK=app/build/outputs/apk/release/app-arm64-v8a-release.apk
           [ -f "$APK" ] || APK="$(find app/build/outputs/apk/release -name '*.apk' | sort | head -n1)"
+          unzip -l "$APK" | grep -q "assets/index.android.bundle" || { echo "JS bundle missing from APK"; exit 1; }
           cp "$APK" "$GITHUB_WORKSPACE/sali-vpn.apk"
 
       - uses: actions/upload-artifact@v4
