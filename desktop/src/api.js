@@ -5,7 +5,7 @@ const store = require('./store');
 
 const DISCOVERY_URL = 'https://salivpn.com/config.json';
 const baked = (() => { try { return require('./build-config.json').apiUrl; } catch { return null; } })();
-const BUILT_IN_API = (process.env.SALI_API_URL || baked || 'https://salivpn.com').replace(/\/$/, '');
+const BUILT_IN_API = (process.env.SALI_API_URL || baked || 'https://api.salivpn.com').replace(/\/$/, '');
 let apiBase = null;
 
 class ApiError extends Error {

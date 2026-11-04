@@ -9,7 +9,7 @@ import type {
   VpnServerDTO,
 } from '@sali/types';
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000') + '/api/v1';
+const API_BASE = (import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? 'https://api.salivpn.com' : 'http://localhost:3000')) + '/api/v1';
 let authToken: string | null = null;
 
 export class ApiRequestError extends Error {

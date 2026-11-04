@@ -48,7 +48,7 @@ jobs:
       - name: App config
         run: |
           {
-            echo "EXPO_PUBLIC_API_URL=${{ vars.EXPO_PUBLIC_API_URL || 'https://salivpn.com' }}"
+            echo "EXPO_PUBLIC_API_URL=${{ vars.EXPO_PUBLIC_API_URL || 'https://api.salivpn.com' }}"
             echo "EXPO_PUBLIC_LANDING_URL=https://salivpn.com"
             echo "EXPO_PUBLIC_BOT_USERNAME=${{ vars.EXPO_PUBLIC_BOT_USERNAME || 'SaliVPNOfficialBot' }}"
           } > apps/mobile/.env
