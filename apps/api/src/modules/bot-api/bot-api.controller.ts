@@ -12,6 +12,7 @@ import { TrialsService } from '../trials/trials.service';
 import { trialSecondsLeft } from '../trials/trial-clock';
 import { NotificationsService } from '../notifications/notifications.service';
 import { formatPublicId } from '../codes/code-format';
+import { ReferralsService, REFERRAL_DISCOUNT_PERCENT, REFERRAL_FRIEND_BONUS_HOURS } from '../referrals/referrals.service';
 
 class ProfileDto {
   @IsInt() telegramId!: number;
@@ -57,6 +58,7 @@ export class BotApiController {
     private readonly subscriptions: SubscriptionsService,
     private readonly trials: TrialsService,
     private readonly notifications: NotificationsService,
+    private readonly referrals: ReferralsService,
   ) {}
 
   private async buyer(profile: ProfileDto) {
@@ -69,9 +71,11 @@ export class BotApiController {
     return user;
   }
 
-  private starsFor(plan: { code: string; priceUsd: unknown }) {
+  /** Stars for a plan; with a referral discount, the same share comes off the Stars price. */
+  private starsFor(plan: { code: string; priceUsd: unknown }, discountPercent = 0) {
     const override = Number(process.env[`STARS_PRICE_${plan.code.toUpperCase()}`]);
-    return Number.isFinite(override) && override > 0 ? override : Math.round(Number(plan.priceUsd) * STARS_PER_USD);
+    const full = Number.isFinite(override) && override > 0 ? override : Math.round(Number(plan.priceUsd) * STARS_PER_USD);
+    return Math.max(1, Math.round(full * (1 - discountPercent / 100)));
   }
 
   private async accessOf(userId: string) {
@@ -87,7 +91,11 @@ export class BotApiController {
   /** /start — registers the customer and, for start=link_<SaliID>, claims the store-app installation. */
   @Post('start')
   async start(@Body() dto: StartDto) {
+    const isNew = !(await this.users.findByTelegramId(BigInt(dto.profile.telegramId)));
     const user = await this.buyer(dto.profile);
+    let referred = false;
+    const ref = dto.startParam?.match(/^ref_(\d{3,20})$/);
+    if (ref && isNew) referred = Boolean(await this.referrals.recordReferralIfNew(user.id, BigInt(ref[1])));
     let link: { status: string; publicId?: string } | null = null;
     const match = dto.startParam?.match(/^link_([0-9A-Za-z]{8})$/);
     if (match) {
@@ -96,7 +104,14 @@ export class BotApiController {
     }
     const apps = await this.users.listLinkedApps(BigInt(dto.profile.telegramId));
     const freeUsed = Boolean(await this.prisma.activationCode.findFirst({ where: { ownerId: user.id, kind: 'FREE' } }));
-    return { publicId: formatPublicId(user.publicId), link, linkedApps: apps.length, freeUsed, isBlocked: user.isBlocked };
+    return { publicId: formatPublicId(user.publicId), link, linkedApps: apps.length, freeUsed, isBlocked: user.isBlocked, referred, friendBonusHours: REFERRAL_FRIEND_BONUS_HOURS };
+  }
+
+  /** «Пригласить друга»: link, how many friends came, discounts waiting for the next purchase. */
+  @Post('referrals')
+  async referralStats(@Body() dto: TelegramDto) {
+    const user = await this.requireUser(dto.telegramId);
+    return this.referrals.getStats(user.id);
   }
 
   @Post('link')
@@ -114,8 +129,12 @@ export class BotApiController {
   }
 
   @Post('plans')
-  async plans() {
+  async plans(@Body() dto: Partial<TelegramDto>) {
     const plans = await this.prisma.plan.findMany({ where: { isActive: true }, orderBy: { durationDays: 'asc' } });
+    const user = typeof dto?.telegramId === 'number' ? await this.users.findByTelegramId(BigInt(dto.telegramId)) : null;
+    const discountPercent = user && await this.prisma.referralReward.findFirst({ where: { userId: user.id, kind: 'discount_percent', paymentId: null, consumedAt: null } })
+      ? REFERRAL_DISCOUNT_PERCENT
+      : 0;
     return plans.map((plan) => ({
       code: plan.code,
       name: plan.name,
@@ -124,6 +143,9 @@ export class BotApiController {
       originalPriceUsd: plan.originalPriceUsd ? Number(plan.originalPriceUsd) : null,
       stars: this.starsFor(plan),
       maxDevices: plan.maxDevices,
+      discountPercent,
+      discountedPriceUsd: discountPercent ? Math.round(Number(plan.priceUsd) * (100 - discountPercent)) / 100 : null,
+      discountedStars: discountPercent ? this.starsFor(plan, discountPercent) : null,
     }));
   }
 
@@ -135,11 +157,13 @@ export class BotApiController {
     if (!plan) throw new NotFoundException('Тариф не найден');
 
     if (dto.method === 'stars') {
+      await this.payments.releaseStaleDiscounts(user.id);
       const payment = await this.payments.createStarsPayment(user.id, plan.id);
       return {
         method: 'stars',
         paymentId: payment.id,
-        stars: this.starsFor(plan),
+        stars: this.starsFor(plan, payment.discountPercent ?? 0),
+        discountPercent: payment.discountPercent ?? 0,
         title: `Sali VPN — ${plan.durationDays >= 360 ? '1 год' : '1 месяц'}`,
         description: `Код активации на ${plan.durationDays} дней. Введите его в приложении Sali VPN. До ${plan.maxDevices} устройств.`,
       };
@@ -150,6 +174,7 @@ export class BotApiController {
       paymentId: result.payment.id,
       checkoutUrl: result.checkout.checkoutUrl ?? null,
       cryptoInvoice: result.checkout.cryptoInvoice ?? null,
+      discountPercent: result.payment.discountPercent ?? 0,
     };
   }
 
@@ -159,7 +184,7 @@ export class BotApiController {
     const user = await this.requireUser(dto.telegramId);
     const payment = await this.prisma.payment.findFirst({ where: { id: dto.paymentId, userId: user.id }, include: { plan: true } });
     if (!payment || payment.status !== PaymentStatus.PENDING) return { ok: false, error: 'Счёт устарел. Выберите тариф заново.' };
-    if (dto.currency !== 'XTR' || dto.amount !== this.starsFor(payment.plan)) return { ok: false, error: 'Сумма изменилась. Выберите тариф заново.' };
+    if (dto.currency !== 'XTR' || dto.amount !== this.starsFor(payment.plan, payment.discountPercent ?? 0)) return { ok: false, error: 'Сумма изменилась. Выберите тариф заново.' };
     return { ok: true };
   }
 

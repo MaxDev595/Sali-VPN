@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { TrialsService } from '../trials/trials.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ReferralsService } from '../referrals/referrals.service';
 import { formatCode, formatPublicId, newActivationCode, normalizeCode } from './code-format';
 
 const CODE_TTL_DAYS = Number(process.env.ACTIVATION_CODE_TTL_DAYS ?? 90);
@@ -27,6 +28,7 @@ export class CodesService {
     private readonly subscriptions: SubscriptionsService,
     private readonly trials: TrialsService,
     private readonly notifications: NotificationsService,
+    private readonly referrals: ReferralsService,
   ) {}
 
   private present(row: { code: string; kind: ActivationCodeKind; durationDays: number; expiresAt: Date; plan?: { name: string } | null }): IssuedCode {
@@ -147,8 +149,20 @@ export class CodesService {
         const subscription = await this.subscriptions.grantDays(userId, plan.id, row.durationDays, 'code');
         expiresAt = subscription.expiresAt;
       }
+      // Invited friend: the first activated code brings +3 hours here and 10% to the inviter.
+      const bonus = row.ownerId
+        ? await this.referrals.rewardIfEligible(row.ownerId, userId).catch((error) => {
+            this.logger.warn(`Referral reward failed owner=${row.ownerId}`, error as Error);
+            return null;
+          })
+        : null;
+      if (bonus) {
+        const refreshed = row.kind === ActivationCodeKind.FREE ? await this.trials.getTrial(userId) : await this.subscriptions.getActiveForUser(userId);
+        expiresAt = refreshed?.expiresAt ?? expiresAt;
+      }
       void this.notifyRedeemed(row.ownerId, userId, row.code, row.kind, expiresAt);
       return {
+        referralBonusHours: bonus?.friendBonusHours ?? 0,
         kind: row.kind,
         durationDays: row.kind === ActivationCodeKind.FREE ? 1 : row.durationDays,
         planName: row.plan?.name ?? (row.kind === ActivationCodeKind.FREE ? '24 часа бесплатно' : null),

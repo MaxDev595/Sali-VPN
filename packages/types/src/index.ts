@@ -107,7 +107,7 @@ export interface ReferralInfoDTO {
   totalRewarded: number;
   availableDiscounts: number;
   discountPercent: number;
-  referredTrialBonusMinutes: number;
+  friendBonusHours: number;
 }
 
 export interface HomeStateDTO {

@@ -139,10 +139,45 @@ export class PaymentsService {
    */
   async createStarsPayment(userId: string, planId: string) {
     const plan = await this.prisma.plan.findUniqueOrThrow({ where: { id: planId } });
-    const payment = await this.prisma.payment.create({
-      data: { userId, planId, provider: 'telegram_stars', currency: 'XTR', amountUsd: plan.priceUsd, deliverAsCode: true, status: PaymentStatus.PENDING },
+    const fullAmount = Number(plan.priceUsd);
+    return this.prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.create({
+        data: { userId, planId, provider: 'telegram_stars', currency: 'XTR', amountUsd: plan.priceUsd, deliverAsCode: true, status: PaymentStatus.PENDING },
+      });
+      const reward = await tx.referralReward.findFirst({
+        where: { userId, kind: 'discount_percent', paymentId: null, consumedAt: null },
+        orderBy: { grantedAt: 'asc' },
+      });
+      let discountPercent = 0;
+      if (reward) {
+        const claimed = await tx.referralReward.updateMany({
+          where: { id: reward.id, paymentId: null, consumedAt: null },
+          data: { paymentId: payment.id },
+        });
+        if (claimed.count === 1) discountPercent = reward.amount;
+      }
+      const amountUsd = Math.round(fullAmount * (1 - discountPercent / 100) * 100) / 100;
+      return tx.payment.update({
+        where: { id: payment.id },
+        data: { externalPaymentId: payment.id, amountUsd, discountPercent },
+        include: { plan: true },
+      });
+    }, { isolationLevel: 'Serializable' });
+  }
+
+  /**
+   * An unpaid Stars invoice holds the referral discount. When the customer opens a
+   * new one, older unpaid Stars invoices are closed (their precheck then fails) and
+   * the discount goes back to the pool for the new invoice.
+   */
+  async releaseStaleDiscounts(userId: string) {
+    const stale = await this.prisma.payment.findMany({ where: { userId, provider: 'telegram_stars', status: PaymentStatus.PENDING, discountPercent: { gt: 0 } }, select: { id: true } });
+    if (!stale.length) return;
+    await this.prisma.referralReward.updateMany({
+      where: { userId, consumedAt: null, paymentId: { in: stale.map((p) => p.id) } },
+      data: { paymentId: null },
     });
-    return this.prisma.payment.update({ where: { id: payment.id }, data: { externalPaymentId: payment.id }, include: { plan: true } });
+    await this.prisma.payment.updateMany({ where: { id: { in: stale.map((p) => p.id) } }, data: { status: PaymentStatus.FAILED, failureReason: 'Replaced by a newer invoice' } });
   }
 
   /** Activation code issued for a paid bot purchase, if any. */

@@ -6,9 +6,10 @@ import { UsersModule } from '../users/users.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { TrialsModule } from '../trials/trials.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ReferralsModule } from '../referrals/referrals.module';
 
 @Module({
-  imports: [CodesModule, PaymentsModule, UsersModule, SubscriptionsModule, TrialsModule, NotificationsModule],
+  imports: [CodesModule, PaymentsModule, UsersModule, SubscriptionsModule, TrialsModule, NotificationsModule, ReferralsModule],
   controllers: [BotApiController],
 })
 export class BotApiModule {}
