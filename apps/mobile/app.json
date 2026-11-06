@@ -6,7 +6,7 @@
     "version": "0.5.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "icon": "./assets/sali-logo.png",
+    "icon": "./assets/sali-icon.png",
     "splash": {
       "backgroundColor": "#FFFFFF"
     },
@@ -20,7 +20,7 @@
     "android": {
       "package": "app.sali.vpn",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/sali-logo.png",
+        "foregroundImage": "./assets/sali-icon.png",
         "backgroundColor": "#FFFFFF"
       },
       "permissions": [
