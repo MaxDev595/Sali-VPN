@@ -17,13 +17,13 @@ const t = {
     back: 'На главную', eyebrow: 'Скачать', title: 'Sali VPN на телефон и компьютер',
     lead: 'Выберите своё устройство, скачайте приложение и подключитесь за пару минут.',
     detected: 'Похоже, у вас', recommended: 'Рекомендуем',
-    android: { name: 'Android', sub: 'Телефон или планшет', req: 'Android 7.0 и новее · ~35 МБ', main: 'Скачать APK', alt: 'Google Play' },
+    android: { name: 'Android', sub: 'Телефон или планшет', req: 'Android 7.0 и новее · ~35 МБ', main: 'Скачать APK', alt: 'Как установить' },
     windows: { name: 'Windows', sub: 'Компьютер или ноутбук', req: 'Windows 10 / 11, 64-бит · ~90 МБ', main: 'Скачать установщик', alt: 'Портативная версия' },
     apple: { name: 'iPhone и Mac', sub: 'Пока не поддерживается', text: 'Sali VPN работает на Android и Windows. Один код активирует одно устройство.' },
     version: 'Версия', free: '24 часа бесплатно', freeText: 'После установки получите в боте бесплатный код на 24 часа.',
     guideEyebrow: 'Инструкция', guideTitle: 'Как установить и подключиться', tabs: { android: 'Android', windows: 'Windows' },
     stepsAndroid: [
-      { icon: 'download', title: 'Скачайте приложение', text: 'Нажмите «Скачать APK» на этой странице прямо с телефона. Или установите Sali VPN из Google Play.' },
+      { icon: 'download', title: 'Скачайте приложение', text: 'Нажмите «Скачать APK» на этой странице прямо с телефона.' },
       { icon: 'lock', title: 'Разрешите установку', text: 'Откройте скачанный файл sali-vpn.apk. Если Android спросит — разрешите браузеру «Установку неизвестных приложений» и нажмите «Установить».', tip: 'Это стандартный запрос Android для приложений не из Google Play.' },
       { icon: 'key', title: 'Откройте Sali VPN', text: 'Приложение сразу создаст ваш Sali ID (например, SL-7K4P-Q2M9). Регистрация и пароли не нужны.' },
       { icon: 'telegram', title: 'Привяжите Telegram', text: 'Нажмите «Привязать Telegram» — откроется бот Sali, и он запомнит ваше устройство.' },
@@ -64,13 +64,13 @@ const t = {
     back: 'Back home', eyebrow: 'Download', title: 'Sali VPN for phone and computer',
     lead: 'Pick your device, download the app and connect in a couple of minutes.',
     detected: 'Looks like you are on', recommended: 'Recommended',
-    android: { name: 'Android', sub: 'Phone or tablet', req: 'Android 7.0+ · ~35 MB', main: 'Download APK', alt: 'Google Play' },
+    android: { name: 'Android', sub: 'Phone or tablet', req: 'Android 7.0+ · ~35 MB', main: 'Download APK', alt: 'How to install' },
     windows: { name: 'Windows', sub: 'Desktop or laptop', req: 'Windows 10 / 11, 64-bit · ~90 MB', main: 'Download installer', alt: 'Portable version' },
     apple: { name: 'iPhone and Mac', sub: 'Not supported yet', text: 'Sali VPN runs on Android and Windows. One code activates one device.' },
     version: 'Version', free: '24 hours free', freeText: 'After installing, get a free 24-hour code from the bot.',
     guideEyebrow: 'Guide', guideTitle: 'How to install and connect', tabs: { android: 'Android', windows: 'Windows' },
     stepsAndroid: [
-      { icon: 'download', title: 'Download the app', text: 'Tap "Download APK" on this page from your phone, or install Sali VPN from Google Play.' },
+      { icon: 'download', title: 'Download the app', text: 'Tap "Download APK" on this page from your phone.' },
       { icon: 'lock', title: 'Allow the install', text: 'Open sali-vpn.apk. If Android asks, allow your browser to "Install unknown apps", then tap Install.', tip: 'This is the standard Android prompt for apps outside Google Play.' },
       { icon: 'key', title: 'Open Sali VPN', text: 'The app creates your Sali ID right away (e.g. SL-7K4P-Q2M9). No sign-up, no passwords.' },
       { icon: 'telegram', title: 'Link Telegram', text: 'Tap "Link Telegram" — the Sali bot opens and remembers your device.' },
@@ -135,13 +135,13 @@ export function DownloadPage() {
   const card = (id: Platform) => {
     const p = c[id];
     const main = id === 'android' ? DOWNLOADS.apk : DOWNLOADS.windows;
-    const alt = id === 'android' ? DOWNLOADS.googlePlay : DOWNLOADS.windowsPortable;
+    const alt = id === 'android' ? '#guide' : DOWNLOADS.windowsPortable;
     return <article className={`sv-dl-card${detected === id ? ' is-detected' : ''}`}>
       {detected === id && <em>{c.recommended}</em>}
       <Icon name={id} className="sv-dl-card-icon" />
       <h2>{p.name}</h2><p className="sv-dl-sub">{p.sub}</p>
       <a className="sv-btn sv-btn-peach" href={main}><Icon name="download-glyph-dark" />{p.main}</a>
-      <a className="sv-dl-alt" href={alt} target={id === 'android' ? '_blank' : undefined} rel="noreferrer">{p.alt} →</a>
+      <a className="sv-dl-alt" href={alt} onClick={id === 'android' ? (event) => { event.preventDefault(); setTab('android'); document.getElementById('guide')?.scrollIntoView({ behavior: 'smooth' }); } : undefined} rel="noreferrer">{p.alt} →</a>
       <p className="sv-dl-req">{p.req} · {c.version} {APP_VERSION[id]}</p>
     </article>;
   };

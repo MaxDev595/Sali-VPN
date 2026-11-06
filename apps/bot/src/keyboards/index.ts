@@ -122,7 +122,6 @@ export function downloadKeyboard() {
   const windows = process.env.WINDOWS_DOWNLOAD_URL || `${RELEASES}/desktop-latest/SaliVPN-Setup.exe`;
   return Markup.inlineKeyboard([
     [Markup.button.url('📱 Android (APK)', apk), Markup.button.url('💻 Windows', windows)],
-    ...(process.env.ANDROID_STORE_URL ? [[Markup.button.url('Google Play', process.env.ANDROID_STORE_URL)]] : []),
     [Markup.button.url('📖 Инструкция по установке', process.env.DOWNLOAD_PAGE_URL || 'https://salivpn.com/download')],
   ]);
 }
