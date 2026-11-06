@@ -10,7 +10,7 @@ title Sali VPN - APK build
 echo Building Sali VPN APK... first run also installs JDK and Android SDK (20-40 minutes).
 echo Log: %LOG%
 call "%~f0" run > "%LOG%" 2>&1
-if errorlevel 1 (echo. & echo BUILD FAILED - see build-apk.log) else (echo. & echo DONE: %SRC%apps\mobile\dist\sali-vpn-0.4.0.apk)
+if errorlevel 1 (echo. & echo BUILD FAILED - see build-apk.log) else (echo. & echo DONE: %SRC%apps\mobile\dist\sali-vpn-0.5.0.apk)
 pause
 exit /b
 
@@ -55,6 +55,6 @@ call gradlew.bat assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemo
 
 echo [4/4] Copying APK ...
 if not exist "%SRC%apps\mobile\dist" mkdir "%SRC%apps\mobile\dist"
-copy /Y "%DST%\apps\mobile\android\app\build\outputs\apk\release\app-arm64-v8a-release.apk" "%SRC%apps\mobile\dist\sali-vpn-0.4.0.apk" || exit /b 1
+copy /Y "%DST%\apps\mobile\android\app\build\outputs\apk\release\app-arm64-v8a-release.apk" "%SRC%apps\mobile\dist\sali-vpn-0.5.0.apk" || exit /b 1
 echo BUILD OK
 exit /b 0
