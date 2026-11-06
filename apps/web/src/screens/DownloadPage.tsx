@@ -15,11 +15,11 @@ const APP_VERSION = '0.5.0';
 const t = {
   ru: {
     back: 'На главную', eyebrow: 'Скачать', title: 'Sali VPN на телефон и компьютер',
-    lead: 'Одна подписка — до 3 устройств. Выберите своё устройство, скачайте приложение и подключитесь за пару минут.',
+    lead: 'Выберите своё устройство, скачайте приложение и подключитесь за пару минут.',
     detected: 'Похоже, у вас', recommended: 'Рекомендуем',
     android: { name: 'Android', sub: 'Телефон или планшет', req: 'Android 7.0 и новее · ~35 МБ', main: 'Скачать APK', alt: 'Google Play' },
     windows: { name: 'Windows', sub: 'Компьютер или ноутбук', req: 'Windows 10 / 11, 64-бит · ~90 МБ', main: 'Скачать установщик', alt: 'Портативная версия' },
-    apple: { name: 'iPhone и Mac', sub: 'В разработке', text: 'Пока подключайтесь с Android или Windows — подписка общая для всех устройств.' },
+    apple: { name: 'iPhone и Mac', sub: 'Пока не поддерживается', text: 'Sali VPN работает на Android и Windows. Один код активирует одно устройство.' },
     version: 'Версия', free: '24 часа бесплатно', freeText: 'После установки получите в боте бесплатный код на 24 часа.',
     guideEyebrow: 'Инструкция', guideTitle: 'Как установить и подключиться', tabs: { android: 'Android', windows: 'Windows' },
     stepsAndroid: [
@@ -42,7 +42,7 @@ const t = {
     info: [
       ['key', 'Код — одноразовый', 'Каждый код активируется один раз на одном устройстве. Купленный код можно подарить — он действует 90 дней до активации.'],
       ['clock', '24 часа бесплатно', 'Один раз на аккаунт Telegram — 24 часа VPN без ограничений с момента активации кода.'],
-      ['devices', 'До 3 устройств', 'Подписка работает на телефоне и компьютере одновременно. Привяжите каждое устройство к одному Telegram.'],
+      ['devices', 'Несколько устройств', 'Один код — одно устройство. Купите код для каждого телефона или компьютера и активируйте его кнопкой в боте.'],
       ['star', 'Продление', 'Автосписаний нет. Новый код добавляет дни к текущей подписке, бот напомнит за 3 дня до окончания.'],
       ['globe', 'Серверы', 'Нидерланды, Германия, США — выбирайте страну в приложении. Список растёт каждый месяц.'],
       ['chat', 'Поддержка', 'Что-то не работает — напишите в бот поддержки, отвечает живой человек.'],
@@ -62,11 +62,11 @@ const t = {
   },
   en: {
     back: 'Back home', eyebrow: 'Download', title: 'Sali VPN for phone and computer',
-    lead: 'One plan covers up to 3 devices. Pick your device, download the app and connect in a couple of minutes.',
+    lead: 'Pick your device, download the app and connect in a couple of minutes.',
     detected: 'Looks like you are on', recommended: 'Recommended',
     android: { name: 'Android', sub: 'Phone or tablet', req: 'Android 7.0+ · ~35 MB', main: 'Download APK', alt: 'Google Play' },
     windows: { name: 'Windows', sub: 'Desktop or laptop', req: 'Windows 10 / 11, 64-bit · ~90 MB', main: 'Download installer', alt: 'Portable version' },
-    apple: { name: 'iPhone and Mac', sub: 'In development', text: 'For now connect from Android or Windows — one plan works on all your devices.' },
+    apple: { name: 'iPhone and Mac', sub: 'Not supported yet', text: 'Sali VPN runs on Android and Windows. One code activates one device.' },
     version: 'Version', free: '24 hours free', freeText: 'After installing, get a free 24-hour code from the bot.',
     guideEyebrow: 'Guide', guideTitle: 'How to install and connect', tabs: { android: 'Android', windows: 'Windows' },
     stepsAndroid: [
@@ -89,7 +89,7 @@ const t = {
     info: [
       ['key', 'One-time codes', 'Each code activates once on one device. A purchased code can be gifted — valid for 90 days until activated.'],
       ['clock', '24 hours free', 'Once per Telegram account — 24 hours of unlimited VPN from the moment you activate the code.'],
-      ['devices', 'Up to 3 devices', 'Use your plan on phone and computer at the same time. Link each device to the same Telegram.'],
+      ['devices', 'Several devices', 'One code activates one device. Get a code for each phone or computer and activate it from the bot.'],
       ['star', 'Renewal', 'No auto-charges. A new code adds days on top, and the bot reminds you 3 days before the end.'],
       ['globe', 'Servers', 'Netherlands, Germany, USA — pick a country in the app. New locations every month.'],
       ['chat', 'Support', 'Something not working? Message the support bot — a real person answers.'],
