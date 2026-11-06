@@ -28,7 +28,7 @@ function setVpnState(next, detail) {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 420, height: 720, minWidth: 380, minHeight: 640, show: false, resizable: true,
+    width: 1040, height: 680, minWidth: 860, minHeight: 600, show: false, resizable: true,
     backgroundColor: '#040913', title: 'Sali VPN', icon: asset('app.png'),
     titleBarStyle: 'hidden', titleBarOverlay: { color: '#040913', symbolColor: '#B7C0D4', height: 36 },
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, nodeIntegration: false },
@@ -111,6 +111,9 @@ ipcMain.handle('vpn:state', async () => ({ state: vpnState, serverLocation, conn
 ipcMain.handle('open:bot', (_event, start) => shell.openExternal(`https://t.me/${BOT}${start ? `?start=${encodeURIComponent(start)}` : ''}`));
 ipcMain.handle('open:support', () => shell.openExternal(SUPPORT));
 ipcMain.handle('open:download', () => shell.openExternal('https://salivpn.com/download'));
+// Help centre: buttons for protocol, DNS, devices… open salivpn.com/help/<topic>.
+ipcMain.handle('open:help', (_event, topic) => shell.openExternal(`https://salivpn.com/help${/^[a-z-]{2,30}$/.test(String(topic ?? '')) ? `/${topic}` : ''}`));
+ipcMain.handle('open:site', (_event, page) => shell.openExternal(`https://salivpn.com${['/privacy', '/terms', '/download'].includes(page) ? page : ''}`));
 ipcMain.handle('clipboard:read', () => clipboard.readText());
 ipcMain.handle('clipboard:write', (_event, text) => clipboard.writeText(String(text)));
 ipcMain.handle('app:version', () => app.getVersion());

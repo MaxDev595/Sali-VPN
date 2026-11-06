@@ -2,11 +2,13 @@
 const $ = (id) => document.getElementById(id);
 const el = {
   app: $('app'), publicId: $('publicId'), idChip: $('idChip'), statusTitle: $('statusTitle'), statusSub: $('statusSub'),
-  power: $('power'), powerLabel: $('powerLabel'), powerSub: $('powerSub'), timer: $('timer'),
-  access: $('access'), accessText: $('accessText'), server: $('server'), flag: $('flag'),
+  power: $('power'), timer: $('timer'), tariffStub: $('tariffStub'), accessMain: $('accessMain'), accessSub: $('accessSub'),
+  server: $('server'), flag: $('flag'),
   enterCode: $('enterCode'), getCode: $('getCode'), getCodeLabel: $('getCodeLabel'), linkCard: $('linkCard'), linkBtn: $('linkBtn'),
   sheet: $('sheet'), form: $('codeForm'), input: $('codeInput'), paste: $('paste'), error: $('codeError'), submit: $('codeSubmit'), cancel: $('codeCancel'),
   toast: $('toast'), support: $('support'), phone: $('phone'), version: $('version'),
+  nav: $('nav'), navCap: $('navCap'), devId: $('devId'), devTariff: $('devTariff'), devTg: $('devTg'),
+  rowTelegram: $('rowTelegram'), tgValue: $('tgValue'), tgHint: $('tgHint'), supportId: $('supportId'), faq: $('faq'),
 };
 
 let home = null;
@@ -15,6 +17,15 @@ let homeLoadedAt = 0;
 
 const FLAGS = [[/nether|нидерл|amster|амстер/i, 'flag-nl'], [/german|герман|frank|франкф|berlin|берлин/i, 'flag-de'], [/usa|united states|сша|new york|нью-йорк/i, 'flag-us']];
 const flagFor = (location) => (FLAGS.find(([re]) => re.test(location || '')) || [null, 'globe-glyph'])[1];
+
+const FAQ = [
+  ['VPN не подключается', 'Проверьте, что тариф активен (карточка «Тариф»), выключите другие VPN и прокси, затем попробуйте снова. Windows может спросить разрешение для службы WireGuard — его нужно подтвердить.'],
+  ['Подключился, но сайты не открываются', 'Отключитесь и подключитесь снова — Sali перенесёт вас на рабочий сервер. Если используете свой DNS или прокси в браузере, выключите их.'],
+  ['Куда вводить код?', 'Кнопка «Ввести код» на странице VPN. Регистр и дефисы не важны — код можно просто вставить кнопкой «Вставить».'],
+  ['Как получить 24 часа бесплатно?', 'Нажмите «24 часа бесплатно» — откроется наш Telegram-бот. Он пришлёт код, который нужно ввести здесь.'],
+  ['Можно на нескольких устройствах?', 'Да. Один код активирует одно устройство: купите код для каждого и активируйте его кнопкой в боте — он спросит, на какое устройство.'],
+  ['VPN работает, когда окно закрыто?', 'Да. Закрытие окна сворачивает Sali в область уведомлений, VPN остаётся включённым. Отключить его можно там же, правой кнопкой по значку.'],
+];
 
 function toast(text, kind = '') {
   el.toast.textContent = text;
@@ -44,27 +55,34 @@ function render() {
   const busy = vpn.state === 'connecting' || vpn.state === 'disconnecting';
   const on = vpn.state === 'connected';
   el.app.classList.toggle('is-connected', on);
-  el.app.classList.toggle('is-busy', busy);
+  el.app.classList.toggle('is-connecting', vpn.state === 'connecting');
+  el.app.classList.toggle('is-disconnecting', vpn.state === 'disconnecting');
   el.power.disabled = busy;
 
-  el.statusTitle.textContent = on ? 'Соединение защищено' : busy ? (vpn.state === 'connecting' ? 'Подключаемся…' : 'Отключаемся…') : 'VPN выключен';
-  el.statusSub.textContent = vpn.detail || (on ? 'Весь трафик компьютера идёт через Sali' : a.kind === 'none' ? 'Активируйте код, чтобы подключиться' : 'Нажмите кнопку, чтобы подключиться');
-  el.powerLabel.textContent = on ? 'В сети' : busy ? '…' : 'Подключить';
-  el.powerSub.textContent = on ? 'ЗАЩИЩЕНО' : busy ? 'ПОДОЖДИТЕ' : 'НАЖМИТЕ';
+  el.statusTitle.textContent = on ? 'Соединение защищено' : vpn.state === 'connecting' ? 'Рисуем туннель…' : vpn.state === 'disconnecting' ? 'Отключаемся…' : 'VPN выключен';
+  el.statusSub.textContent = vpn.detail || (on ? 'Весь трафик компьютера идёт через Sali' : busy ? ' ' : a.kind === 'none' ? 'Активируйте код, чтобы подключиться' : 'Нажмите на знак, чтобы подключиться');
   el.power.setAttribute('aria-label', on ? 'Отключить VPN' : 'Подключить VPN');
-  el.timer.textContent = on && vpn.connectedAt ? `В сети ${hms((Date.now() - vpn.connectedAt) / 1000)}` : ' ';
+  el.timer.textContent = on && vpn.connectedAt ? `● ${hms((Date.now() - vpn.connectedAt) / 1000)}` : ' ';
 
-  el.access.className = 'pill ' + (a.kind === 'paid' ? 'ok' : a.kind === 'trial' ? 'trial' : a.kind === 'none' ? 'none' : '');
-  if (a.kind === 'paid') el.accessText.innerHTML = `${escapeHtml(a.plan || 'Подписка')} до <b>${a.until ? new Date(a.until).toLocaleDateString('ru-RU') : '—'}</b>`;
-  else if (a.kind === 'trial') el.accessText.innerHTML = `Бесплатно: осталось <b>${hms(a.left)}</b>`;
-  else if (a.kind === 'none') el.accessText.textContent = a.hadTrial ? 'Доступ закончился — продлите в боте' : 'Нет активного тарифа';
-  else el.accessText.textContent = 'Проверяем доступ…';
+  el.tariffStub.className = 'stub' + (a.kind === 'none' ? ' none' : '');
+  if (a.kind === 'paid') { el.accessMain.textContent = a.until ? `до ${new Date(a.until).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}` : 'Подписка'; el.accessSub.textContent = a.plan || 'Подписка'; }
+  else if (a.kind === 'trial') { el.accessMain.innerHTML = `<span class="mono">${hms(a.left)}</span>`; el.accessSub.textContent = 'Бесплатно'; }
+  else if (a.kind === 'none') { el.accessMain.textContent = 'Ввести код'; el.accessSub.textContent = a.hadTrial ? 'Тариф закончился' : 'Нет тарифа'; }
+  else { el.accessMain.textContent = '—'; el.accessSub.textContent = 'Проверяем доступ…'; }
 
   el.getCodeLabel.textContent = a.kind === 'none' && !a.hadTrial ? '24 часа бесплатно' : a.kind === 'none' ? 'Купить в боте' : 'Мои коды в боте';
   el.server.textContent = vpn.serverLocation || 'Автовыбор';
   el.flag.src = `assets/${flagFor(vpn.serverLocation)}.png`;
-  el.linkCard.hidden = !home || Boolean(home.user && home.user.telegramLinked);
-  if (home && home.user) el.publicId.textContent = home.user.publicId;
+
+  const linked = Boolean(home && home.user && home.user.telegramLinked);
+  el.linkCard.hidden = !home || linked;
+  const id = home && home.user ? home.user.publicId : '—';
+  el.publicId.textContent = home && home.user ? id : '····-····';
+  el.devId.textContent = id; el.supportId.textContent = id;
+  el.devTariff.textContent = a.kind === 'paid' ? 'подписка' : a.kind === 'trial' ? 'бесплатный' : a.kind === 'none' ? 'нет' : '—';
+  el.devTg.textContent = home ? (linked ? 'привязан' : 'не привязан') : '—';
+  el.tgValue.textContent = home ? (linked ? 'Привязан' : 'Привязать') : '—';
+  el.tgHint.textContent = linked ? 'Коды и напоминания приходят в бот' : 'Привяжите, чтобы активировать коды одной кнопкой';
 }
 
 function escapeHtml(text) { return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
@@ -76,7 +94,8 @@ async function loadHome({ quiet = false } = {}) {
   render();
 }
 
-el.power.addEventListener('click', async () => {
+async function togglePower() {
+  if (el.power.disabled) return;
   if (vpn.state === 'connected') { await window.sali.disconnect(); return; }
   if (access().kind === 'none') { openSheet(); return; }
   const result = await window.sali.connect();
@@ -85,13 +104,54 @@ el.power.addEventListener('click', async () => {
     if (result.status === 403) openSheet();
   }
   void loadHome({ quiet: true });
-});
+}
+el.power.addEventListener('click', () => void togglePower());
 
 window.sali.onVpnState((payload) => {
   vpn = { ...vpn, state: payload.state, detail: payload.detail, serverLocation: payload.serverLocation ?? vpn.serverLocation };
   if (payload.state === 'connected' && !vpn.connectedAt) vpn.connectedAt = Date.now();
   if (payload.state === 'disconnected') vpn.connectedAt = null;
   render();
+});
+
+/* navigation with page transitions; the pen cap slides to the current section */
+const pages = [...document.querySelectorAll('.page')];
+const tabs = [...el.nav.querySelectorAll('button[data-page]')];
+let current = 'vpn';
+function go(name) {
+  if (name === current) return;
+  const from = pages.find((page) => page.dataset.page === current);
+  const to = pages.find((page) => page.dataset.page === name);
+  const tab = tabs.find((button) => button.dataset.page === name);
+  if (!to || !tab) return;
+  current = name;
+  tabs.forEach((button) => button.setAttribute('aria-selected', String(button === tab)));
+  el.navCap.style.transform = `translateY(${tab.offsetTop + tab.offsetHeight / 2 - 2}px) rotate(-45deg)`;
+  from.classList.remove('enter'); from.classList.add('leave');
+  setTimeout(() => {
+    from.hidden = true; from.classList.remove('leave');
+    to.hidden = false; to.scrollTop = 0;
+    to.classList.remove('enter'); void to.offsetWidth; to.classList.add('enter');
+  }, 160);
+}
+tabs.forEach((button) => button.addEventListener('click', () => go(button.dataset.page)));
+
+/* help centre and site links */
+document.querySelectorAll('[data-help]').forEach((node) => node.addEventListener('click', () => void window.sali.openHelp(node.dataset.help || undefined)));
+document.querySelectorAll('[data-site]').forEach((node) => node.addEventListener('click', () => void window.sali.openSite(node.dataset.site)));
+
+/* FAQ: answers open to their height, the plus turns into a cross */
+FAQ.forEach(([question, answer], index) => {
+  const item = document.createElement('div');
+  item.className = 'qa';
+  item.innerHTML = `<button aria-expanded="false" aria-controls="qa${index}"><span>${escapeHtml(question)}</span><i class="plus" aria-hidden="true"></i></button><div class="answer" id="qa${index}"><p>${escapeHtml(answer)}</p></div>`;
+  item.querySelector('button').addEventListener('click', () => {
+    const open = !item.classList.contains('open');
+    el.faq.querySelectorAll('.qa.open').forEach((other) => { other.classList.remove('open'); other.querySelector('button').setAttribute('aria-expanded', 'false'); });
+    item.classList.toggle('open', open);
+    item.querySelector('button').setAttribute('aria-expanded', String(open));
+  });
+  el.faq.appendChild(item);
 });
 
 /* activation code sheet */
@@ -105,9 +165,9 @@ function formatCode(raw) {
 function openSheet() { el.sheet.hidden = false; el.error.hidden = true; setTimeout(() => el.input.focus(), 60); }
 function closeSheet() { el.sheet.hidden = true; el.input.value = ''; }
 el.enterCode.addEventListener('click', openSheet);
+el.tariffStub.addEventListener('click', openSheet);
 el.cancel.addEventListener('click', closeSheet);
 el.sheet.addEventListener('click', (event) => { if (event.target === el.sheet) closeSheet(); });
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !el.sheet.hidden) closeSheet(); });
 el.input.addEventListener('input', () => { el.input.value = formatCode(el.input.value); el.error.hidden = true; });
 el.paste.addEventListener('click', async () => { el.input.value = formatCode(await window.sali.readClipboard()); el.input.focus(); });
 el.form.addEventListener('submit', async (event) => {
@@ -124,19 +184,31 @@ el.form.addEventListener('submit', async (event) => {
   await loadHome({ quiet: true });
 });
 
+/* keyboard: 1–4 switch sections, Space toggles VPN, Ctrl+V on the VPN page opens the code sheet */
+document.addEventListener('keydown', (event) => {
+  if (!el.sheet.hidden) { if (event.key === 'Escape') closeSheet(); return; }
+  if (event.target instanceof HTMLInputElement) return;
+  const index = ['1', '2', '3', '4'].indexOf(event.key);
+  if (index >= 0 && !event.ctrlKey && !event.altKey) { go(tabs[index].dataset.page); return; }
+  if (event.code === 'Space' && current === 'vpn' && document.activeElement === document.body) { event.preventDefault(); void togglePower(); }
+  if (event.key.toLowerCase() === 'v' && event.ctrlKey && current === 'vpn') { openSheet(); void window.sali.readClipboard().then((text) => { el.input.value = formatCode(text); }); }
+});
+
 /* bot, links */
-el.getCode.addEventListener('click', () => { const a = access(); void window.sali.openBot(a.kind === 'none' && !a.hadTrial ? 'free' : a.kind === 'none' ? 'buy' : undefined); });
-el.linkBtn.addEventListener('click', () => {
+const linkToBot = () => {
   const id = (home && home.user && home.user.publicId || '').replace(/[^0-9A-Z]/gi, '').replace(/^SL/i, '');
   void window.sali.openBot(id ? `link_${id}` : undefined);
-});
+};
+el.getCode.addEventListener('click', () => { const a = access(); void window.sali.openBot(a.kind === 'none' && !a.hadTrial ? 'free' : a.kind === 'none' ? 'buy' : undefined); });
+el.linkBtn.addEventListener('click', linkToBot);
+el.rowTelegram.addEventListener('click', () => { if (home && home.user && !home.user.telegramLinked) linkToBot(); else void window.sali.openBot(); });
 el.idChip.addEventListener('click', async () => { if (!home) return; await window.sali.copy(home.user.publicId); toast('Sali ID скопирован', 'ok'); });
 el.support.addEventListener('click', () => void window.sali.openSupport());
 el.phone.addEventListener('click', () => void window.sali.openDownload());
 
 /* boot */
 (async () => {
-  el.version.textContent = 'v' + await window.sali.version();
+  el.version.textContent = 'Sali VPN ' + await window.sali.version();
   const state = await window.sali.vpnState();
   vpn = { ...vpn, ...state };
   render();

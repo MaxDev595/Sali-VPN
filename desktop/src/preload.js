@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('sali', {
   openBot: (start) => ipcRenderer.invoke('open:bot', start),
   openSupport: () => ipcRenderer.invoke('open:support'),
   openDownload: () => ipcRenderer.invoke('open:download'),
+  openHelp: (topic) => ipcRenderer.invoke('open:help', topic),
+  openSite: (page) => ipcRenderer.invoke('open:site', page),
   readClipboard: () => ipcRenderer.invoke('clipboard:read'),
   copy: (text) => ipcRenderer.invoke('clipboard:write', text),
   version: () => ipcRenderer.invoke('app:version'),

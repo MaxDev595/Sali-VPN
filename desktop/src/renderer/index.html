@@ -8,48 +8,125 @@
 </head>
 <body>
   <div class="drag"></div>
-  <main class="app" id="app">
-    <header class="top">
-      <span class="badge"><img src="assets/mark.svg" alt="" /></span>
-      <img class="word" src="assets/wordmark.svg" alt="Sali" />
-      <button class="id-chip" id="idChip" title="Скопировать Sali ID"><small>ID</small><b id="publicId">…</b></button>
-    </header>
+  <div class="shell" id="app">
+    <!-- Sidebar: brand, sections (the peach pen cap marks the current one), account at the bottom. -->
+    <aside class="side">
+      <div class="brand"><span class="badge"><img src="assets/mark.svg" alt="" /></span><img class="word" src="assets/wordmark.svg" alt="Sali" /></div>
+      <nav class="nav" id="nav" role="tablist" aria-label="Разделы">
+        <span class="nav-cap" id="navCap" aria-hidden="true"></span>
+        <button role="tab" data-page="vpn" aria-selected="true"><kbd>1</kbd>VPN</button>
+        <button role="tab" data-page="devices" aria-selected="false"><kbd>2</kbd>Устройства</button>
+        <button role="tab" data-page="settings" aria-selected="false"><kbd>3</kbd>Настройки</button>
+        <button role="tab" data-page="help" aria-selected="false"><kbd>4</kbd>Помощь</button>
+      </nav>
+      <div class="side-foot">
+        <button class="id-card" id="idChip" title="Скопировать Sali ID"><small>SALI ID</small><b id="publicId">····-····</b><span>копировать</span></button>
+        <span class="version" id="version"></span>
+      </div>
+    </aside>
 
-    <section class="status">
-      <p class="status-title" id="statusTitle">Загрузка…</p>
-      <p class="status-sub" id="statusSub">&nbsp;</p>
-    </section>
+    <main class="stage">
+      <!-- VPN -->
+      <section class="page is-active" data-page="vpn" id="page-vpn">
+        <div class="vpn-grid">
+          <div class="vpn-hero">
+            <p class="kicker" id="timer">&nbsp;</p>
+            <button class="power" id="power" aria-label="Подключить VPN">
+              <svg class="orbit" viewBox="0 0 240 240" aria-hidden="true"><circle class="track" cx="120" cy="120" r="114" /><circle class="arc" cx="120" cy="120" r="114" pathLength="1" /></svg>
+              <svg class="mark" viewBox="395 175 470 410" aria-hidden="true">
+          <defs><mask id="reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="1254" height="1254"><path class="reveal" d="M 696.6 274.4 A 139 139 0 0 0 500.8 470.2 A 139 139 0 0 0 743.7 354.3" stroke="#fff" stroke-width="118" fill="none" pathLength="1" stroke-dasharray="1"/></mask></defs>
+          <g class="ghost"><path d="M 582.6 197.9 C 511.8 206.8, 453.2 255.1, 430.4 323.2 C 404.1 402.2, 435.7 475.0, 496.5 475.2 C 507.0 475.3, 515 474.3, 515 473.0 C 515 472.5, 512.4 470.2, 509.2 467.9 C 458.5 429.6, 449.8 356.2, 489.2 298.6 C 510.0 268.3, 541.5 247.5, 577.8 240.3 C 590.2 237.8, 620.2 237.8, 632 240.3 C 649.5 244.0, 667.1 251.1, 683.5 261.0 C 689.4 264.5, 692.6 265.9, 694.0 265.4 C 696.2 264.7, 714.6 244.8, 716.2 241.3 C 717.7 238.0, 715.5 235.3, 705.2 227.6 C 688.8 215.3, 666.0 205.5, 641.5 200.3 C 628.2 197.5, 596.2 196.2, 582.6 197.9" fill-rule="evenodd"/><path d="M 751.6 379.7 C 699.1 431.3, 656.9 462.0, 611 482.2 C 566.2 501.9, 517.9 508.3, 476.6 499.9 C 471.2 498.8, 466.3 498.0, 465.8 498.2 C 464.4 498.6, 477.7 513.3, 486.3 521.0 C 540.9 569.1, 627.9 579.4, 696.5 545.9 C 744.5 522.5, 779.9 472.5, 790.1 414 C 791.9 403.8, 791.9 375.0, 790.1 368.1 C 788.1 360.2, 784.9 357, 779.3 357 L 774.7 357 751.6 379.7" fill-rule="evenodd"/><path d="M 737.9 278.7 C 734.6 280.9, 692.9 324.4, 691.2 327.3 C 687.1 334.6, 692.7 344, 701.3 344 C 706.1 344, 724.9 338.2, 746.8 330.0 C 770.1 321.4, 771.0 318.1, 757.2 293.2 C 748.9 278.2, 744.1 274.5, 737.9 278.7"/></g>
+          <g class="ink" mask="url(#reveal)"><path d="M 582.6 197.9 C 511.8 206.8, 453.2 255.1, 430.4 323.2 C 404.1 402.2, 435.7 475.0, 496.5 475.2 C 507.0 475.3, 515 474.3, 515 473.0 C 515 472.5, 512.4 470.2, 509.2 467.9 C 458.5 429.6, 449.8 356.2, 489.2 298.6 C 510.0 268.3, 541.5 247.5, 577.8 240.3 C 590.2 237.8, 620.2 237.8, 632 240.3 C 649.5 244.0, 667.1 251.1, 683.5 261.0 C 689.4 264.5, 692.6 265.9, 694.0 265.4 C 696.2 264.7, 714.6 244.8, 716.2 241.3 C 717.7 238.0, 715.5 235.3, 705.2 227.6 C 688.8 215.3, 666.0 205.5, 641.5 200.3 C 628.2 197.5, 596.2 196.2, 582.6 197.9" fill-rule="evenodd"/><path d="M 751.6 379.7 C 699.1 431.3, 656.9 462.0, 611 482.2 C 566.2 501.9, 517.9 508.3, 476.6 499.9 C 471.2 498.8, 466.3 498.0, 465.8 498.2 C 464.4 498.6, 477.7 513.3, 486.3 521.0 C 540.9 569.1, 627.9 579.4, 696.5 545.9 C 744.5 522.5, 779.9 472.5, 790.1 414 C 791.9 403.8, 791.9 375.0, 790.1 368.1 C 788.1 360.2, 784.9 357, 779.3 357 L 774.7 357 751.6 379.7" fill-rule="evenodd"/></g>
+          <path class="nib" d="M 737.9 278.7 C 734.6 280.9, 692.9 324.4, 691.2 327.3 C 687.1 334.6, 692.7 344, 701.3 344 C 706.1 344, 724.9 338.2, 746.8 330.0 C 770.1 321.4, 771.0 318.1, 757.2 293.2 C 748.9 278.2, 744.1 274.5, 737.9 278.7"/>
+          <path class="cap" d="M 794.9 222.1 C 775.7 240.6, 768 248.8, 768 250.4 C 768 252.9, 791.7 277, 794.2 277 C 796.4 277, 800.5 273.4, 827.3 247.9 C 848.4 228.0, 851 225.2, 851 222.4 C 851 218.2, 828.7 196, 824.4 196 C 822.3 196, 816.3 201.3, 794.9 222.1"/>
+        </svg>
+            </button>
+            <h1 class="status-title" id="statusTitle">Загрузка…</h1>
+            <p class="status-sub" id="statusSub">&nbsp;</p>
+          </div>
 
-    <section class="power-wrap">
-      <button class="power" id="power" aria-label="Подключить VPN">
-        <span class="halo"></span>
-        <span class="ring"><span class="core"><img src="assets/mark.svg" alt="" class="core-mark" /><b id="powerLabel">Подключить</b><small id="powerSub">НАЖМИТЕ</small></span></span>
-      </button>
-      <p class="timer" id="timer">&nbsp;</p>
-    </section>
+          <div class="vpn-side">
+            <div class="ticket">
+              <button class="stub" id="tariffStub">
+                <small>ТАРИФ</small>
+                <b id="accessMain">—</b>
+                <span id="accessSub">Проверяем доступ…</span>
+              </button>
+              <span class="perf" aria-hidden="true"></span>
+              <div class="stub">
+                <small>ЛОКАЦИЯ</small>
+                <b class="loc"><img id="flag" src="assets/globe-glyph.png" alt="" /><span id="server">Автовыбор</span></b>
+                <span>Выбирается автоматически</span>
+              </div>
+            </div>
 
-    <section class="cards">
-      <div class="pill" id="access"><i></i><span id="accessText">Проверяем доступ…</span></div>
-      <div class="server"><img id="flag" src="assets/globe-glyph.png" alt="" /><div><small>СЕРВЕР</small><b id="server">Автовыбор</b></div></div>
-    </section>
+            <div class="actions">
+              <button class="btn btn-peach" id="enterCode"><img src="assets/key-glyph.png" alt="" />Ввести код</button>
+              <button class="btn btn-ghost" id="getCode"><img src="assets/telegram-glyph.png" alt="" /><span id="getCodeLabel">Получить код в боте</span></button>
+            </div>
 
-    <section class="actions">
-      <button class="btn btn-peach" id="enterCode"><img src="assets/key-glyph.png" alt="" />Ввести код</button>
-      <button class="btn btn-ghost" id="getCode"><img src="assets/telegram-glyph.png" alt="" /><span id="getCodeLabel">Получить код в боте</span></button>
-    </section>
+            <section class="link-card" id="linkCard" hidden>
+              <img src="assets/link-glyph.png" alt="" />
+              <div><b>Привяжите Telegram</b><span>Бот запомнит этот компьютер — коды можно будет активировать одной кнопкой.</span></div>
+              <button class="btn-small" id="linkBtn">Привязать</button>
+            </section>
 
-    <section class="link-card" id="linkCard" hidden>
-      <img src="assets/link-glyph.png" alt="" />
-      <div><b>Привяжите Telegram</b><span>Бот запомнит этот компьютер — коды можно будет активировать одной кнопкой.</span></div>
-      <button class="btn-small" id="linkBtn">Привязать</button>
-    </section>
+            <p class="hint"><kbd>Пробел</kbd> — подключить или отключить</p>
+          </div>
+        </div>
+      </section>
 
-    <footer class="foot">
-      <button id="support"><img src="assets/chat-glyph.png" alt="" />Поддержка</button>
-      <button id="phone"><img src="assets/download-glyph.png" alt="" />Sali на телефон</button>
-      <span id="version"></span>
-    </footer>
-  </main>
+      <!-- Devices: every row opens salivpn.com/help/devices -->
+      <section class="page" data-page="devices" id="page-devices" hidden>
+        <header class="page-head"><h2>Устройства</h2><p>Один код — одно устройство. Все ваши устройства видны в боте: «Мои устройства».</p></header>
+        <button class="device current" data-help="devices">
+          <span class="dev-icon"><img src="assets/windows-glyph.png" alt="" /></span>
+          <span class="dev-copy"><small>ЭТОТ КОМПЬЮТЕР</small><b>Windows</b></span>
+          <span class="dev-facts"><span>Sali ID <b id="devId">—</b></span><span>Тариф <b id="devTariff">—</b></span><span>Telegram <b id="devTg">—</b></span></span>
+          <i class="ext">↗</i>
+        </button>
+        <p class="label"><i class="tick"></i>SALI VPN ЕСТЬ НА</p>
+        <div class="dev-list">
+          <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/android-glyph.png" alt="" /></span><span class="dev-copy"><b>Android</b><small>Телефоны и планшеты · Android 7+</small></span><i class="ext">↗</i></button>
+          <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/windows-glyph.png" alt="" /></span><span class="dev-copy"><b>Windows</b><small>Компьютеры и ноутбуки · Windows 10, 11</small></span><i class="ext">↗</i></button>
+        </div>
+        <div class="add">
+          <div><b>Добавить устройство</b><span>Установите Sali VPN на второе устройство, привяжите его к Telegram и активируйте код кнопкой в боте.</span></div>
+          <button class="btn btn-ghost" id="phone">Скачать на телефон</button>
+        </div>
+      </section>
+
+      <!-- Settings: protocol / DNS / … open the help centre -->
+      <section class="page" data-page="settings" id="page-settings" hidden>
+        <header class="page-head"><h2>Настройки</h2><p>Как устроено соединение — подробно на сайте.</p></header>
+        <p class="label"><i class="tick"></i>СОЕДИНЕНИЕ</p>
+        <div class="group">
+          <button class="row" data-help="protocol"><span><b>Протокол</b><small>Как работают WireGuard и AmneziaWG</small></span><em>WireGuard</em><i class="ext">↗</i></button>
+          <button class="row" data-help="dns"><span><b>DNS</b><small>Запросы идут внутри туннеля</small></span><em>1.1.1.1 · 8.8.8.8</em><i class="ext">↗</i></button>
+          <button class="row" data-help="servers"><span><b>Серверы</b><small>Автовыбор и перенос при сбое</small></span><em>Авто</em><i class="ext">↗</i></button>
+        </div>
+        <p class="label"><i class="tick"></i>АККАУНТ</p>
+        <div class="group">
+          <button class="row" id="rowTelegram"><span><b>Telegram</b><small id="tgHint">Коды и напоминания приходят в бот</small></span><em id="tgValue">—</em><i class="chev">›</i></button>
+          <button class="row" data-help="payments"><span><b>Оплата и коды</b><small>Stars, USDT, сроки кодов</small></span><i class="ext">↗</i></button>
+          <button class="row" data-site="/privacy"><span><b>Политика конфиденциальности</b></span><i class="ext">↗</i></button>
+          <button class="row" data-site="/terms"><span><b>Условия использования</b></span><i class="ext">↗</i></button>
+        </div>
+      </section>
+
+      <!-- Help: FAQ + support bot -->
+      <section class="page" data-page="help" id="page-help" hidden>
+        <header class="page-head"><h2>Помощь и поддержка</h2><p>Короткие ответы — ниже. Если не помогло, напишите нам в Telegram: отвечает живой человек.</p></header>
+        <div class="support">
+          <div><b>@SaliVPNHelpBot</b><span>Укажите ваш Sali ID: <em id="supportId">—</em></span></div>
+          <button class="btn btn-peach" id="support">Написать в поддержку</button>
+        </div>
+        <p class="label"><i class="tick"></i>ЧАСТЫЕ ВОПРОСЫ</p>
+        <div class="faq" id="faq"></div>
+        <button class="more" data-help="">Все статьи в справочном центре ↗</button>
+      </section>
+    </main>
+  </div>
 
   <div class="sheet-backdrop" id="sheet" hidden>
     <form class="sheet" id="codeForm" autocomplete="off">
@@ -60,8 +137,10 @@
         <button type="button" id="paste" class="btn-small">Вставить</button>
       </div>
       <p class="form-error" id="codeError" hidden></p>
-      <button class="btn btn-peach" id="codeSubmit" type="submit">Активировать</button>
-      <button class="btn btn-ghost" type="button" id="codeCancel">Отмена</button>
+      <div class="sheet-actions">
+        <button class="btn btn-ghost" type="button" id="codeCancel">Отмена</button>
+        <button class="btn btn-peach" id="codeSubmit" type="submit">Активировать</button>
+      </div>
     </form>
   </div>
 
