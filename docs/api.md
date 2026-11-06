@@ -3,26 +3,27 @@
 Base URL: `https://your-domain.example/api/v1`
 Local dev: `http://localhost:3000/api/v1`
 
-All request/response bodies are JSON. All endpoints except `/auth/telegram-webapp`
+All request/response bodies are JSON. All endpoints except `/auth/app`
 require `Authorization: Bearer <token>`.
 
 ## Auth
 
-### `POST /auth/telegram-webapp`
-Exchanges a Telegram Mini App `initData` string for a session JWT.
+### `POST /auth/app`
+The Android and Windows apps sign in with their installation key. There is no
+Telegram login in the apps: access arrives only through activation codes.
 
 ```json
 // Request
-{ "initData": "query_id=...&user=...&auth_date=...&hash=..." }
+{ "deviceKey": "b7f3…(16-128 chars)" }
 
 // Response
-{ "token": "eyJhbGciOi...", "startParam": "ref_123456789" }
+{ "token": "eyJhbGciOi...", "publicId": "7K4PQ2M9" }
 ```
 
 ## Home
 
 ### `GET /home`
-Returns aggregated state for the Mini App home screen: user, VPN account,
+Returns aggregated state for the app home screen: user, VPN account,
 trial, subscription.
 
 ### `POST /vpn/connect`

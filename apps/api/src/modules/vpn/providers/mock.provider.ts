@@ -12,7 +12,7 @@ import {
  * In-memory stand-in for a real VPN backend. Used automatically when
  * VPN_PROVIDER=mock (e.g. in local development before a real WireGuard
  * server has been provisioned) so the rest of the product — trials,
- * subscriptions, Mini App — can be built and demoed end-to-end. It is never
+ * subscriptions, apps — can be built and demoed end-to-end. It is never
  * selected in production unless explicitly configured, and clearly labels
  * its output as a demo config.
  */

@@ -58,7 +58,7 @@ export function LandingPage() {
     <header className={`sv-nav${scrolled ? ' scrolled' : ''}`}>
       <div className="sv-wrap sv-nav-inner">
         <button className="sv-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><LogoBadge className="sv-brand-mark" /><LogoWordmark vpn={false} className="sv-brand-word" /></button>
-        <nav>{c.nav.map(([id, label]) => <button key={id} onClick={() => go(id)}>{label}</button>)}<Link to="/download">{c.downloadNav}</Link></nav>
+        <nav>{c.nav.map(([id, label]) => <button key={id} onClick={() => go(id)}>{label}</button>)}<Link to="/help">{c.help}</Link><Link to="/download">{c.downloadNav}</Link></nav>
         <LanguageSwitch language={language} onChange={setLanguage} />
         <a className="sv-btn sv-btn-dark sv-nav-cta" href={BOT_URL}>{c.openBot}</a>
       </div>
@@ -123,6 +123,6 @@ export function LandingPage() {
       </div>
     </section>
 
-    <footer className="sv-footer"><div className="sv-wrap sv-footer-inner"><div className="sv-brand"><LogoBadge className="sv-brand-mark" /><LogoWordmark vpn={false} className="sv-brand-word" /></div><p>{c.footer}</p><nav><Link to="/download">{c.downloadNav}</Link><a href={SUPPORT_URL}>{c.support}</a><Link to="/privacy">{c.privacy}</Link><Link to="/terms">{c.terms}</Link><a href={BOT_URL}>Telegram</a></nav><small>© {new Date().getFullYear()} Sali VPN</small></div></footer>
+    <footer className="sv-footer"><div className="sv-wrap sv-footer-inner"><div className="sv-brand"><LogoBadge className="sv-brand-mark" /><LogoWordmark vpn={false} className="sv-brand-word" /></div><p>{c.footer}</p><nav><Link to="/download">{c.downloadNav}</Link><Link to="/help">{c.help}</Link><a href={SUPPORT_URL}>{c.support}</a><Link to="/privacy">{c.privacy}</Link><Link to="/terms">{c.terms}</Link><a href={BOT_URL}>Telegram</a></nav><small>© {new Date().getFullYear()} Sali VPN</small></div></footer>
   </main>;
 }

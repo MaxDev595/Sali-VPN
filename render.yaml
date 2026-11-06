@@ -58,8 +58,8 @@ services:
         sync: false
       - key: ADMIN_TELEGRAM_IDS
         sync: false
-      - key: TELEGRAM_MINIAPP_URL
-        value: https://salivpn.com/#/app
+      - key: SITE_URL
+        value: https://salivpn.com
       - key: SUPPORT_URL
         value: https://t.me/SaliVPNHelpBot
       - key: DOWNLOAD_PAGE_URL
@@ -69,7 +69,7 @@ services:
       - key: WINDOWS_DOWNLOAD_URL
         value: https://github.com/MaxDev595/Sali-VPN/releases/download/desktop-latest/SaliVPN-Setup.exe
 
-      # Who may call the API from a browser (landing + mini app)
+      # Who may call the API from a browser (the site)
       - key: CORS_ORIGINS
         value: https://salivpn.com,https://www.salivpn.com
 

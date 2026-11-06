@@ -132,11 +132,3 @@ export interface ApiErrorBody {
   code: string;
 }
 
-// Telegram WebApp initData, validated server-side (see apps/api auth module)
-export interface TelegramInitDataUser {
-  id: number;
-  first_name?: string;
-  last_name?: string;
-  username?: string;
-  language_code?: string;
-}

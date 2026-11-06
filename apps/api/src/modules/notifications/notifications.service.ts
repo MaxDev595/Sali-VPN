@@ -42,7 +42,7 @@ export class NotificationsService {
     return notification;
   }
 
-  /** Welcomes a newly verified Mini App user and reveals the persistent bot menu. */
+  /** Welcomes a new user and reveals the persistent bot menu. */
   async sendWelcome(userId: string) {
     const botToken = this.config.get<string>('TELEGRAM_BOT_TOKEN');
     if (!botToken) return;

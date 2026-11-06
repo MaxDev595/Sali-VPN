@@ -28,7 +28,7 @@ export class InternalController {
     private readonly support: SupportService,
   ) {}
 
-  /** Called on /start. New users are created only after verified Mini App login. */
+  /** Legacy profile sync (the bot now registers users through /internal/bot/start). */
   @Post('users/sync')
   async syncUser(@Body() dto: SyncTelegramUserDto) {
     const user = await this.users.updateTelegramProfileIfExists({

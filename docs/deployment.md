@@ -4,7 +4,7 @@
 
 - `apps/api` — NestJS backend (Docker container, port 3000 internally)
 - `apps/bot` — Telegraf bot (Docker container, port 8080 internally, webhook mode)
-- `apps/web` — Mini App static build served by nginx (Docker container, port 80 internally)
+- `apps/web` — site (landing, download, help centre) served by nginx (Docker container, port 80 internally)
 - `postgres` — database
 - A reverse proxy terminates HTTPS and routes to the three services above.
 
@@ -16,8 +16,8 @@
   (see `docs/vpn-server-setup.md`) — keep these separate from the app server
   for a smaller blast radius and cleaner IP/routing.
 - Two DNS records pointing at your app server: one for the API/bot
-  (`your-domain.example`) and one for the Mini App
-  (`your-miniapp-domain.example`).
+  (`your-domain.example`) and one for the site
+  (`your-site-domain.example`).
 
 ## 2. Configure environment
 
@@ -31,7 +31,7 @@ cp .env.example .env
 
 ```bash
 sudo apt install certbot
-sudo certbot certonly --standalone -d your-domain.example -d your-miniapp-domain.example
+sudo certbot certonly --standalone -d your-domain.example -d your-site-domain.example
 ```
 Then update `infrastructure/nginx/reverse-proxy.conf` with your real domains
 (already templated) and mount `/etc/letsencrypt` into whatever container or
@@ -50,14 +50,13 @@ docker compose up -d
 ## 5. Point Telegram at your deployment
 
 Follow `docs/telegram-bot-setup.md` — set `TELEGRAM_MODE=webhook`,
-`TELEGRAM_WEBHOOK_URL=https://your-domain.example/telegram/webhook`, and
-register the Mini App URL with BotFather as
-`https://your-miniapp-domain.example`.
+`TELEGRAM_WEBHOOK_URL=https://your-domain.example/telegram/webhook` and
+`SITE_URL=https://your-site-domain.example`.
 
 ## 6. Verify
 
 - `curl https://your-domain.example/api/v1/plans` → returns the seeded plan.
-- Open the bot in Telegram, send `/start`, tap "🔐 Подключить VPN".
+- Open the bot in Telegram, send `/start`, tap «🎁 24 часа бесплатно».
 - Check `docker compose logs -f api bot` for errors.
 
 ## 7. Ongoing operations

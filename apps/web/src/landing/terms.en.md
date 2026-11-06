@@ -3,7 +3,7 @@
 **Effective date:** September 5, 2026  
 **Last updated:** September 5, 2026
 
-These Terms govern access to and use of **Sali VPN**, including its Telegram bot, Telegram Mini App, website, API, VPN servers, and related services. By using Sali VPN, creating a configuration, activating a free period, or buying a subscription, you accept these Terms. If you disagree, stop using the service.
+These Terms govern access to and use of **Sali VPN**, including its Telegram bot, Android and Windows apps, website, API, VPN servers, and related services. By using Sali VPN, creating a configuration, activating a free period, or buying a subscription, you accept these Terms. If you disagree, stop using the service.
 
 ## 1. About the service
 
@@ -25,7 +25,7 @@ Sali VPN may offer a trial whose duration, traffic, servers, devices, and other 
 
 ## 5. Paid subscription
 
-Some features require an active subscription. Before payment, we show the price, term, included features, device count, and material limits. Current plans appear in the bot, Mini App, or official website. Activation follows payment automatically or within a reasonable technical period.
+Some features require an active subscription. Before payment, we show the price, term, included features, device count, and material limits. Current plans appear in the bot or on the official website. Activation follows payment automatically or within a reasonable technical period.
 
 ## 6. Subscription term
 
@@ -81,7 +81,7 @@ We may restrict or end access where we reasonably believe these Terms were breac
 
 ## 19. Maintenance
 
-Servers, equipment, networks, the bot, Mini App, API, infrastructure, and security may be updated, causing temporary unavailability. We aim to minimize interruptions.
+Servers, equipment, networks, the bot, the apps, API, infrastructure, and security may be updated, causing temporary unavailability. We aim to minimize interruptions.
 
 ## 20. Service resilience
 
@@ -117,7 +117,7 @@ We may change interfaces, features, infrastructure, countries, protocols, plans,
 
 ## 28. Changes to these Terms
 
-We may update these Terms and publish the revision date. Material changes may be announced through the bot, Mini App, website, Telegram channel, or another channel. Continued use after the effective date constitutes acceptance to the extent allowed by law.
+We may update these Terms and publish the revision date. Material changes may be announced through the bot, the apps, website, Telegram channel, or another channel. Continued use after the effective date constitutes acceptance to the extent allowed by law.
 
 ## 29. Ending use
 

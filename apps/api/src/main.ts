@@ -19,7 +19,7 @@ async function bootstrap() {
   if (process.env.NODE_ENV === 'development') {
     corsOrigins.push('http://localhost:5173', 'http://127.0.0.1:5173');
   }
-  // The landing page and the Telegram mini app always live on salivpn.com.
+  // The site always lives on salivpn.com.
   if (corsOrigins.length > 0) corsOrigins.push('https://salivpn.com', 'https://www.salivpn.com');
 
   app.enableCors({

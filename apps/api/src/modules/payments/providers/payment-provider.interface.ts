@@ -8,7 +8,7 @@ export interface CreatePaymentInput {
   userId: string;
   planId: string;
   amountUsd: number;
-  /** Used to redirect back into the bot/Mini App after payment where relevant */
+  /** Used to redirect back into the bot after payment where relevant */
   metadata?: Record<string, string>;
 }
 

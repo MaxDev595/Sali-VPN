@@ -50,7 +50,7 @@ Use a project-controlled TON Space address, not a custodial exchange deposit
 address that requires its own memo. Users must send USDT on TON and copy the
 invoice comment exactly.
 
-The Mini App sends `provider: paddle` or `provider: crypto`, so both checkout methods can be offered at the same time regardless of the default provider.
+The bot requests `provider: paddle` or `provider: crypto`, so both checkout methods can be offered at the same time regardless of the default provider.
 
 ## Before production
 

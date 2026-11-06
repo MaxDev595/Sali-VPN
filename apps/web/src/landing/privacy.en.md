@@ -3,7 +3,7 @@
 **Effective date:** September 5, 2026  
 **Last updated:** September 5, 2026
 
-This Privacy Policy explains how data may be collected and processed when you use **Sali VPN**, including its Telegram bot, Telegram Mini App, web interfaces, API, and VPN infrastructure. By using Sali VPN, you acknowledge that you have read this Policy.
+This Privacy Policy explains how data may be collected and processed when you use **Sali VPN**, including its Telegram bot, Android and Windows apps, website, API, and VPN infrastructure. By using Sali VPN, you acknowledge that you have read this Policy.
 
 ## 1. Who we are
 
@@ -24,7 +24,7 @@ We aim to collect only data required to operate the service.
 - first and last name shown in Telegram;
 - Telegram username, if set;
 - interface language;
-- technical information supplied by Telegram Mini App;
+- technical information supplied by the Sali VPN apps (app version, platform, Sali ID);
 - information required for authentication.
 
 We do not receive your Telegram password.
@@ -81,7 +81,7 @@ If you contact support, we may retain the request and related information to res
 
 ## 13. Cookies and local storage
 
-The Mini App or website may use cookies, local storage, or similar technology when required for authentication, preferences, security, and correct operation. We do not need to use advertising cookies or third-party ad trackers.
+The website and the apps may use cookies, local storage, or similar technology when required for authentication, preferences, security, and correct operation. We do not need to use advertising cookies or third-party ad trackers.
 
 ## 14. Your rights
 

@@ -54,7 +54,7 @@ export class TrialsService {
   }
 
   /**
-   * Server-authoritative expiry check. The Mini App countdown is purely
+   * Server-authoritative expiry check. The countdown in the apps is purely
    * cosmetic — access is only ever granted or revoked based on this.
    */
   private async expireOne(trialId: string, userId: string) {

@@ -6,12 +6,12 @@ anywhere in the codebase.
 | Variable | Where to get it | Required for |
 |---|---|---|
 | `DATABASE_URL` | Your PostgreSQL instance (Docker Compose provides one) | Everything |
-| `JWT_SECRET` | Generate: `openssl rand -hex 32` | Mini App session auth |
+| `JWT_SECRET` | Generate: `openssl rand -hex 32` | App session auth (Android, Windows) |
 | `INTERNAL_API_KEY` | Generate: `openssl rand -hex 32` | Bot → API calls |
 | `ADMIN_TELEGRAM_IDS` | Your own numeric Telegram ID (e.g. from [@userinfobot](https://t.me/userinfobot)) | Admin API access |
 | `TELEGRAM_BOT_TOKEN` | [@BotFather](https://t.me/BotFather) → `/newbot` | The bot itself |
 | `TELEGRAM_BOT_USERNAME` | Chosen when creating the bot | Referral links |
-| `TELEGRAM_MINIAPP_URL` | Your deployed Mini App HTTPS URL, registered with BotFather | Mini App buttons |
+| `SITE_URL` | Public site, default `https://salivpn.com` | Bot links to `/help/<topic>` |
 | `TELEGRAM_WEBHOOK_SECRET` | Generate: `openssl rand -hex 32` | Webhook mode only |
 | `WIREGUARD_API_URL` / `WIREGUARD_API_KEY` | Set up by you — see `docs/vpn-server-setup.md` | Real VPN access |
 | `TELEGRAM_PAYMENTS_PROVIDER_TOKEN` | BotFather → your bot → Payments (optional) | Telegram Stars payments |
