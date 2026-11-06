@@ -10,7 +10,7 @@ import '../landing/landing.css';
 type Platform = 'android' | 'windows';
 type Step = { icon: string; title: string; text: string; tip?: string };
 
-const APP_VERSION = '0.4.0';
+const APP_VERSION = '0.5.0';
 
 const t = {
   ru: {
