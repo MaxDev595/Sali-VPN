@@ -7,7 +7,7 @@ const el = {
   enterCode: $('enterCode'), getCode: $('getCode'), getCodeLabel: $('getCodeLabel'), linkCard: $('linkCard'), linkBtn: $('linkBtn'),
   sheet: $('sheet'), form: $('codeForm'), input: $('codeInput'), paste: $('paste'), error: $('codeError'), submit: $('codeSubmit'), cancel: $('codeCancel'),
   toast: $('toast'), support: $('support'), phone: $('phone'), version: $('version'),
-  nav: $('nav'), navCap: $('navCap'), devId: $('devId'), devTariff: $('devTariff'), devTg: $('devTg'),
+  nav: $('nav'), navDrop: $('navDrop'), devId: $('devId'), devTariff: $('devTariff'), devTg: $('devTg'),
   rowTelegram: $('rowTelegram'), tgValue: $('tgValue'), tgHint: $('tgHint'), supportId: $('supportId'), faq: $('faq'),
 };
 
@@ -62,7 +62,7 @@ function render() {
   el.statusTitle.textContent = on ? 'Соединение защищено' : vpn.state === 'connecting' ? 'Рисуем туннель…' : vpn.state === 'disconnecting' ? 'Отключаемся…' : 'VPN выключен';
   el.statusSub.textContent = vpn.detail || (on ? 'Весь трафик компьютера идёт через Sali' : busy ? ' ' : a.kind === 'none' ? 'Активируйте код, чтобы подключиться' : 'Нажмите на знак, чтобы подключиться');
   el.power.setAttribute('aria-label', on ? 'Отключить VPN' : 'Подключить VPN');
-  el.timer.textContent = on && vpn.connectedAt ? `● ${hms((Date.now() - vpn.connectedAt) / 1000)}` : ' ';
+  el.timer.textContent = on && vpn.connectedAt ? hms((Date.now() - vpn.connectedAt) / 1000) : ' ';
 
   el.tariffStub.className = 'stub' + (a.kind === 'none' ? ' none' : '');
   if (a.kind === 'paid') { el.accessMain.textContent = a.until ? `до ${new Date(a.until).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}` : 'Подписка'; el.accessSub.textContent = a.plan || 'Подписка'; }
@@ -125,8 +125,7 @@ function go(name) {
   const tab = tabs.find((button) => button.dataset.page === name);
   if (!to || !tab) return;
   current = name;
-  tabs.forEach((button) => button.setAttribute('aria-selected', String(button === tab)));
-  el.navCap.style.transform = `translateY(${tab.offsetTop + tab.offsetHeight / 2 - 2}px) rotate(-45deg)`;
+  pour(tabs.find((button) => button.getAttribute('aria-selected') === 'true'), tab);
   from.classList.remove('enter'); from.classList.add('leave');
   setTimeout(() => {
     from.hidden = true; from.classList.remove('leave');
@@ -135,6 +134,26 @@ function go(name) {
   }, 160);
 }
 tabs.forEach((button) => button.addEventListener('click', () => go(button.dataset.page)));
+
+/* The peach colour leaves the old icon as a drop, slides along the menu
+   (stretching like liquid while it moves) and pours into the new icon. */
+function pour(fromTab, toTab) {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const y = (button) => button.offsetTop + button.offsetHeight / 2;
+  const select = () => { tabs.forEach((button) => button.setAttribute('aria-selected', String(button === toTab))); toTab.classList.remove('pour'); void toTab.offsetWidth; toTab.classList.add('pour'); };
+  if (!fromTab || fromTab === toTab || reduce || !el.navDrop.animate) { select(); return; }
+  fromTab.setAttribute('aria-selected', 'false');
+  const a = y(fromTab); const b = y(toTab); const stretch = 1 + Math.min(1.8, Math.abs(b - a) / 44 * .8);
+  const drop = el.navDrop.animate([
+    { opacity: 0, transform: `translateY(${a}px) scale(.4)` },
+    { opacity: 1, transform: `translateY(${a}px) scale(1)`, offset: .18 },
+    { opacity: 1, transform: `translateY(${(a + b) / 2}px) scale(.75, ${stretch})`, offset: .55 },
+    { opacity: 1, transform: `translateY(${b}px) scale(1)`, offset: .86 },
+    { opacity: 0, transform: `translateY(${b}px) scale(.4)` },
+  ], { duration: 520, easing: 'cubic-bezier(.45, 0, .2, 1)' });
+  setTimeout(select, 430);
+  drop.onfinish = () => drop.cancel();
+}
 
 /* help centre and site links */
 document.querySelectorAll('[data-help]').forEach((node) => node.addEventListener('click', () => void window.sali.openHelp(node.dataset.help || undefined)));

@@ -13,14 +13,14 @@
     <aside class="side">
       <div class="brand"><span class="badge"><img src="assets/mark.svg" alt="" /></span><img class="word" src="assets/wordmark.svg" alt="Sali" /></div>
       <nav class="nav" id="nav" role="tablist" aria-label="Разделы">
-        <span class="nav-cap" id="navCap" aria-hidden="true"></span>
-        <button role="tab" data-page="vpn" aria-selected="true"><kbd>1</kbd>VPN</button>
-        <button role="tab" data-page="devices" aria-selected="false"><kbd>2</kbd>Устройства</button>
-        <button role="tab" data-page="settings" aria-selected="false"><kbd>3</kbd>Настройки</button>
-        <button role="tab" data-page="help" aria-selected="false"><kbd>4</kbd>Помощь</button>
+        <span class="nav-drop" id="navDrop" aria-hidden="true"></span>
+        <button role="tab" data-page="vpn" aria-selected="true"><i class="ico ico-key" aria-hidden="true"></i>VPN<kbd>1</kbd></button>
+        <button role="tab" data-page="devices" aria-selected="false"><i class="ico ico-devices" aria-hidden="true"></i>Устройства<kbd>2</kbd></button>
+        <button role="tab" data-page="settings" aria-selected="false"><i class="ico ico-gear" aria-hidden="true"></i>Настройки<kbd>3</kbd></button>
+        <button role="tab" data-page="help" aria-selected="false"><i class="ico ico-help" aria-hidden="true"></i>Помощь<kbd>4</kbd></button>
       </nav>
       <div class="side-foot">
-        <button class="id-card" id="idChip" title="Скопировать Sali ID"><small>SALI ID</small><b id="publicId">····-····</b><span>копировать</span></button>
+        <button class="id-card" id="idChip" title="Скопировать Sali ID"><i class="ico ico-shield id-badge" aria-hidden="true"></i><small>SALI ID</small><b id="publicId">····-····</b><span>копировать</span></button>
         <span class="version" id="version"></span>
       </div>
     </aside>
@@ -83,12 +83,12 @@
           <span class="dev-icon"><img src="assets/windows-glyph.png" alt="" /></span>
           <span class="dev-copy"><small>ЭТОТ КОМПЬЮТЕР</small><b>Windows</b></span>
           <span class="dev-facts"><span>Sali ID <b id="devId">—</b></span><span>Тариф <b id="devTariff">—</b></span><span>Telegram <b id="devTg">—</b></span></span>
-          <i class="ext">↗</i>
+          <i class="ico ico-external ext" aria-hidden="true"></i>
         </button>
-        <p class="label"><i class="tick"></i>SALI VPN ЕСТЬ НА</p>
+        <p class="label"><i class="ico ico-devices" aria-hidden="true"></i>SALI VPN ЕСТЬ НА</p>
         <div class="dev-list">
-          <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/android-glyph.png" alt="" /></span><span class="dev-copy"><b>Android</b><small>Телефоны и планшеты · Android 7+</small></span><i class="ext">↗</i></button>
-          <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/windows-glyph.png" alt="" /></span><span class="dev-copy"><b>Windows</b><small>Компьютеры и ноутбуки · Windows 10, 11</small></span><i class="ext">↗</i></button>
+          <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/android-glyph.png" alt="" /></span><span class="dev-copy"><b>Android</b><small>Телефоны и планшеты · Android 7+</small></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
+          <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/windows-glyph.png" alt="" /></span><span class="dev-copy"><b>Windows</b><small>Компьютеры и ноутбуки · Windows 10, 11</small></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
         </div>
         <div class="add">
           <div><b>Добавить устройство</b><span>Установите Sali VPN на второе устройство, привяжите его к Telegram и активируйте код кнопкой в боте.</span></div>
@@ -99,18 +99,18 @@
       <!-- Settings: protocol / DNS / … open the help centre -->
       <section class="page" data-page="settings" id="page-settings" hidden>
         <header class="page-head"><h2>Настройки</h2><p>Как устроено соединение — подробно на сайте.</p></header>
-        <p class="label"><i class="tick"></i>СОЕДИНЕНИЕ</p>
+        <p class="label"><i class="ico ico-shield" aria-hidden="true"></i>СОЕДИНЕНИЕ</p>
         <div class="group">
-          <button class="row" data-help="protocol"><span><b>Протокол</b><small>Как работают WireGuard и AmneziaWG</small></span><em>WireGuard</em><i class="ext">↗</i></button>
-          <button class="row" data-help="dns"><span><b>DNS</b><small>Запросы идут внутри туннеля</small></span><em>1.1.1.1 · 8.8.8.8</em><i class="ext">↗</i></button>
-          <button class="row" data-help="servers"><span><b>Серверы</b><small>Автовыбор и перенос при сбое</small></span><em>Авто</em><i class="ext">↗</i></button>
+          <button class="row" data-help="protocol"><span><b>Протокол</b><small>Как работают WireGuard и AmneziaWG</small></span><em>WireGuard</em><i class="ico ico-external ext" aria-hidden="true"></i></button>
+          <button class="row" data-help="dns"><span><b>DNS</b><small>Запросы идут внутри туннеля</small></span><em>1.1.1.1 · 8.8.8.8</em><i class="ico ico-external ext" aria-hidden="true"></i></button>
+          <button class="row" data-help="servers"><span><b>Серверы</b><small>Автовыбор и перенос при сбое</small></span><em>Авто</em><i class="ico ico-external ext" aria-hidden="true"></i></button>
         </div>
-        <p class="label"><i class="tick"></i>АККАУНТ</p>
+        <p class="label"><i class="ico ico-user" aria-hidden="true"></i>АККАУНТ</p>
         <div class="group">
-          <button class="row" id="rowTelegram"><span><b>Telegram</b><small id="tgHint">Коды и напоминания приходят в бот</small></span><em id="tgValue">—</em><i class="chev">›</i></button>
-          <button class="row" data-help="payments"><span><b>Оплата и коды</b><small>Stars, USDT, сроки кодов</small></span><i class="ext">↗</i></button>
-          <button class="row" data-site="/privacy"><span><b>Политика конфиденциальности</b></span><i class="ext">↗</i></button>
-          <button class="row" data-site="/terms"><span><b>Условия использования</b></span><i class="ext">↗</i></button>
+          <button class="row" id="rowTelegram"><span><b>Telegram</b><small id="tgHint">Коды и напоминания приходят в бот</small></span><em id="tgValue">—</em><i class="ico ico-chevron chev" aria-hidden="true"></i></button>
+          <button class="row" data-help="payments"><span><b>Оплата и коды</b><small>Stars, USDT, сроки кодов</small></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
+          <button class="row" data-site="/privacy"><span><b>Политика конфиденциальности</b></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
+          <button class="row" data-site="/terms"><span><b>Условия использования</b></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
         </div>
       </section>
 
@@ -121,9 +121,9 @@
           <div><b>@SaliVPNHelpBot</b><span>Укажите ваш Sali ID: <em id="supportId">—</em></span></div>
           <button class="btn btn-peach" id="support">Написать в поддержку</button>
         </div>
-        <p class="label"><i class="tick"></i>ЧАСТЫЕ ВОПРОСЫ</p>
+        <p class="label"><i class="ico ico-help" aria-hidden="true"></i>ЧАСТЫЕ ВОПРОСЫ</p>
         <div class="faq" id="faq"></div>
-        <button class="more" data-help="">Все статьи в справочном центре ↗</button>
+        <button class="more" data-help="">Все статьи в справочном центре <i class="ico ico-external" aria-hidden="true"></i></button>
       </section>
     </main>
   </div>
