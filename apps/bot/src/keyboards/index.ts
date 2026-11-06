@@ -1,5 +1,6 @@
 import { Context, Markup } from 'telegraf';
 import type { BotPlan, IssuedCode } from '../services/api-client';
+import { DOC_TOPICS, helpUrl } from '../docs';
 
 export const menuLabels = {
   buy: '💎 Купить подписку',
@@ -9,6 +10,7 @@ export const menuLabels = {
   download: '📲 Скачать приложение',
   invite: '👥 Пригласить друга',
   support: '💬 Поддержка',
+  docs: '📖 Документация',
   settings: '⚙️ Аккаунт',
   // Labels from the previous menu: still answered so old pinned keyboards keep working.
   legacyVpn: 'Подключить VPN',
@@ -24,8 +26,8 @@ export const mainReplyKeyboard = Markup.keyboard([
   [menuLabels.buy],
   [menuLabels.free, menuLabels.codes],
   [menuLabels.devices, menuLabels.download],
-  [menuLabels.invite, menuLabels.support],
-  [menuLabels.settings],
+  [menuLabels.invite, menuLabels.docs],
+  [menuLabels.settings, menuLabels.support],
 ])
   .resize()
   .persistent();
@@ -34,17 +36,14 @@ export const mainInlineKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback(menuLabels.buy, 'menu_buy')],
   [Markup.button.callback(menuLabels.free, 'menu_free'), Markup.button.callback(menuLabels.codes, 'menu_codes')],
   [Markup.button.callback(menuLabels.devices, 'menu_devices'), Markup.button.callback(menuLabels.download, 'menu_download')],
-  [Markup.button.callback(menuLabels.invite, 'menu_invite'), Markup.button.callback(menuLabels.support, 'menu_support')],
+  [Markup.button.callback(menuLabels.invite, 'menu_invite'), Markup.button.callback(menuLabels.docs, 'menu_docs')],
+  [Markup.button.callback(menuLabels.settings, 'menu_settings'), Markup.button.callback(menuLabels.support, 'menu_support')],
 ]);
 
 export const languageKeyboard = Markup.inlineKeyboard([[
   Markup.button.callback('🇷🇺 Русский', 'language_ru'),
   Markup.button.callback('🇬🇧 English', 'language_en'),
 ]]);
-
-export function openAppKeyboard(url: string, label = '⚡ Открыть Sali VPN') {
-  return Markup.inlineKeyboard([[Markup.button.webApp(label, url)]]);
-}
 
 export function welcomeKeyboard(freeUsed: boolean) {
   return Markup.inlineKeyboard([
@@ -58,13 +57,25 @@ function period(days: number) {
   return days >= 360 ? '1 год' : days >= 28 ? `${Math.round(days / 30)} мес.` : `${days} дн.`;
 }
 
+/** "$8" → "$̶8̶": Telegram buttons have no formatting, combining strokes still read as a crossed-out price. */
+export function strike(text: string) {
+  return [...text].map((char) => `${char}\u0336`).join('');
+}
+
+function money(value: number) {
+  return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
+}
+
+export function planButtonLabel(plan: BotPlan) {
+  const price = plan.discountedPriceUsd ?? plan.priceUsd;
+  const old = plan.discountedPriceUsd ? plan.priceUsd : plan.originalPriceUsd;
+  const stars = plan.discountedStars ?? plan.stars;
+  const perMonth = plan.durationDays >= 360 ? ` · ${money(Math.round((price / 12) * 100) / 100)}/мес` : '';
+  return `${period(plan.durationDays)} — ${old && old > price ? `${strike(money(old))} ` : ''}${money(price)} · ${stars} ⭐${perMonth}`;
+}
+
 export function plansKeyboard(plans: BotPlan[]) {
-  const monthly = plans.find((plan) => plan.durationDays < 60);
-  return Markup.inlineKeyboard(plans.map((plan) => {
-    const perMonth = plan.durationDays >= 360 ? ` · $${(plan.priceUsd / 12).toFixed(2)}/мес` : '';
-    const saving = monthly && plan !== monthly ? Math.round((1 - plan.priceUsd / (monthly.priceUsd * Math.round(plan.durationDays / 30.4))) * 100) : 0;
-    return [Markup.button.callback(`${period(plan.durationDays)} — $${plan.priceUsd} · ${plan.stars} ⭐${perMonth}${saving > 0 ? ` (−${saving}%)` : ''}`, `buy_${plan.code}`)];
-  }));
+  return Markup.inlineKeyboard(plans.map((plan) => [Markup.button.callback(planButtonLabel(plan), `buy_${plan.code}`)]));
 }
 
 const METHOD_LABELS = { stars: '⭐ Telegram Stars', crypto: '💵 USDT (сеть TON)', card: '💳 Банковская карта' } as const;
@@ -123,13 +134,38 @@ export const faqKeyboard = (supportUrl?: string) =>
     [Markup.button.callback('Как привязать устройство?', 'faq_link')],
     [Markup.button.callback('VPN не подключается', 'faq_not_connecting')],
     [Markup.button.callback('Проблемы с оплатой', 'faq_payment')],
-    ...(supportUrl ? [[Markup.button.url('Связаться с поддержкой', supportUrl)]] : []),
+    [Markup.button.callback('📖 Вся документация', 'menu_docs')],
+    ...(supportUrl ? [[Markup.button.url('💬 Написать в поддержку', supportUrl)]] : []),
   ]);
 
 export const supportKeyboard = (supportUrl: string) =>
   Markup.inlineKeyboard([
-    [Markup.button.url('Связаться с поддержкой', supportUrl)],
+    [Markup.button.url('💬 Написать в поддержку', supportUrl)],
   ]);
+
+/** Documentation index: two topics per row. */
+export function docsKeyboard(siteUrl: string) {
+  const rows = [];
+  for (let i = 0; i < DOC_TOPICS.length; i += 2) {
+    rows.push(DOC_TOPICS.slice(i, i + 2).map((topic) => Markup.button.callback(topic.button, `doc_${topic.slug}`)));
+  }
+  rows.push([Markup.button.url('🌐 Справочный центр на сайте', helpUrl(siteUrl))]);
+  return Markup.inlineKeyboard(rows);
+}
+
+export function docTopicKeyboard(siteUrl: string, slug: string) {
+  return Markup.inlineKeyboard([
+    [Markup.button.url('Подробнее на сайте →', helpUrl(siteUrl, slug))],
+    [Markup.button.callback('← Все разделы', 'menu_docs')],
+  ]);
+}
+
+export function accountKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(menuLabels.codes, 'menu_codes'), Markup.button.callback(menuLabels.devices, 'menu_devices')],
+    [Markup.button.callback(menuLabels.buy, 'menu_buy')],
+  ]);
+}
 
 export function referralShareKeyboard(link: string, shareText: string) {
   const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareText)}`;
@@ -143,10 +179,16 @@ export function referralShareKeyboard(link: string, shareText: string) {
   };
 }
 
-/** Access ended: buying happens here in the bot, the Mini App stays one tap away. */
-export function expiredAccessKeyboard(appUrl: string, _subscriptionUrl?: string) {
+/** Access ended: buying happens here in the bot. */
+export function expiredAccessKeyboard() {
   return Markup.inlineKeyboard([
     [Markup.button.callback('💎 Купить подписку', 'menu_buy')],
-    [Markup.button.webApp('Открыть Sali', appUrl)],
+    [Markup.button.callback(menuLabels.download, 'menu_download')],
+  ]);
+}
+
+export function accessKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(menuLabels.devices, 'menu_devices'), Markup.button.callback(menuLabels.download, 'menu_download')],
   ]);
 }

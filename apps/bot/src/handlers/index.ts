@@ -1,38 +1,28 @@
 import { Context } from 'telegraf';
 import { BotConfig } from '../config';
 import { api, BotUserState } from '../services/api-client';
-import { accessText, date, duration, genericError, howItWorks, onboarding } from '../messages';
+import { accessText, date, duration, genericError, howItWorks, referralMessage } from '../messages';
+import { docBySlug } from '../docs';
 import {
+  accessKeyboard,
+  accountKeyboard,
+  docsKeyboard,
+  docTopicKeyboard,
   expiredAccessKeyboard,
   faqKeyboard,
   mainInlineKeyboard,
   mainReplyKeyboard,
-  openAppKeyboard,
   referralShareKeyboard,
   supportKeyboard,
 } from '../keyboards';
 
 const FAQ: Record<string, string> = {
   faq_how: howItWorks,
-  faq_code: '<b>Куда вводить код?</b>\n\nОткройте приложение Sali VPN → на главном экране кнопка «Ввести код» (или Аккаунт → «Ввести код»). Регистр и дефисы не важны. Код одноразовый: после активации он привязывается к устройству.',
+  faq_code: '<b>Куда вводить код?</b>\n\nОткройте приложение Sali VPN → на главном экране кнопка «Ввести код» (или Аккаунт → «Ввести код»). Регистр и дефисы не важны. Код одноразовый: после активации он привязывается к устройству.\n\nЕсли устройство привязано к Telegram, код можно активировать кнопкой «⚡ Активировать на моём устройстве» прямо под кодом.',
   faq_link: '<b>Как привязать устройство?</b>\n\nВ приложении нажмите «Привязать Telegram» — откроется этот бот, и устройство запомнится автоматически. Или пришлите сюда Sali ID из приложения: <code>SL-XXXX-XXXX</code>.',
-  faq_connect: '<b>Как подключить VPN?</b>\n\nОткройте Sali VPN, нажмите большую кнопку подключения и разрешите VPN-профиль.',
   faq_not_connecting: '<b>VPN не подключается</b>\n\nПроверьте, что тариф активен («📱 Мои устройства»), отключите другие VPN и попробуйте снова. Если не помогло — напишите в поддержку и укажите ваш Sali ID.',
-  faq_server: '<b>Как сменить сервер?</b>\n\nОткройте Sali VPN и выберите доступный сервер в приложении.',
-  faq_buy: '<b>Как купить подписку?</b>\n\nНажмите «💎 Купить подписку», выберите месяц или год и способ оплаты. Бот пришлёт код.',
   faq_payment: '<b>Проблемы с оплатой</b>\n\nНе оплачивайте повторно. Код всегда сохраняется в «🔑 Мои коды». Для USDT нажмите «Я оплатил — проверить». Если кода нет через 10 минут — напишите в поддержку.',
 };
-
-function profile(ctx: Context) {
-  if (!ctx.from) return null;
-  return {
-    telegramId: ctx.from.id,
-    username: ctx.from.username,
-    firstName: ctx.from.first_name,
-    lastName: ctx.from.last_name,
-    languageCode: ctx.from.language_code,
-  };
-}
 
 async function stateFor(ctx: Context): Promise<BotUserState | null> {
   return ctx.from ? api.getState(ctx.from.id) : null;
@@ -42,6 +32,10 @@ function isExpired(state: BotUserState) {
   return state.state === 'TRIAL_EXPIRED' || state.state === 'SUBSCRIPTION_EXPIRED';
 }
 
+function callbackData(ctx: Context) {
+  return ctx.callbackQuery && 'data' in ctx.callbackQuery ? ctx.callbackQuery.data : '';
+}
+
 export function createHandlers(config: BotConfig) {
   return {
     menu: async (ctx: Context) => {
@@ -49,54 +43,12 @@ export function createHandlers(config: BotConfig) {
       await ctx.reply('Быстрые кнопки закреплены снизу', mainReplyKeyboard);
     },
 
-    start: async (ctx: Context, language: 'ru' | 'en' = 'ru') => {
-      const telegramProfile = profile(ctx);
-      if (!telegramProfile) return;
-      try {
-        const startParam = (ctx as Context & { startPayload?: string }).startPayload;
-        const synced = await api.syncUser({ ...telegramProfile, startParam });
-        if (!synced.exists) {
-          const onboardingUrl = new URL(config.miniAppUrl);
-          if (startParam && /^ref_\d+$/.test(startParam)) onboardingUrl.searchParams.set('ref', startParam);
-          onboardingUrl.searchParams.set('lang', language);
-          const text = language === 'en'
-            ? '<b>Sali VPN</b>\n\nPrivate connection, stable servers and simple setup. Start your free trial in the app.'
-            : onboarding;
-          await ctx.replyWithHTML(text, openAppKeyboard(onboardingUrl.toString(), language === 'en' ? '⚡ Try for free' : '⚡ Попробовать бесплатно'));
-          return;
-        }
-        const state = await api.getState(telegramProfile.telegramId);
-        if (language === 'en') {
-          const appUrl = new URL(config.miniAppUrl);
-          appUrl.searchParams.set('lang', 'en');
-          await ctx.replyWithHTML('<b>Welcome back!</b>\n\nYour Sali VPN account is ready.', openAppKeyboard(appUrl.toString(), '⚡ Open Sali VPN'));
-          return;
-        }
-        await ctx.replyWithHTML('<b>Рады снова вас приветствовать!</b>\n\nМы помним вас. Ваш аккаунт Sali VPN готов к работе.');
-        await ctx.replyWithHTML(
-          accessText(state),
-          isExpired(state)
-            ? expiredAccessKeyboard(config.miniAppUrl, config.subscriptionUrl)
-            : openAppKeyboard(config.miniAppUrl),
-        );
-        await ctx.reply('Главное меню', mainInlineKeyboard);
-        await ctx.reply('Быстрые кнопки закреплены снизу', mainReplyKeyboard);
-      } catch (error) {
-        console.error('Failed to handle /start', error);
-        await ctx.reply(genericError);
-      }
-    },
-
+    /** Old "Подключить VPN" / "Моя подписка" buttons: status + what to do next. */
     vpn: async (ctx: Context) => {
       try {
         const state = await stateFor(ctx);
         if (!state) return;
-        await ctx.replyWithHTML(
-          accessText(state),
-          isExpired(state)
-            ? expiredAccessKeyboard(config.miniAppUrl, config.subscriptionUrl)
-            : openAppKeyboard(config.miniAppUrl, '⚡ Открыть VPN'),
-        );
+        await ctx.replyWithHTML(accessText(state), isExpired(state) ? expiredAccessKeyboard() : accessKeyboard());
       } catch (error) {
         console.error('Failed to show VPN state', error);
         await ctx.reply(genericError);
@@ -116,45 +68,29 @@ export function createHandlers(config: BotConfig) {
               `Действует до: ${date(state.subscription.expiresAt)}`,
             ].join('\n')
           : state.trial?.status === 'ACTIVE'
-            ? `<b>Подписка</b>\n\nСейчас действуют бесплатные 24 часа.\nОсталось: ${duration(state.trial.secondsRemaining)}`
-            : '<b>Подписка</b>\n\nАктивной подписки нет.';
-        await ctx.replyWithHTML(text, expiredAccessKeyboard(config.miniAppUrl));
+            ? `<b>Подписка</b>\n\nСейчас действует бесплатный тариф.\nОсталось: ${duration(state.trial.secondsRemaining)}`
+            : '<b>Подписка</b>\n\nАктивной подписки нет. Подписка привязывается к устройству — посмотрите сроки в «📱 Мои устройства».';
+        await ctx.replyWithHTML(text, isExpired(state) || !state.subscription ? expiredAccessKeyboard() : accessKeyboard());
       } catch (error) {
         console.error('Failed to show subscription', error);
         await ctx.reply(genericError);
       }
     },
 
-    tariffs: async (ctx: Context) => {
-      await ctx.reply('Тарифы и оплата — в разделе «💎 Купить подписку».', expiredAccessKeyboard(config.miniAppUrl));
-    },
-
     servers: async (ctx: Context) => {
-      await ctx.reply('Выберите VPN-сервер в Sali', openAppKeyboard(config.serversUrl, 'Открыть серверы'));
+      const topic = docBySlug('servers')!;
+      await ctx.replyWithHTML(topic.text, docTopicKeyboard(config.siteUrl, topic.slug));
     },
 
     invite: async (ctx: Context) => {
+      if (!ctx.from) return;
       try {
-        const state = await stateFor(ctx);
-        if (!state) return;
-        const link = state.referralStats.link;
-        const shareText = 'Попробуй Sali VPN — простой и приватный VPN. По моей ссылке ты получишь дополнительные 30 минут VPN бесплатно.';
-
-        await ctx.replyWithHTML([
-          '<b>Приглашайте друзей в Sali VPN</b>',
-          '',
-          'Как это работает:',
-          '• вы отправляете другу свою ссылку;',
-          '• друг переходит по ней и создаёт новый аккаунт;',
-          '• друг получает +30 минут VPN;',
-          '• вы получаете скидку 10% на следующую оплату.',
-          '',
-          'Бонус действует только для новых аккаунтов.',
-        ].join('\n'));
-
+        const stats = await api.referrals(ctx.from.id);
+        const shareText = `Попробуй Sali VPN — быстрый и приватный VPN. По моей ссылке ты получишь +${stats.friendBonusHours} часа бесплатно.`;
+        await ctx.replyWithHTML(referralMessage(stats));
         await ctx.reply(
-          `${shareText}\n\n${link}`,
-          referralShareKeyboard(link, shareText) as Parameters<Context['reply']>[1],
+          `${shareText}\n\n${stats.link}`,
+          referralShareKeyboard(stats.link, shareText) as Parameters<Context['reply']>[1],
         );
       } catch (error) {
         console.error('Failed to show referral link', error);
@@ -167,10 +103,16 @@ export function createHandlers(config: BotConfig) {
         const state = await stateFor(ctx);
         if (!state) return;
         const telegram = state.user.username ? `@${state.user.username}` : state.user.firstName || 'Telegram';
-        const tariff = state.subscription?.plan.name ?? (state.trial?.status === 'ACTIVE' ? '24 часа бесплатно' : 'Нет активного тарифа');
-        await ctx.reply(
-          ['Аккаунт', '', `Telegram: ${telegram}`, `Sali ID: SL-${state.user.publicId.slice(0, 4)}-${state.user.publicId.slice(4)}`, `Статус: ${state.state === 'BLOCKED' ? 'ограничен' : 'активен'}`, `Тариф: ${tariff}`, ...(state.subscription ? [`Действует до: ${date(state.subscription.expiresAt)}`] : [])].join('\n'),
-          openAppKeyboard(config.accountUrl, 'Открыть аккаунт'),
+        await ctx.replyWithHTML(
+          [
+            '<b>Аккаунт</b>',
+            '',
+            `Telegram: ${telegram}`,
+            `Статус: ${state.state === 'BLOCKED' ? 'ограничен' : 'активен'}`,
+            '',
+            'Тарифы привязаны к устройствам: сроки — в «📱 Мои устройства», купленные коды — в «🔑 Мои коды».',
+          ].join('\n'),
+          accountKeyboard(),
         );
       } catch (error) {
         console.error('Failed to show account', error);
@@ -179,15 +121,32 @@ export function createHandlers(config: BotConfig) {
     },
 
     help: async (ctx: Context) => {
-      await ctx.replyWithHTML('<b>Помощь</b>\n\nВыберите вопрос:', faqKeyboard(config.supportUrl));
+      await ctx.replyWithHTML(
+        '<b>Помощь</b>\n\nВыберите вопрос. Если ответа нет — напишите в поддержку, там отвечают живые люди.',
+        faqKeyboard(config.supportUrl),
+      );
     },
 
     faq: async (ctx: Context) => {
-      if (!('callback_query' in ctx.update)) return;
-      const data = 'data' in ctx.update.callback_query ? ctx.update.callback_query.data : undefined;
+      const data = callbackData(ctx);
       if (!data || !FAQ[data]) return;
       await ctx.answerCbQuery().catch(() => undefined);
       await ctx.replyWithHTML(FAQ[data], supportKeyboard(config.supportUrl));
+    },
+
+    docs: async (ctx: Context) => {
+      await ctx.replyWithHTML(
+        '<b>Документация Sali VPN</b>\n\nКоротко о том, как всё устроено. Полные статьи — в справочном центре на сайте.',
+        docsKeyboard(config.siteUrl),
+      );
+    },
+
+    /** doc_<slug> */
+    doc: async (ctx: Context) => {
+      const topic = docBySlug(callbackData(ctx).replace(/^doc_/, ''));
+      await ctx.answerCbQuery().catch(() => undefined);
+      if (!topic) return;
+      await ctx.replyWithHTML(topic.text, { ...docTopicKeyboard(config.siteUrl, topic.slug), link_preview_options: { is_disabled: true } });
     },
   };
 }

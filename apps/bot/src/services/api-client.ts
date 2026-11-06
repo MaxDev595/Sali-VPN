@@ -51,6 +51,19 @@ export interface BotPlan {
   originalPriceUsd: number | null;
   stars: number;
   maxDevices: number;
+  /** Referral discount waiting for this customer (0 if none). */
+  discountPercent?: number;
+  discountedPriceUsd?: number | null;
+  discountedStars?: number | null;
+}
+
+export interface ReferralStats {
+  link: string;
+  totalInvited: number;
+  totalRewarded: number;
+  availableDiscounts: number;
+  discountPercent: number;
+  friendBonusHours: number;
 }
 
 export interface IssuedCode {
@@ -78,7 +91,7 @@ export interface LinkedDevice {
 }
 
 export type Purchase =
-  | { method: 'stars'; paymentId: string; stars: number; title: string; description: string }
+  | { method: 'stars'; paymentId: string; stars: number; title: string; description: string; discountPercent?: number }
   | {
       method: 'crypto' | 'card';
       paymentId: string;
@@ -149,11 +162,12 @@ export const api = {
 
   // --- Bot billing & activation codes -------------------------------------
   start: (profile: TelegramProfile, startParam?: string) =>
-    call<{ publicId: string; link: { status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId?: string } | null; linkedApps: number; freeUsed: boolean; isBlocked: boolean }>('/bot/start', { profile, startParam }),
+    call<{ publicId: string; link: { status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId?: string } | null; linkedApps: number; freeUsed: boolean; isBlocked: boolean; referred?: boolean; friendBonusHours?: number }>('/bot/start', { profile, startParam }),
+  referrals: (telegramId: number) => call<ReferralStats>('/bot/referrals', { telegramId }),
   link: (telegramId: number, publicId: string) =>
     call<{ status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId: string | null }>('/bot/link', { telegramId, publicId }),
   devices: (telegramId: number) => call<LinkedDevice[]>('/bot/devices', { telegramId }),
-  plans: () => call<BotPlan[]>('/bot/plans', {}),
+  plans: (telegramId?: number) => call<BotPlan[]>('/bot/plans', telegramId ? { telegramId } : {}),
   purchase: (profile: TelegramProfile, planCode: string, method: 'stars' | 'crypto' | 'card') =>
     call<Purchase>('/bot/purchase', { profile, planCode, method }, 0),
   precheck: (telegramId: number, paymentId: string, amount: number, currency: string) =>
@@ -165,7 +179,7 @@ export const api = {
   freeCode: (telegramId: number) => call<IssuedCode & { alreadyIssued: boolean }>('/bot/free', { telegramId }, 0),
   codes: (telegramId: number) => call<OwnedCode[]>('/bot/codes', { telegramId }),
   apply: (telegramId: number, code: string, publicId?: string) =>
-    call<{ chooseDevice?: string[]; kind?: string; durationDays?: number; planName?: string | null; expiresAt?: string | null; publicId?: string }>('/bot/apply', { telegramId, code, publicId }, 0),
+    call<{ chooseDevice?: string[]; referralBonusHours?: number; kind?: string; durationDays?: number; planName?: string | null; expiresAt?: string | null; publicId?: string }>('/bot/apply', { telegramId, code, publicId }, 0),
 
   // --- Admin: VPN nodes ----------------------------------------------------
   nodeToken: (telegramId: number, countryCode: string, city?: string) =>

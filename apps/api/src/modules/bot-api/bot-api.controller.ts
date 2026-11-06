@@ -22,6 +22,7 @@ class ProfileDto {
   @IsOptional() @IsString() @MaxLength(16) languageCode?: string;
 }
 class TelegramDto { @IsInt() telegramId!: number; }
+class OptionalTelegramDto { @IsOptional() @IsInt() telegramId?: number; }
 class StartDto {
   @ValidateNested() @Type(() => ProfileDto) profile!: ProfileDto;
   @IsOptional() @IsString() @MaxLength(64) startParam?: string;
@@ -129,7 +130,7 @@ export class BotApiController {
   }
 
   @Post('plans')
-  async plans(@Body() dto: Partial<TelegramDto>) {
+  async plans(@Body() dto: OptionalTelegramDto) {
     const plans = await this.prisma.plan.findMany({ where: { isActive: true }, orderBy: { durationDays: 'asc' } });
     const user = typeof dto?.telegramId === 'number' ? await this.users.findByTelegramId(BigInt(dto.telegramId)) : null;
     const discountPercent = user && await this.prisma.referralReward.findFirst({ where: { userId: user.id, kind: 'discount_percent', paymentId: null, consumedAt: null } })

@@ -23,7 +23,8 @@ loadEnv({ path: resolve(__dirname, '../../../.env') });
  *     ├─ 📱 Мои устройства → привязанные приложения и их тариф
  *     ├─ 📲 Скачать приложение
  *     ├─ 👥 Пригласить друга
- *     ├─ 💬 Поддержка (FAQ)
+ *     ├─ 📖 Документация  → короткие статьи + ссылки на salivpn.com/help/*
+ *     ├─ 💬 Поддержка (FAQ → бот поддержки)
  *     └─ ⚙️ Аккаунт
  *
  *   Text "SL-XXXX-XXXX" → привязать устройство; text with a code → «Активировать».
@@ -52,6 +53,8 @@ async function main() {
   bot.command('subscription', handlers.subscription);
   bot.command('account', handlers.account);
   bot.command('help', handlers.help);
+  bot.command('docs', handlers.docs);
+  bot.command('invite', handlers.invite);
   bot.command('myid', admin.myId);
   bot.command('addserver', admin.addServer);
   bot.command('nodes', admin.nodes);
@@ -65,6 +68,7 @@ async function main() {
   bot.hears(menuLabels.download, billing.download);
   bot.hears(menuLabels.invite, handlers.invite);
   bot.hears(menuLabels.support, handlers.help);
+  bot.hears(menuLabels.docs, handlers.docs);
   bot.hears(menuLabels.settings, handlers.account);
   // Old persistent keyboards
   bot.hears(menuLabels.legacyVpn, handlers.vpn);
@@ -87,6 +91,8 @@ async function main() {
   bot.action('menu_invite', action(handlers.invite));
   bot.action('menu_support', action(handlers.help));
   bot.action('menu_settings', action(handlers.account));
+  bot.action('menu_docs', action(handlers.docs));
+  bot.action(/^doc_/, handlers.doc);
   bot.action(/^buy_/, billing.choosePlan);
   bot.action(/^pay_/, billing.payCallback);
   bot.action(/^chk_/, billing.checkPayment);
@@ -109,8 +115,10 @@ async function main() {
     { command: 'free', description: '24 часа бесплатно' },
     { command: 'codes', description: 'Мои коды' },
     { command: 'devices', description: 'Мои устройства' },
+    { command: 'invite', description: 'Пригласить друга' },
+    { command: 'docs', description: 'Документация' },
     { command: 'account', description: 'Аккаунт' },
-    { command: 'help', description: 'Помощь' },
+    { command: 'help', description: 'Помощь и поддержка' },
   ]).catch((error) => {
     console.warn('Failed to register bot commands; continuing with polling', error);
   });

@@ -1,19 +1,7 @@
 import { BotUserState } from './services/api-client';
-import type { IssuedCode, LinkedDevice, OwnedCode } from './services/api-client';
+import type { BotPlan, IssuedCode, LinkedDevice, OwnedCode, ReferralStats } from './services/api-client';
 
 export const genericError = 'Сервис временно перезапускается. Повторите команду через несколько секунд.';
-
-export const onboarding = [
-  '<b>Sali VPN</b>',
-  '',
-  'Простой и приватный VPN без сложных настроек.',
-  '',
-  '• приватное подключение',
-  '• высокая скорость',
-  '• стабильные серверы',
-  '• простое подключение',
-  '• минимум настроек',
-].join('\n');
 
 export function duration(seconds: number) {
   if (seconds < 60) return 'меньше минуты';
@@ -34,7 +22,7 @@ export function accessText(state: BotUserState) {
     return `<b>Sali VPN</b>\n\n🟢 VPN доступен\nТариф: ${state.subscription.plan.name}\nДействует до: ${date(state.subscription.expiresAt)}`;
   }
   if (state.state === 'TRIAL_ACTIVE' && state.trial) {
-    return `<b>Sali VPN</b>\n\n🟢 VPN доступен\nТариф: 24 часа бесплатно\nОсталось: ${duration(state.trial.secondsRemaining)}`;
+    return `<b>Sali VPN</b>\n\n🟢 VPN доступен\nТариф: бесплатный\nОсталось: ${duration(state.trial.secondsRemaining)}`;
   }
   if (state.state === 'SUBSCRIPTION_EXPIRED') {
     return '<b>Подписка закончилась</b>\n\nДля продолжения использования Sali VPN необходимо продлить подписку.';
@@ -89,10 +77,11 @@ export function freeCodeMessage(code: IssuedCode, again: boolean) {
   ].join('\n');
 }
 
-export function redeemedMessage(result: { publicId?: string; expiresAt?: string | null; kind?: string }) {
+export function redeemedMessage(result: { publicId?: string; expiresAt?: string | null; kind?: string; referralBonusHours?: number }) {
   const until = result.expiresAt ? `\nДоступ до: <b>${date(result.expiresAt)}</b>` : '';
   const what = result.kind === 'FREE' ? 'Бесплатные 24 часа включены' : 'Подписка активирована';
-  return `✅ <b>${what}</b> на устройстве <b>${result.publicId ?? ''}</b>.${until}\n\nОткройте приложение и нажмите кнопку подключения.`;
+  const bonus = result.referralBonusHours ? `\n🎁 +${result.referralBonusHours} часа от друга уже добавлены.` : '';
+  return `✅ <b>${what}</b> на устройстве <b>${result.publicId ?? ''}</b>.${until}${bonus}\n\nОткройте приложение и нажмите кнопку подключения.`;
 }
 
 export function codesListMessage(codes: OwnedCode[]) {
@@ -131,4 +120,51 @@ export function linkResultMessage(status: string, publicId?: string | null) {
     case 'linked_elsewhere': return 'Это устройство уже привязано к другому Telegram-аккаунту. Если это ошибка — напишите в поддержку.';
     default: return 'Не нашли устройство с таким Sali ID. Проверьте номер в приложении: Аккаунт → Sali ID.';
   }
+}
+
+function money(value: number) {
+  return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
+}
+
+/** «Купить подписку»: официальная цена зачёркнута, ниже — текущая и, если есть, реферальная скидка. */
+export function plansMessage(plans: BotPlan[]) {
+  const lines = plans.map((plan) => {
+    const old = plan.originalPriceUsd && plan.originalPriceUsd > plan.priceUsd ? `<s>${money(plan.originalPriceUsd)}</s> ` : '';
+    const now = plan.discountedPriceUsd
+      ? `<s>${money(plan.priceUsd)}</s> <b>${money(plan.discountedPriceUsd)}</b>`
+      : `<b>${money(plan.priceUsd)}</b>`;
+    const stars = plan.discountedStars ?? plan.stars;
+    return `• ${period(plan.durationDays)} — ${old}${now} · ${stars} ⭐`;
+  });
+  const discount = plans.find((plan) => plan.discountPercent)?.discountPercent;
+  return [
+    '<b>Подписка Sali VPN</b>',
+    '',
+    ...lines,
+    '',
+    '• все серверы и максимальная скорость',
+    '• без рекламы и логов',
+    '• один код — одно устройство',
+    ...(discount ? ['', `🎁 У вас есть реферальная скидка <b>${discount}%</b> — она уже учтена в цене.`] : []),
+    '',
+    'После оплаты вы получите код — введите его в приложении. Если подписка уже есть, дни добавятся к текущим.',
+  ].join('\n');
+}
+
+export function referralMessage(stats: ReferralStats) {
+  return [
+    '<b>Приглашайте друзей в Sali VPN</b>',
+    '',
+    `• Друг получает <b>+${stats.friendBonusHours} часа</b> VPN бесплатно — сразу после активации первого кода.`,
+    `• Вы получаете <b>скидку ${stats.discountPercent}%</b> на следующую оплату за каждого друга.`,
+    '',
+    `Приглашено: <b>${stats.totalInvited}</b> · бонусов получено: <b>${stats.totalRewarded}</b>`,
+    `Скидок ждёт следующей оплаты: <b>${stats.availableDiscounts}</b>`,
+    '',
+    'Бонус действует только для новых аккаунтов Telegram. Ссылка — в сообщении ниже.',
+  ].join('\n');
+}
+
+export function referredWelcome(hours: number) {
+  return `🎁 <b>Вы пришли по приглашению друга</b>\n\nПосле активации первого кода вы получите <b>+${hours} часа</b> VPN бесплатно.`;
 }

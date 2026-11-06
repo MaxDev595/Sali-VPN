@@ -38,3 +38,26 @@ test('rounds remaining duration up for user display', () => {
   assert.equal(duration(61), '2 мин.');
   assert.equal(duration(3600), '1 ч.');
 });
+
+test('plans show the official price crossed out and the current one', () => {
+  const { plansMessage } = require('../dist/messages');
+  const { planButtonLabel } = require('../dist/keyboards');
+  const plan = { code: 'pro_monthly', name: 'Sali Pro', durationDays: 30, priceUsd: 5, originalPriceUsd: 8, stars: 250, maxDevices: 3 };
+  assert.match(plansMessage([plan]), /<s>\$8<\/s> <b>\$5<\/b> · 250 ⭐/);
+  assert.match(planButtonLabel(plan), /^1 мес\. — \$̶8̶ \$5 · 250 ⭐$/);
+});
+
+test('referral discount replaces the price and is announced', () => {
+  const { plansMessage } = require('../dist/messages');
+  const plan = { code: 'pro_monthly', name: 'Sali Pro', durationDays: 30, priceUsd: 5, originalPriceUsd: 8, stars: 250, maxDevices: 3, discountPercent: 10, discountedPriceUsd: 4.5, discountedStars: 225 };
+  const text = plansMessage([plan]);
+  assert.match(text, /<s>\$5<\/s> <b>\$4\.50<\/b> · 225 ⭐/);
+  assert.match(text, /скидка <b>10%<\/b>/);
+});
+
+test('referral message names both rewards', () => {
+  const { referralMessage } = require('../dist/messages');
+  const text = referralMessage({ link: 'x', totalInvited: 2, totalRewarded: 1, availableDiscounts: 1, discountPercent: 10, friendBonusHours: 3 });
+  assert.match(text, /\+3 часа/);
+  assert.match(text, /скидку 10%/);
+});

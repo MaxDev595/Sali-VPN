@@ -21,7 +21,9 @@ import {
   howItWorks,
   linkResultMessage,
   paidCodeMessage,
+  plansMessage,
   redeemedMessage,
+  referredWelcome,
 } from '../messages';
 
 /** Sali ID typed by the customer: SL-7K4P-Q2M9, sl7k4pq2m9, 7K4P Q2M9… */
@@ -77,6 +79,7 @@ export function createBillingHandlers(config: BotConfig) {
         }
         if (startParam === 'buy') return handlers.buy(ctx);
         if (startParam === 'free') return handlers.free(ctx);
+        if (startParam?.startsWith('doc_')) return;
         await ctx.replyWithHTML(
           [
             '<b>Sali VPN</b> — быстрый и приватный VPN в одно нажатие.',
@@ -87,6 +90,7 @@ export function createBillingHandlers(config: BotConfig) {
           ].join('\n'),
           mainReplyKeyboard,
         );
+        if (result.referred) await ctx.replyWithHTML(referredWelcome(result.friendBonusHours ?? 3));
         await ctx.reply('С чего начнём?', welcomeKeyboard(result.freeUsed));
       } catch (error) {
         await fail(ctx, error, 'start');
@@ -95,19 +99,8 @@ export function createBillingHandlers(config: BotConfig) {
 
     buy: async (ctx: Context): Promise<void> => {
       try {
-        const plans = await api.plans();
-        await ctx.replyWithHTML(
-          [
-            '<b>Подписка Sali VPN</b>',
-            '',
-            '• все серверы и максимальная скорость',
-            `• до ${plans[0]?.maxDevices ?? 3} устройств`,
-            '• без рекламы и логов',
-            '',
-            'После оплаты вы получите код — введите его в приложении. Если подписка уже есть, дни добавятся к текущим.',
-          ].join('\n'),
-          plansKeyboard(plans),
-        );
+        const plans = await api.plans(ctx.from?.id);
+        await ctx.replyWithHTML(plansMessage(plans), plansKeyboard(plans));
       } catch (error) {
         await fail(ctx, error, 'buy');
       }
@@ -264,7 +257,7 @@ export function createBillingHandlers(config: BotConfig) {
         [
           '<b>Приложение Sali VPN</b>',
           '',
-          'Есть для телефона (Android) и компьютера (Windows). Одна подписка — до 3 устройств.',
+          'Есть для телефона (Android) и компьютера (Windows). Один код активирует одно устройство.',
           '',
           'После установки откройте приложение и нажмите «Привязать Telegram» — устройство появится в «📱 Мои устройства», а коды можно будет активировать одной кнопкой.',
         ].join('\n'),
@@ -313,7 +306,6 @@ export function createBillingHandlers(config: BotConfig) {
       return next();
     },
 
-    openMiniApp: config.miniAppUrl,
   };
   return handlers;
 }
