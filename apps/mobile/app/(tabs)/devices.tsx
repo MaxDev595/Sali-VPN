@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Text } from '../../src/components/Text';
 import { PlatformIcon } from '../../src/components/PlatformIcon';
+import { Icon } from '../../src/components/Icon';
 import { SectionLabel } from '../../src/components/List';
 import { useAccountStore } from '../../src/store/accountStore';
 import { telegramBotUrl, telegramLinkUrl } from '../../src/services/session';
@@ -37,7 +38,7 @@ export default function DevicesScreen() {
               <Text style={styles.kicker}>ЭТО УСТРОЙСТВО</Text>
               <Text style={styles.currentName}>Android</Text>
             </View>
-            <Text style={styles.external}>↗</Text>
+            <Icon name="external" size={18} color={theme.colors.accent} />
           </View>
           <View style={styles.facts}>
             <View style={styles.fact}><Text style={styles.factLabel}>Sali ID</Text><Text style={styles.factValue}>{home?.user.publicId ?? '—'}</Text></View>
@@ -47,12 +48,12 @@ export default function DevicesScreen() {
         </Pressable>
       </Animated.View>
 
-      <SectionLabel>SALI VPN ЕСТЬ НА</SectionLabel>
+      <SectionLabel icon="devices">SALI VPN ЕСТЬ НА</SectionLabel>
       {platforms.map((item, index) => <Animated.View key={item.id} entering={FadeInDown.delay(80 + index * 60).duration(360)}>
         <Pressable accessibilityRole="link" onPress={() => openHelp('devices')} style={({ pressed }) => [styles.platform, pressed && styles.pressed]}>
           <View style={styles.icon}><PlatformIcon platform={item.id} size={30} /></View>
           <View style={{ flex: 1 }}><Text style={styles.platformName}>{item.name}</Text><Text style={styles.platformDetail}>{item.detail}</Text></View>
-          <Text style={styles.external}>↗</Text>
+          <Icon name="external" size={18} color={theme.colors.accent} />
         </Pressable>
       </Animated.View>)}
 
@@ -76,7 +77,6 @@ const styles = StyleSheet.create({
   icon: { width: 50, height: 50, borderRadius: 15, backgroundColor: theme.colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' },
   kicker: { color: theme.colors.accent, fontSize: 11, letterSpacing: 1.6, fontFamily: 'SaliSans-Bold' },
   currentName: { color: theme.colors.textPrimary, fontSize: 22, fontFamily: 'SaliSans-SemiBold', marginTop: 2 },
-  external: { color: theme.colors.accent, fontSize: 18, fontFamily: 'SaliSans-Bold' },
   facts: { marginTop: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.colors.border, paddingTop: 6 },
   fact: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 },
   factLabel: { color: theme.colors.textSecondary, fontSize: 14 },

@@ -99,7 +99,7 @@ export default function ActivateScreen() {
           <View style={styles.help}>
             <Text style={styles.helpTitle}>Где взять код?</Text>
             <Text style={styles.helpText}>Бесплатные 24 часа и подписка выдаются в нашем Telegram-боте. Ваш ID устройства: <Text style={styles.id}>{home?.user.publicId ?? '—'}</Text></Text>
-            <Pressable onPress={openBot} style={({ pressed }) => [styles.link, pressed && { opacity: .7 }]}><Text style={styles.linkText}>Открыть Telegram-бот ›</Text></Pressable>
+            <Pressable onPress={openBot} style={({ pressed }) => [styles.link, pressed && { opacity: .7 }]}><Text style={styles.linkText}>Открыть Telegram-бот</Text></Pressable>
           </View>
         </>}
       </ScrollView>

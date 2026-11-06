@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Text } from '../src/components/Text';
-import { AccordionItem } from '../src/components/Accordion';
+import { AccordionItem, accordionLayout } from '../src/components/Accordion';
+import { Icon } from '../src/components/Icon';
 import { SectionLabel } from '../src/components/List';
 import { SaliButton } from '../src/components/SaliButton';
 import { useAccountStore } from '../src/store/accountStore';
@@ -39,12 +40,13 @@ export default function SupportScreen() {
   return <SafeAreaView style={styles.safe}>
     <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Pressable accessibilityLabel="Назад" onPress={() => router.back()} style={styles.back}><Text style={styles.backText}>‹</Text></Pressable>
+        <Pressable accessibilityLabel="Назад" onPress={() => router.back()} style={styles.back}><Icon name="chevron" size={20} style={{ transform: [{ scaleX: -1 }] }} /></Pressable>
         <Text style={styles.title}>{t.help}</Text>
       </View>
       <Text style={styles.intro}>{t.supportIntro}</Text>
 
       <Animated.View entering={FadeInDown.duration(380)} style={styles.contact}>
+        <View style={styles.contactIcon}><Icon name="telegram" size={22} color={theme.colors.accent} /></View>
         <View style={{ flex: 1 }}>
           <Text style={styles.contactTitle}>@SaliVPNHelpBot</Text>
           <Text style={styles.contactText}>Укажите ваш Sali ID: <Text style={styles.id}>{publicId ?? '—'}</Text></Text>
@@ -52,12 +54,12 @@ export default function SupportScreen() {
       </Animated.View>
       <View style={{ marginTop: 12 }}><SaliButton title={t.writeSupport} onPress={openSupport} /></View>
 
-      <SectionLabel>{t.faq}</SectionLabel>
-      {FAQ[language].map(([question, answer], index) => <Animated.View key={question} entering={FadeInDown.delay(60 + index * 45).duration(340)}>
-        <AccordionItem question={question} answer={answer} open={open === index} onToggle={() => setOpen(open === index ? null : index)} />
-      </Animated.View>)}
+      <SectionLabel icon="help">{t.faq}</SectionLabel>
+      {FAQ[language].map(([question, answer], index) => <AccordionItem key={question} question={question} answer={answer} open={open === index} onToggle={() => setOpen(open === index ? null : index)} />)}
 
-      <Pressable onPress={() => openHelp()} style={styles.more}><Text style={styles.moreText}>{t.allArticles} ↗</Text></Pressable>
+      <Animated.View layout={accordionLayout}>
+        <Pressable onPress={() => openHelp()} style={styles.more}><Text style={styles.moreText}>{t.allArticles}</Text><Icon name="external" size={15} color={theme.colors.accent} /></Pressable>
+      </Animated.View>
     </ScrollView>
   </SafeAreaView>;
 }
@@ -67,13 +69,13 @@ const styles = StyleSheet.create({
   screen: { padding: 20, paddingBottom: 48 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   back: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center' },
-  backText: { color: theme.colors.textPrimary, fontSize: 32, lineHeight: 34 },
   title: { flex: 1, color: theme.colors.textPrimary, fontSize: 26, lineHeight: 32, fontFamily: 'SaliSans-Bold' },
   intro: { color: theme.colors.textSecondary, fontSize: 15, lineHeight: 22, marginTop: 16, marginBottom: 18 },
-  contact: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: theme.radius.lg, backgroundColor: '#0C1A33', borderWidth: 1, borderColor: '#1E3460' },
+  contactIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,197,135,.12)', alignItems: 'center', justifyContent: 'center' },
+  contact: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: theme.radius.lg, backgroundColor: '#0C1A33', borderWidth: 1, borderColor: '#1E3460' },
   contactTitle: { color: theme.colors.textPrimary, fontSize: 17, fontFamily: 'SaliSans-SemiBold' },
   contactText: { color: theme.colors.textSecondary, fontSize: 14, marginTop: 4 },
   id: { color: theme.colors.accent, fontFamily: 'SaliSans-Bold' },
-  more: { alignSelf: 'center', paddingVertical: 16 },
+  more: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 16 },
   moreText: { color: theme.colors.accent, fontSize: 15, fontFamily: 'SaliSans-SemiBold' },
 });

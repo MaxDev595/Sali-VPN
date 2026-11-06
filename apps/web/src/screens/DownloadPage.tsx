@@ -10,7 +10,7 @@ import '../landing/landing.css';
 type Platform = 'android' | 'windows';
 type Step = { icon: string; title: string; text: string; tip?: string };
 
-const APP_VERSION = '0.5.0';
+const APP_VERSION: Record<Platform, string> = { android: '0.5.1', windows: '0.5.0' };
 
 const t = {
   ru: {
@@ -142,7 +142,7 @@ export function DownloadPage() {
       <h2>{p.name}</h2><p className="sv-dl-sub">{p.sub}</p>
       <a className="sv-btn sv-btn-peach" href={main}><Icon name="download-glyph-dark" />{p.main}</a>
       <a className="sv-dl-alt" href={alt} target={id === 'android' ? '_blank' : undefined} rel="noreferrer">{p.alt} →</a>
-      <p className="sv-dl-req">{p.req} · {c.version} {APP_VERSION}</p>
+      <p className="sv-dl-req">{p.req} · {c.version} {APP_VERSION[id]}</p>
     </article>;
   };
 

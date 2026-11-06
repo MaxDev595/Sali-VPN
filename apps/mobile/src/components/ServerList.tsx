@@ -3,6 +3,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import { Text } from './Text';
+import { Icon } from './Icon';
 import type { VPNServer } from '../types';
 import { api } from '../services/api/client';
 import { ensureSession } from '../services/session';
@@ -46,7 +47,7 @@ export function ServerList({ onPicked, header }: { onPicked?(server: VPNServer):
     contentContainerStyle={styles.list}
     showsVerticalScrollIndicator={false}
     ListHeaderComponent={<>{header}{offline && <Text style={styles.offline}>{t.offline}</Text>}</>}
-    ListFooterComponent={<Pressable onPress={() => openHelp('servers')} style={styles.footer}><Text style={styles.footerText}>{t.serversHelp} ↗</Text></Pressable>}
+    ListFooterComponent={<Pressable onPress={() => openHelp('servers')} style={styles.footer}><Text style={styles.footerText}>{t.serversHelp}</Text><Icon name="external" size={15} color={theme.colors.accent} /></Pressable>}
     renderItem={({ item, index }) => {
       const isSelected = selected?.id === item.id || (!selected?.remote && selected?.countryCode === item.countryCode && !item.premiumOnly);
       const locked = item.premiumOnly && !hasPlan;
@@ -61,7 +62,7 @@ export function ServerList({ onPicked, header }: { onPicked?(server: VPNServer):
             <Text style={styles.city}>{item.city}{item.ping ? ` · ${item.ping} мс` : ''}{locked ? ` · ${t.needsPlan}` : ''}</Text>
           </View>
           <Load value={item.load} />
-          <View style={[styles.radio, isSelected && styles.radioOn]}>{isSelected && <View style={styles.radioCap} />}</View>
+          <View style={[styles.radio, isSelected && styles.radioOn]}>{isSelected && <Icon name="check" size={14} color={theme.colors.onPrimary} />}</View>
         </Pressable>
       </Animated.View>;
     }}
@@ -84,8 +85,7 @@ const styles = StyleSheet.create({
   load: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 14 },
   loadBar: { width: 3, borderRadius: 1.5, backgroundColor: theme.colors.muted },
   radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: theme.colors.muted, alignItems: 'center', justifyContent: 'center' },
-  radioOn: { borderColor: theme.colors.accent },
-  radioCap: { width: 11, height: 4, borderRadius: 2, backgroundColor: theme.colors.accent, transform: [{ rotate: theme.cap.angle }] },
-  footer: { alignSelf: 'center', paddingVertical: 18 },
+  radioOn: { borderColor: theme.colors.accent, backgroundColor: theme.colors.accent },
+  footer: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 18 },
   footerText: { color: theme.colors.accent, fontSize: 14, fontFamily: 'SaliSans-SemiBold' },
 });

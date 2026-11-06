@@ -1,41 +1,39 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useDerivedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeOut, LinearTransition, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Text } from './Text';
+import { Icon } from './Icon';
 import { theme } from '../theme';
 
 const EASE = Easing.bezier(.22, 1, .36, 1);
+/** Every card in the list shares this transition, so neighbours glide down instead of overlapping. */
+export const accordionLayout = LinearTransition.duration(380).easing(EASE);
 
 /**
- * FAQ item: the answer slides open to its measured height, the "+" turns into "×"
- * (45°) and fills with peach, the card lifts a little.
+ * FAQ item. The answer is part of the normal layout (no measuring), the card and
+ * every card below it animate to their new positions together. The "+" turns
+ * 45° into a cross on a peach disc.
  */
 export function AccordionItem({ question, answer, open, onToggle }: { question: string; answer: string; open: boolean; onToggle(): void }) {
-  const [height, setHeight] = useState(0);
-  const progress = useDerivedValue(() => withTiming(open ? 1 : 0, { duration: 420, easing: EASE }), [open]);
-  const body = useAnimatedStyle(() => ({ height: height * progress.value, opacity: progress.value }));
-  const text = useAnimatedStyle(() => ({ transform: [{ translateY: (1 - progress.value) * -8 }] }));
+  const p = useSharedValue(open ? 1 : 0);
+  useEffect(() => { p.value = withTiming(open ? 1 : 0, { duration: 380, easing: EASE }); }, [open, p]);
   const plus = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${progress.value * 135}deg` }],
-    backgroundColor: progress.value > .5 ? theme.colors.accent : theme.colors.surfaceElevated,
+    transform: [{ rotate: `${p.value * 45}deg` }],
+    backgroundColor: interpolateColor(p.value, [0, 1], [theme.colors.surfaceElevated, theme.colors.accent]),
   }));
-  const bar = useAnimatedStyle(() => ({ backgroundColor: progress.value > .5 ? theme.colors.onPrimary : theme.colors.textPrimary }));
-  const card = useAnimatedStyle(() => ({ borderColor: progress.value > .5 ? 'rgba(255,197,135,.28)' : theme.colors.border }));
+  const card = useAnimatedStyle(() => ({ borderColor: interpolateColor(p.value, [0, 1], [theme.colors.border, 'rgba(255,197,135,0.32)']) }));
 
-  return <Animated.View style={[styles.card, card]}>
+  return <Animated.View layout={accordionLayout} style={[styles.card, card]}>
     <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={onToggle} style={styles.head}>
       <Text style={styles.question}>{question}</Text>
       <Animated.View style={[styles.plus, plus]}>
-        <Animated.View style={[styles.barH, bar]} />
-        <Animated.View style={[styles.barV, bar]} />
+        <Icon name="plus" size={14} color={open ? theme.colors.onPrimary : theme.colors.textPrimary} />
       </Animated.View>
     </Pressable>
-    <Animated.View style={[styles.clip, body]}>
-      {/* Measured off-flow so the open height is known before the first tap. */}
-      <View style={styles.measure} onLayout={(event) => setHeight(event.nativeEvent.layout.height)}>
-        <Animated.View style={text}><Text style={styles.answer}>{answer}</Text></Animated.View>
-      </View>
-    </Animated.View>
+    {open && <Animated.View entering={FadeIn.duration(260).delay(90)} exiting={FadeOut.duration(140)} style={styles.body}>
+      <View style={styles.rule} />
+      <Text style={styles.answer}>{answer}</Text>
+    </Animated.View>}
   </Animated.View>;
 }
 
@@ -44,9 +42,7 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 16 },
   question: { flex: 1, color: theme.colors.textPrimary, fontSize: 16, lineHeight: 22, fontFamily: 'SaliSans-SemiBold' },
   plus: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  barH: { position: 'absolute', width: 12, height: 2, borderRadius: 1 },
-  barV: { position: 'absolute', width: 2, height: 12, borderRadius: 1 },
-  clip: { overflow: 'hidden' },
-  measure: { position: 'absolute', left: 0, right: 0, top: 0, paddingHorizontal: 16, paddingBottom: 18 },
+  body: { paddingHorizontal: 16, paddingBottom: 18 },
+  rule: { height: StyleSheet.hairlineWidth, backgroundColor: theme.colors.border, marginBottom: 12 },
   answer: { color: theme.colors.textSecondary, fontSize: 15, lineHeight: 22 },
 });

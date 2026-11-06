@@ -7,10 +7,12 @@ import type { VPNStatus } from '../types';
 import { LOGO_DRAW as D, LOGO_PATHS, MARK_VIEWBOX as V } from './logoPaths';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+/** Off state: the mark is clearly drawn, just quiet — not a muddy silhouette. */
+const GHOST = '#2A3958';
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const SIZE = 248;
-const RING_R = 118;
+const SIZE = 224;
+const RING_R = 106;
 const RING_LEN = 2 * Math.PI * RING_R;
 
 /**
@@ -41,7 +43,7 @@ export function VPNControl({ status, onPress, label }: { status: VPNStatus; onPr
 
   const reveal = useAnimatedProps(() => ({ strokeDashoffset: D.maskLength * (1 - draw.value) }));
   const outer = useAnimatedProps(() => ({ strokeDashoffset: RING_LEN * (1 - on.value), strokeOpacity: on.value }));
-  const capStyle = useAnimatedProps(() => ({ fillOpacity: interpolate(on.value, [0, 1], [.35, 1]) }));
+  const capStyle = useAnimatedProps(() => ({ fillOpacity: interpolate(on.value, [0, 1], [.9, 1]) }));
   const nibStyle = useAnimatedProps(() => ({ fillOpacity: Math.max(on.value, draw.value > .98 ? 1 : 0) }));
   const halo = useAnimatedStyle(() => ({ opacity: on.value * .9, transform: [{ scale: .92 + .08 * on.value }] }));
   const body = useAnimatedStyle(() => ({ transform: [{ scale: 1 - .035 * press.value }] }));
@@ -59,7 +61,7 @@ export function VPNControl({ status, onPress, label }: { status: VPNStatus; onPr
     <Animated.View pointerEvents="none" style={[styles.halo, halo]} />
     <Animated.View style={[styles.body, body]}>
       <Svg width={SIZE} height={SIZE} style={StyleSheet.absoluteFill}>
-        <Circle cx={SIZE / 2} cy={SIZE / 2} r={RING_R} stroke={theme.colors.hairline} strokeWidth={1.5} fill="none" />
+        <Circle cx={SIZE / 2} cy={SIZE / 2} r={RING_R} stroke={status === 'error' ? 'rgba(255,122,122,0.45)' : theme.colors.hairline} strokeWidth={status === 'error' ? 2 : 1.5} fill="none" />
         <AnimatedCircle cx={SIZE / 2} cy={SIZE / 2} r={RING_R} stroke={theme.colors.success} strokeWidth={2} fill="none" strokeLinecap="round" strokeDasharray={RING_LEN} animatedProps={outer} transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`} />
       </Svg>
       <View style={styles.markBox}>
@@ -70,9 +72,9 @@ export function VPNControl({ status, onPress, label }: { status: VPNStatus; onPr
             </Mask>
           </Defs>
           {/* ghost */}
-          <Path d={LOGO_PATHS.ring} fill={theme.colors.ghost} fillRule="evenodd" />
-          <Path d={LOGO_PATHS.swoosh} fill={theme.colors.ghost} fillRule="evenodd" />
-          <Path d={LOGO_PATHS.nib} fill={theme.colors.ghost} />
+          <Path d={LOGO_PATHS.ring} fill={GHOST} fillRule="evenodd" />
+          <Path d={LOGO_PATHS.swoosh} fill={GHOST} fillRule="evenodd" />
+          <Path d={LOGO_PATHS.nib} fill={GHOST} />
           {/* ink */}
           <Path d={LOGO_PATHS.ring} fill={theme.colors.cream} fillRule="evenodd" mask="url(#controlReveal)" />
           <Path d={LOGO_PATHS.swoosh} fill={theme.colors.cream} fillRule="evenodd" mask="url(#controlReveal)" />

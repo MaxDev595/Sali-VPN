@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { Text } from '../../src/components/Text';
 import { BrandMark } from '../../src/components/BrandMark';
+import { Icon } from '../../src/components/Icon';
 import { VPNControl } from '../../src/components/VPNControl';
 import { TelegramLinkCard } from '../../src/components/TelegramLinkCard';
 import { SaliModal } from '../../src/components/SaliModal';
@@ -68,7 +69,7 @@ export default function VpnScreen() {
           <View><Text style={styles.idLabel}>SALI ID</Text><Text style={styles.idValue}>{home?.user.publicId ?? '····-····'}</Text></View>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.push('/activate')} style={({ pressed }) => [styles.codeButton, pressed && { opacity: .8 }]}>
-          <View style={styles.codeCap} /><Text style={styles.codeText}>{t.enterCode}</Text>
+          <Icon name="key" size={16} color={theme.colors.accent} /><Text style={styles.codeText}>{t.enterCode}</Text>
         </Pressable>
       </View>
 
@@ -76,12 +77,17 @@ export default function VpnScreen() {
 
       <View style={styles.hero}>
         <Animated.Text key={`k-${status}`} entering={FadeIn.duration(260)} exiting={FadeOut.duration(120)} style={[styles.kicker, active && { color: theme.colors.success }]}>
-          {active && connectedAt ? `● ${clock((now - connectedAt) / 1000)}` : ' '}
+          {active && connectedAt ? clock((now - connectedAt) / 1000) : ' '}
         </Animated.Text>
         <VPNControl status={status} label={label} onPress={() => void toggle()} />
         <Animated.Text key={`t-${status}`} entering={FadeInDown.duration(320)} style={styles.title}>{title}</Animated.Text>
-        <Text style={styles.subtitle}>{active ? t.tapToDisconnect : status === 'connecting' || status === 'disconnecting' ? ' ' : t.tapToConnect}</Text>
-        {error && !needsCode ? <Text style={styles.error} onPress={clearError}>{error}</Text> : null}
+        {status === 'error' && error && !needsCode
+          ? <Animated.View entering={FadeInDown.duration(300)} style={styles.errorCard}>
+              <Icon name="info" size={18} color={theme.colors.error} />
+              <Text style={styles.errorText}>{error}</Text>
+              <Pressable accessibilityRole="button" onPress={() => { clearError(); void toggle(); }} style={({ pressed }) => [styles.retry, pressed && { opacity: .8 }]}><Text style={styles.retryText}>Повторить</Text></Pressable>
+            </Animated.View>
+          : <Text style={styles.subtitle}>{active ? t.tapToDisconnect : status === 'connecting' || status === 'disconnecting' ? ' ' : t.tapToConnect}</Text>}
       </View>
 
       {/* Ticket: tariff stub | location, joined by a perforation. */}
@@ -124,13 +130,15 @@ const styles = StyleSheet.create({
   idLabel: { color: theme.colors.textSecondary, fontSize: 10, letterSpacing: 1.6, fontFamily: 'SaliSans-Bold' },
   idValue: { color: theme.colors.textPrimary, fontSize: 15, fontFamily: 'SaliSans-SemiBold', letterSpacing: .6, marginTop: 1 },
   codeButton: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 38, paddingHorizontal: 14, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
-  codeCap: { width: 10, height: 4, borderRadius: 2, backgroundColor: theme.colors.accent, transform: [{ rotate: theme.cap.angle }] },
   codeText: { color: theme.colors.textPrimary, fontSize: 14, fontFamily: 'SaliSans-SemiBold' },
-  hero: { flex: 1, minHeight: 470, alignItems: 'center', justifyContent: 'center' },
+  hero: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8 },
   kicker: { color: theme.colors.textSecondary, fontSize: 15, fontFamily: 'SaliSans-SemiBold', letterSpacing: 1.2, fontVariant: ['tabular-nums'], height: 22 },
   title: { color: theme.colors.textPrimary, fontSize: 28, lineHeight: 34, fontFamily: 'SaliSans-Bold', textAlign: 'center', marginTop: 4 },
   subtitle: { color: theme.colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 6 },
-  error: { color: theme.colors.error, textAlign: 'center', fontSize: 14, lineHeight: 20, paddingHorizontal: 20, marginTop: 10 },
+  errorCard: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, paddingVertical: 10, paddingLeft: 14, paddingRight: 8, borderRadius: 16, backgroundColor: 'rgba(255,122,122,0.08)', borderWidth: 1, borderColor: 'rgba(255,122,122,0.22)', maxWidth: 360 },
+  errorText: { flex: 1, color: '#FFB4B4', fontSize: 13.5, lineHeight: 19 },
+  retry: { paddingHorizontal: 14, height: 34, borderRadius: 17, backgroundColor: theme.colors.surfaceElevated, justifyContent: 'center' },
+  retryText: { color: theme.colors.textPrimary, fontSize: 13, fontFamily: 'SaliSans-SemiBold' },
   ticket: { flexDirection: 'row', borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden' },
   stub: { flex: 1, paddingVertical: 15, paddingHorizontal: 16 },
   stubWide: { flex: 1.25 },

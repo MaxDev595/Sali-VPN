@@ -1,5 +1,6 @@
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
+import { Icon } from './Icon';
 import { useAccountStore } from '../store/accountStore';
 import { telegramLinkUrl } from '../services/session';
 import { theme } from '../theme';
@@ -13,12 +14,12 @@ export function TelegramLinkCard({ compact = false }: { compact?: boolean }) {
   const home = useAccountStore(state => state.home);
   if (!home || home.user.telegramLinked) return null;
   return <Pressable accessibilityRole="button" onPress={() => void Linking.openURL(telegramLinkUrl(home.user.publicId))} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-    <View style={styles.icon}><Text style={styles.iconText}>✈︎</Text></View>
+    <View style={styles.icon}><Icon name="telegram" size={20} color={theme.colors.accent} /></View>
     <View style={styles.copy}>
       <Text style={styles.title}>Привяжите Telegram</Text>
       {!compact && <Text style={styles.text}>Бесплатные 24 часа, коды и напоминания придут в бот Sali. Ваш ID: <Text style={styles.id}>{home.user.publicId}</Text></Text>}
     </View>
-    <Text style={styles.chevron}>›</Text>
+    <Icon name="chevron" size={18} color={theme.colors.textSecondary} />
   </Pressable>;
 }
 
