@@ -1,32 +1,120 @@
-import { Linking, PermissionsAndroid, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, View } from 'react-native';
-import { Text } from '../../src/components/Text';
 import { useEffect, useState } from 'react';
+import { Linking, PermissionsAndroid, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Text } from '../../src/components/Text';
 import { SaliModal } from '../../src/components/SaliModal';
-import { DownloadOptions } from '../../src/components/DownloadOptions';
+import { Group, Row, SectionLabel } from '../../src/components/List';
+import { TelegramLinkCard } from '../../src/components/TelegramLinkCard';
 import { useI18n } from '../../src/i18n';
 import { Language, usePreferencesStore } from '../../src/store/preferencesStore';
-import { theme } from '../../src/theme';
 import { useAccountStore } from '../../src/store/accountStore';
 import { telegramBotUrl, telegramLinkUrl } from '../../src/services/session';
-import { TelegramLinkCard } from '../../src/components/TelegramLinkCard';
+import { openHelp, openSite } from '../../src/services/links';
+import { theme } from '../../src/theme';
 
 const APP_VERSION = Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? '—';
-function Row({ title, value, toggle, onChange, onPress }: { title: string; value?: string; toggle?: boolean; onChange?(value: boolean): void; onPress?(): void }) { const displayedValue = value === '0.1.6' ? APP_VERSION : value; const content = <><Text style={styles.rowTitle}>{title}</Text>{onChange ? <Switch value={toggle} onValueChange={onChange} trackColor={{ false: theme.colors.muted, true: 'rgba(255,197,138,.45)' }} thumbColor={toggle ? theme.colors.accent : '#C9D3E8'} /> : <Text style={styles.value}>{displayedValue}  ›</Text>}</>; return onPress ? <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>{content}</Pressable> : <View style={styles.row}>{content}</View>; }
 
-export default function SettingsScreen() {
-  const prefs = usePreferencesStore(); const { t } = useI18n(); const account = useAccountStore(state => state.home); const access = useAccountStore(state => state.access); const [languageOpen, setLanguageOpen] = useState(false); const [info, rawSetInfo] = useState<{ title: string; text: string } | null>(null);
-  const landingUrl = (process.env.EXPO_PUBLIC_LANDING_URL ?? 'https://salivpn.com').replace(/\/$/, '');
-  const setInfo = (next: { title: string; text: string } | null) => {
-    if (next?.title === t.privacyPolicy) { void Linking.openURL(`${landingUrl}/privacy`); return; }
-    if (next?.title === t.terms) { void Linking.openURL(`${landingUrl}/terms`); return; }
-    rawSetInfo(next?.title === 'Sali VPN 0.1.6' ? { ...next, title: `Sali VPN ${APP_VERSION}` } : next);
-  };
+export default function ProfileScreen() {
+  const prefs = usePreferencesStore();
+  const { t } = useI18n();
+  const home = useAccountStore(state => state.home);
+  const access = useAccountStore(state => state.access);
+  const [languageOpen, setLanguageOpen] = useState(false);
   useEffect(() => { if (!prefs.hydrated) void prefs.hydrate(); }, [prefs]);
+
   const chooseLanguage = (language: Language) => { void prefs.set('language', language); setLanguageOpen(false); };
-  const toggleNotifications = async (enabled: boolean) => { if (enabled && Platform.OS === 'android' && Platform.Version >= 33) { const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS); if (result !== PermissionsAndroid.RESULTS.GRANTED) return; } await prefs.set('notifications', enabled); };
-  const openVpnSettings = async () => { if (Platform.OS === 'android') await Linking.sendIntent('android.settings.VPN_SETTINGS'); };
-  return <SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.screen}><Text style={styles.title}>{t.settings}</Text><TelegramLinkCard /><Text style={styles.section}>АККАУНТ</Text><View style={styles.card}><Row title="Sali ID" value={account?.user.publicId ?? '…'} onPress={() => setInfo({ title: 'Sali ID', text: `${account?.user.publicId ?? ''}\n\nНомер этого устройства. Назовите его поддержке или пришлите боту, чтобы привязать устройство.` })} /><Row title="Тариф" value={access === 'premium' ? `до ${account?.subscription?.expiresAt ? new Date(account.subscription.expiresAt).toLocaleDateString('ru-RU') : '∞'}` : access === 'trial' ? 'Бесплатный' : 'Нет'} onPress={() => router.push('/activate')} /><Row title="Ввести код" value="" onPress={() => router.push('/activate')} /><Row title="Telegram" value={account?.user.telegramLinked ? 'Привязан' : 'Привязать'} onPress={() => void Linking.openURL(account && !account.user.telegramLinked ? telegramLinkUrl(account.user.publicId) : telegramBotUrl())} /></View><DownloadOptions /><Text style={styles.section}>VPN</Text><View style={styles.card}><Row title={t.autoConnect} toggle={prefs.autoConnect} onChange={value => void prefs.set('autoConnect', value)} /><Row title={t.publicWifi} toggle={prefs.publicWifi} onChange={value => void prefs.set('publicWifi', value)} /><Row title={t.killSwitch} toggle={prefs.killSwitch} onChange={value => { void prefs.set('killSwitch', value); if (value) void openVpnSettings(); }} /><Row title={t.protocol} value="WireGuard" onPress={() => setInfo({ title: t.protocol, text: 'WireGuard' })} /><Row title={t.dns} value="Sali DNS" onPress={() => setInfo({ title: t.dns, text: 'Sali DNS' })} /></View><Text style={styles.section}>{t.app}</Text><View style={styles.card}><Row title={t.language} value={prefs.language === 'ru' ? t.russian : t.english} onPress={() => setLanguageOpen(true)} /><Row title={t.notifications} toggle={prefs.notifications} onChange={value => void toggleNotifications(value)} /></View><Text style={styles.section}>{t.support}</Text><View style={styles.card}><Row title={t.help} value="" onPress={() => router.push('/support')} /><Row title={t.privacyPolicy} value="" onPress={() => setInfo({ title: t.privacyPolicy, text: prefs.language === 'ru' ? 'Документ будет опубликован перед публичным релизом.' : 'The document will be published before the public release.' })} /><Row title={t.terms} value="" onPress={() => setInfo({ title: t.terms, text: prefs.language === 'ru' ? 'Документ будет опубликован перед публичным релизом.' : 'The document will be published before the public release.' })} /><Row title={t.about} value="0.1.6" onPress={() => setInfo({ title: 'Sali VPN 0.1.6', text: prefs.language === 'ru' ? 'Приватное подключение в одно нажатие.' : 'Private connection in one tap.' })} /></View></ScrollView><SaliModal visible={languageOpen} title={t.selectLanguage} onClose={() => setLanguageOpen(false)}><Pressable style={styles.option} onPress={() => chooseLanguage('ru')}><Text style={styles.optionText}>Русский</Text><Text style={styles.optionMark}>{prefs.language === 'ru' ? '●' : '○'}</Text></Pressable><Pressable style={styles.option} onPress={() => chooseLanguage('en')}><Text style={styles.optionText}>English</Text><Text style={styles.optionMark}>{prefs.language === 'en' ? '●' : '○'}</Text></Pressable></SaliModal><SaliModal visible={Boolean(info)} title={info?.title ?? ''} onClose={() => setInfo(null)}><Text style={styles.modalText}>{info?.text}</Text><Pressable style={styles.modalButton} onPress={() => setInfo(null)}><Text style={styles.modalButtonText}>OK</Text></Pressable></SaliModal></SafeAreaView>;
+  const toggleNotifications = async (enabled: boolean) => {
+    if (enabled && Platform.OS === 'android' && Platform.Version >= 33) {
+      const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+      if (result !== PermissionsAndroid.RESULTS.GRANTED) return;
+    }
+    await prefs.set('notifications', enabled);
+  };
+  const toggleKillSwitch = (value: boolean) => {
+    void prefs.set('killSwitch', value);
+    // Android owns the real kill switch: "Always-on VPN" + "Block connections without VPN".
+    if (value && Platform.OS === 'android') void Linking.sendIntent('android.settings.VPN_SETTINGS').catch(() => openHelp('kill-switch'));
+  };
+
+  const until = home?.subscription?.expiresAt ? new Date(home.subscription.expiresAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+  const tariff = access === 'premium' ? (until ? `Подписка до ${until}` : 'Подписка') : access === 'trial' ? 'Бесплатный тариф' : access === 'expired' ? 'Тариф закончился' : 'Нет тарифа';
+
+  return <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+    <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+      <Text style={styles.title}>{t.profile}</Text>
+
+      {/* Identity card: Sali ID is the account, shown like a pass. */}
+      <Animated.View entering={FadeInDown.duration(380)} style={styles.pass}>
+        <View style={styles.passCap} />
+        <Text style={styles.passLabel}>SALI ID</Text>
+        <Pressable onPress={() => home && void Share.share({ message: home.user.publicId })} hitSlop={8}><Text style={styles.passId}>{home?.user.publicId ?? '····-····'}</Text></Pressable>
+        <View style={styles.passFoot}>
+          <View style={[styles.dot, { backgroundColor: access === 'premium' ? theme.colors.success : access === 'trial' ? theme.colors.accent : theme.colors.muted }]} />
+          <Text style={styles.passTariff}>{tariff}</Text>
+          <Pressable onPress={() => router.push('/activate')} style={({ pressed }) => [styles.passButton, pressed && { opacity: .8 }]}><Text style={styles.passButtonText}>Ввести код</Text></Pressable>
+        </View>
+      </Animated.View>
+
+      <View style={{ marginTop: 14 }}><TelegramLinkCard /></View>
+
+      <SectionLabel>{t.account}</SectionLabel>
+      <Group>
+        <Row title="Telegram" hint={home?.user.telegramLinked ? 'Коды и напоминания приходят в бот' : 'Привяжите, чтобы активировать коды одной кнопкой'} value={home?.user.telegramLinked ? 'Привязан' : 'Привязать'} onPress={() => void Linking.openURL(home && !home.user.telegramLinked ? telegramLinkUrl(home.user.publicId) : telegramBotUrl())} />
+        <Row title="Оплата и коды" kind="external" onPress={() => openHelp('payments')} last />
+      </Group>
+
+      <SectionLabel>{t.connection}</SectionLabel>
+      <Group>
+        <Row title={t.autoConnect} hint={t.autoConnectHint} toggle={prefs.autoConnect} onToggle={value => void prefs.set('autoConnect', value)} onInfo={() => openHelp('auto-connect')} />
+        <Row title={t.killSwitch} hint={t.killSwitchHint} toggle={prefs.killSwitch} onToggle={toggleKillSwitch} onInfo={() => openHelp('kill-switch')} />
+        <Row title={t.protocol} value="WireGuard" kind="external" onPress={() => openHelp('protocol')} />
+        <Row title={t.dns} value="1.1.1.1" kind="external" onPress={() => openHelp('dns')} last />
+      </Group>
+
+      <SectionLabel>{t.app}</SectionLabel>
+      <Group>
+        <Row title={t.language} value={prefs.language === 'ru' ? t.russian : t.english} onPress={() => setLanguageOpen(true)} />
+        <Row title={t.notifications} toggle={prefs.notifications} onToggle={value => void toggleNotifications(value)} last />
+      </Group>
+
+      <SectionLabel>{t.support}</SectionLabel>
+      <Group>
+        <Row title={t.help} onPress={() => router.push('/support')} />
+        <Row title={t.docs} kind="external" onPress={() => openHelp()} />
+        <Row title={t.privacyPolicy} kind="external" onPress={() => openSite('/privacy')} />
+        <Row title={t.terms} kind="external" onPress={() => openSite('/terms')} />
+        <Row title={t.version} value={APP_VERSION} kind="none" last />
+      </Group>
+    </ScrollView>
+
+    <SaliModal visible={languageOpen} title={t.selectLanguage} onClose={() => setLanguageOpen(false)}>
+      {(['ru', 'en'] as const).map(language => <Pressable key={language} style={styles.option} onPress={() => chooseLanguage(language)}>
+        <Text style={styles.optionText}>{language === 'ru' ? 'Русский' : 'English'}</Text>
+        <View style={[styles.radio, prefs.language === language && styles.radioOn]}>{prefs.language === language && <View style={styles.radioCap} />}</View>
+      </Pressable>)}
+    </SaliModal>
+  </SafeAreaView>;
 }
-const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: theme.colors.background }, screen: { padding: 20, paddingBottom: 44, paddingTop: 30 }, title: { color: theme.colors.textPrimary, fontSize: 32, fontFamily: 'SaliSans-Bold', marginBottom: 18 }, section: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: '800', letterSpacing: 1.3, marginTop: 20, marginBottom: 9, marginLeft: 4 }, card: { borderRadius: 20, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden' }, row: { minHeight: 64, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border }, pressed: { backgroundColor: theme.colors.surfaceElevated }, rowTitle: { color: theme.colors.textPrimary, fontSize: 17, lineHeight: 22, fontWeight: '600', flex: 1 }, value: { color: theme.colors.textSecondary, fontSize: 15 }, option: { minHeight: 58, paddingHorizontal: 16, borderRadius: 16, backgroundColor: theme.colors.surfaceElevated, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }, optionText: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: '700', flex: 1 }, optionMark: { color: theme.colors.accent, fontSize: 20 }, modalText: { color: theme.colors.textSecondary, fontSize: 17, lineHeight: 25 }, modalButton: { alignSelf: 'flex-end', marginTop: 22, minWidth: 72, minHeight: 44, borderRadius: 14, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center' }, modalButtonText: { color: theme.colors.onPrimary, fontSize: 16, fontWeight: '800' } });
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: theme.colors.background },
+  screen: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 40 },
+  title: { color: theme.colors.textPrimary, fontSize: 34, lineHeight: 40, fontFamily: 'SaliSans-Bold', marginBottom: 16 },
+  pass: { borderRadius: theme.radius.xl, padding: 20, backgroundColor: '#0B1630', borderWidth: 1, borderColor: '#1B2C4E', overflow: 'hidden' },
+  passCap: { position: 'absolute', right: -10, top: 22, width: 64, height: 18, borderRadius: 6, backgroundColor: theme.colors.accent, opacity: .85, transform: [{ rotate: theme.cap.angle }] },
+  passLabel: { color: '#8E9CBB', fontSize: 11, letterSpacing: 2, fontFamily: 'SaliSans-Bold' },
+  passId: { color: theme.colors.cream, fontSize: 30, letterSpacing: 2, fontFamily: 'SaliSans-SemiBold', marginTop: 6, fontVariant: ['tabular-nums'] },
+  passFoot: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  passTariff: { flex: 1, color: '#C9D2E6', fontSize: 14 },
+  passButton: { paddingHorizontal: 14, height: 34, borderRadius: 17, backgroundColor: theme.colors.accent, justifyContent: 'center' },
+  passButtonText: { color: theme.colors.onPrimary, fontSize: 13, fontFamily: 'SaliSans-Bold' },
+  option: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
+  optionText: { color: theme.colors.textPrimary, fontSize: 17 },
+  radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: theme.colors.muted, alignItems: 'center', justifyContent: 'center' },
+  radioOn: { borderColor: theme.colors.accent },
+  radioCap: { width: 11, height: 4, borderRadius: 2, backgroundColor: theme.colors.accent, transform: [{ rotate: theme.cap.angle }] },
+});

@@ -1,20 +1,31 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Text } from '../src/components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { Text } from '../src/components/Text';
 import { ServerList } from '../src/components/ServerList';
-import { fallbackServers } from '../src/data/fallbackServers';
-import { api } from '../src/services/api/client';
-import { useVpnStore } from '../src/store/vpnStore';
-import { getEntitlement } from '../src/utils/entitlement';
+import { useAccountStore } from '../src/store/accountStore';
 import { theme } from '../src/theme';
+import { useI18n } from '../src/i18n';
 
+/** Location picker opened from the home screen ticket. */
 export default function ServerModal() {
-  const { server, setServer } = useVpnStore();
-  const home = useQuery({ queryKey: ['home'], queryFn: api.home, retry: false });
-  const hasPremium = getEntitlement(home.data) === 'premium';
-  return <SafeAreaView style={styles.safe}><View style={styles.header}><View style={styles.copy}><Text style={styles.kicker}>SALI NETWORK</Text><Text style={styles.title}>Выберите сервер</Text><Text style={styles.subtitle}>1 Free · 3 Premium · 10 скоро</Text></View><Pressable accessibilityLabel="Закрыть" onPress={() => router.back()} style={styles.close}><Text style={styles.closeText}>×</Text></Pressable></View><ServerList servers={fallbackServers} selectedId={server?.id} hasPremium={hasPremium} onSelect={next => { setServer(next); router.back(); }} onPremium={() => router.push('/activate')} /></SafeAreaView>;
+  const { t } = useI18n();
+  const access = useAccountStore(state => state.access);
+  return <SafeAreaView style={styles.safe}>
+    <View style={styles.grip} />
+    <ServerList
+      onPicked={(server) => { if (server.premiumOnly && access !== 'premium') router.replace('/activate'); else router.back(); }}
+      header={<View style={styles.header}><View style={{ flex: 1 }}><Text style={styles.title}>{t.locations}</Text><Text style={styles.subtitle}>{t.chooseLocation}</Text></View><Pressable accessibilityLabel="Закрыть" onPress={() => router.back()} style={styles.close}><Text style={styles.closeText}>×</Text></Pressable></View>}
+    />
+  </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: theme.colors.background }, header: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 7, flexDirection: 'row', alignItems: 'flex-start' }, copy: { flex: 1 }, kicker: { color: theme.colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1.4 }, title: { color: theme.colors.textPrimary, fontSize: 30, lineHeight: 36, fontWeight: '800', marginTop: 6 }, subtitle: { color: theme.colors.textSecondary, fontSize: 15, marginTop: 5 }, close: { width: 46, height: 46, borderRadius: 23, backgroundColor: theme.colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' }, closeText: { color: theme.colors.textPrimary, fontSize: 29, lineHeight: 31 } });
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: theme.colors.background },
+  grip: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: theme.colors.muted, marginTop: 8 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingTop: 14, paddingBottom: 12 },
+  title: { color: theme.colors.textPrimary, fontSize: 28, lineHeight: 34, fontFamily: 'SaliSans-Bold' },
+  subtitle: { color: theme.colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 4 },
+  close: { width: 42, height: 42, borderRadius: 21, backgroundColor: theme.colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' },
+  closeText: { color: theme.colors.textPrimary, fontSize: 26, lineHeight: 28 },
+});

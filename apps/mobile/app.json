@@ -8,8 +8,6 @@
     "userInterfaceStyle": "dark",
     "icon": "./assets/sali-logo.png",
     "splash": {
-      "image": "./assets/splash-white.png",
-      "resizeMode": "cover",
       "backgroundColor": "#FFFFFF"
     },
     "ios": {

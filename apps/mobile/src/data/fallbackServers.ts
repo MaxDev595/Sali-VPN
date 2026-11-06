@@ -1,18 +1,21 @@
 import type { VPNServer } from '../types';
 
+/**
+ * Shown only while the API is unreachable. Real locations come from GET /servers;
+ * these have no ids the API knows, so connecting from them lets the API pick the server.
+ */
 export const fallbackServers: VPNServer[] = [
-  { id: 'nl-free', country: 'Нидерланды', countryCode: 'NL', city: 'Амстердам', ping: 34, load: 38, availability: true, premiumOnly: false, access: 'free' },
-  { id: 'de-premium', country: 'Германия', countryCode: 'DE', city: 'Франкфурт', ping: 39, load: 27, availability: true, premiumOnly: true, access: 'premium' },
-  { id: 'fi-premium', country: 'Финляндия', countryCode: 'FI', city: 'Хельсинки', ping: 43, load: 21, availability: true, premiumOnly: true, access: 'premium' },
-  { id: 'ch-premium', country: 'Швейцария', countryCode: 'CH', city: 'Цюрих', ping: 51, load: 31, availability: true, premiumOnly: true, access: 'premium' },
-  { id: 'is-soon', country: 'Исландия', countryCode: 'IS', city: 'Рейкьявик', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
-  { id: 'se-soon', country: 'Швеция', countryCode: 'SE', city: 'Стокгольм', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
-  { id: 'no-soon', country: 'Норвегия', countryCode: 'NO', city: 'Осло', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
-  { id: 'fr-soon', country: 'Франция', countryCode: 'FR', city: 'Париж', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
-  { id: 'gb-soon', country: 'Великобритания', countryCode: 'GB', city: 'Лондон', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
-  { id: 'us-soon', country: 'США', countryCode: 'US', city: 'Нью-Йорк', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
-  { id: 'ca-soon', country: 'Канада', countryCode: 'CA', city: 'Торонто', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
-  { id: 'jp-soon', country: 'Япония', countryCode: 'JP', city: 'Токио', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
-  { id: 'sg-soon', country: 'Сингапур', countryCode: 'SG', city: 'Сингапур', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
-  { id: 'au-soon', country: 'Австралия', countryCode: 'AU', city: 'Сидней', ping: 0, load: 0, availability: false, premiumOnly: true, access: 'soon' },
+  { id: 'local-nl', country: 'Нидерланды', countryCode: 'NL', city: 'Амстердам', ping: null, load: null, availability: true, premiumOnly: false, access: 'free' },
+  { id: 'local-de', country: 'Германия', countryCode: 'DE', city: 'Франкфурт', ping: null, load: null, availability: true, premiumOnly: true, access: 'premium' },
+  { id: 'local-us', country: 'США', countryCode: 'US', city: 'Нью-Йорк', ping: null, load: null, availability: true, premiumOnly: true, access: 'premium' },
 ];
+
+export const COUNTRY_NAMES: Record<string, { ru: string; en: string }> = {
+  NL: { ru: 'Нидерланды', en: 'Netherlands' }, DE: { ru: 'Германия', en: 'Germany' }, FI: { ru: 'Финляндия', en: 'Finland' },
+  US: { ru: 'США', en: 'United States' }, CH: { ru: 'Швейцария', en: 'Switzerland' }, SE: { ru: 'Швеция', en: 'Sweden' },
+  NO: { ru: 'Норвегия', en: 'Norway' }, FR: { ru: 'Франция', en: 'France' }, GB: { ru: 'Великобритания', en: 'United Kingdom' },
+  PL: { ru: 'Польша', en: 'Poland' }, TR: { ru: 'Турция', en: 'Turkey' }, KZ: { ru: 'Казахстан', en: 'Kazakhstan' },
+  AT: { ru: 'Австрия', en: 'Austria' }, CA: { ru: 'Канада', en: 'Canada' }, JP: { ru: 'Япония', en: 'Japan' }, SG: { ru: 'Сингапур', en: 'Singapore' },
+};
+
+export const FLAGS: Record<string, string> = { NL: '🇳🇱', DE: '🇩🇪', FI: '🇫🇮', US: '🇺🇸', CH: '🇨🇭', SE: '🇸🇪', NO: '🇳🇴', FR: '🇫🇷', GB: '🇬🇧', PL: '🇵🇱', TR: '🇹🇷', KZ: '🇰🇿', AT: '🇦🇹', CA: '🇨🇦', JP: '🇯🇵', SG: '🇸🇬' };

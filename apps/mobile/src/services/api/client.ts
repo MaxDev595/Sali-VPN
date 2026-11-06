@@ -1,5 +1,8 @@
 import { secureStorage } from '../secureStorage';
 import type { HomeState, VPNServer } from '../../types';
+import { COUNTRY_NAMES } from '../../data/fallbackServers';
+
+interface ApiServer { id: string; name: string; location: string; countryCode: string | null; city: string | null; premiumOnly: boolean; pingMs: number | null; currentLoad: number; capacity: number | null; recommended: boolean }
 
 const builtInApi = String(process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const DISCOVERY_URL = 'https://salivpn.com/config.json';
@@ -60,12 +63,25 @@ export interface RedeemResult { kind: 'PAID' | 'FREE' | 'GIFT' | 'PROMO'; durati
  */
 export const api = {
   appLogin: (deviceKey: string) => request<{ token: string; publicId: string }>('/auth/app', { method: 'POST', body: JSON.stringify({ deviceKey }) }),
-  exchangeTelegramToken: (token: string) => request<{ token: string }>('/auth/mobile', { method: 'POST', body: JSON.stringify({ token }) }),
   home: () => request<HomeState>('/home'),
   redeem: (code: string) => request<RedeemResult>('/codes/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
-  connect: (deviceKey: string) => request<{ config: { configText: string; serverLocation: string; allocatedIp: string } }>('/vpn/connect', { method: 'POST', headers: { 'X-Device-Key': deviceKey } }),
+  connect: (deviceKey: string, serverId?: string) => request<{ config: { configText: string; serverLocation: string; allocatedIp: string } }>('/vpn/connect', { method: 'POST', headers: { 'X-Device-Key': deviceKey }, body: JSON.stringify(serverId ? { serverId } : {}) }),
   disconnect: () => request('/vpn/disconnect', { method: 'POST' }),
-  servers: () => request<VPNServer[]>('/servers'),
+  servers: async (): Promise<VPNServer[]> => {
+    const rows = await request<ApiServer[]>('/servers');
+    return rows.map((row) => ({
+      id: row.id,
+      country: COUNTRY_NAMES[row.countryCode ?? '']?.ru ?? row.location,
+      countryCode: row.countryCode ?? '',
+      city: row.city ?? row.location,
+      ping: row.pingMs ?? null,
+      load: row.capacity ? Math.round((row.currentLoad / row.capacity) * 100) : null,
+      availability: true,
+      premiumOnly: row.premiumOnly,
+      access: row.premiumOnly ? 'premium' : 'free',
+      recommended: row.recommended,
+      remote: true,
+    }));
+  },
   registerCurrentDevice: (deviceKey: string) => request('/devices/current', { method: 'POST', body: JSON.stringify({ deviceKey, name: 'Android', platform: 'ANDROID' }) }),
-  createSupportTicket: (message: string) => request('/support/tickets', { method: 'POST', body: JSON.stringify({ category: 'other', message }) }),
 };

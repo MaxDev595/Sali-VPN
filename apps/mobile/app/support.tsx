@@ -1,20 +1,79 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, View } from 'react-native';
-import { Text, TextInput } from '../src/components/Text';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { api } from '../src/services/api/client';
-import { SaliModal } from '../src/components/SaliModal';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Text } from '../src/components/Text';
+import { AccordionItem } from '../src/components/Accordion';
+import { SectionLabel } from '../src/components/List';
+import { SaliButton } from '../src/components/SaliButton';
+import { useAccountStore } from '../src/store/accountStore';
+import { openHelp, openSupport } from '../src/services/links';
 import { useI18n } from '../src/i18n';
 import { theme } from '../src/theme';
 
-const faq = {
-  ru: [['Почему VPN не подключается?', 'Проверьте интернет, выберите доступный сервер и подтвердите системное разрешение VPN.'], ['Почему нет интернета после подключения?', 'Отключите VPN, смените сервер и подключитесь снова.'], ['Сколько устройств доступно?', 'Одна подписка Sali Premium работает максимум на трёх устройствах.']],
-  en: [['Why will VPN not connect?', 'Check your internet connection, choose an available server and approve the system VPN permission.'], ['Why is there no internet after connecting?', 'Disconnect VPN, change the server and connect again.'], ['How many devices are supported?', 'One Sali Premium subscription supports up to three devices.']],
+const FAQ = {
+  ru: [
+    ['VPN не подключается', 'Проверьте, что тариф активен (Профиль), выключите другие VPN и «Частный DNS» в настройках Android, смените локацию и попробуйте снова.'],
+    ['Подключился, но сайты не открываются', 'Отключитесь, выберите другую локацию и подключитесь снова. Если включён Kill Switch, проверьте, что в системе разрешена «Постоянная VPN» для Sali.'],
+    ['Куда вводить код?', 'Кнопка «Код» на главном экране или «Ввести код» в профиле. Регистр и дефисы не важны — код можно просто вставить.'],
+    ['Как получить 24 часа бесплатно?', 'Откройте наш Telegram-бот и нажмите «24 часа бесплатно». Бот пришлёт код — введите его здесь или активируйте кнопкой в боте.'],
+    ['Можно на нескольких устройствах?', 'Да. Один код активирует одно устройство: купите код для каждого и активируйте его кнопкой в боте — он спросит, на какое устройство.'],
+    ['Сменил телефон — что с подпиской?', 'Напишите в поддержку старый и новый Sali ID — поможем перенести оставшиеся дни.'],
+  ],
+  en: [
+    ['VPN won’t connect', 'Check your plan is active (Profile), turn off other VPNs and Android’s “Private DNS”, change the location and try again.'],
+    ['Connected, but sites won’t open', 'Disconnect, pick another location and connect again. With Kill Switch on, make sure “Always-on VPN” is allowed for Sali.'],
+    ['Where do I enter the code?', 'The “Code” button on the home screen or “Enter code” in Profile. Case and dashes don’t matter — just paste it.'],
+    ['How do I get 24 hours free?', 'Open our Telegram bot and tap “24 hours free”. It sends a code — enter it here or activate it from the bot.'],
+    ['Can I use several devices?', 'Yes. One code activates one device: get a code for each and activate it from the bot — it asks which device.'],
+    ['New phone — what about my plan?', 'Send support your old and new Sali ID — we’ll help move the remaining days.'],
+  ],
 } as const;
 
 export default function SupportScreen() {
-  const { language, t } = useI18n(); const [message, setMessage] = useState(''); const [open, setOpen] = useState<number | null>(null); const [sending, setSending] = useState(false); const [result, setResult] = useState<string | null>(null);
-  const send = async () => { if (!message.trim() || sending) return; setSending(true); try { await api.createSupportTicket(message.trim()); setMessage(''); setResult(t.sent); } catch { setResult(language === 'ru' ? 'Не удалось отправить. Проверьте интернет или напишите нам в Telegram-бот.' : 'Could not send. Sign in through Telegram and try again.'); } finally { setSending(false); } };
-  return <SafeAreaView style={styles.safe}><KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled"><View style={styles.header}><Pressable onPress={() => router.back()} style={styles.back}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.title}>{t.help}</Text></View><Text style={styles.intro}>{t.supportIntro}</Text><Text style={styles.section}>{t.faq}</Text>{faq[language].map(([question, answer], index) => <Pressable key={question} onPress={() => setOpen(open === index ? null : index)} style={styles.faqCard}><View style={styles.faqHead}><Text style={styles.question}>{question}</Text><Text style={styles.plus}>{open === index ? '−' : '+'}</Text></View>{open === index && <Text style={styles.answer}>{answer}</Text>}</Pressable>)}<Text style={styles.section}>{t.writeSupport}</Text><View style={styles.form}><TextInput value={message} onChangeText={setMessage} placeholder={t.message} placeholderTextColor={theme.colors.muted} multiline maxLength={2000} style={styles.input} /><Pressable disabled={!message.trim() || sending} onPress={() => void send()} style={({ pressed }) => [styles.send, (!message.trim() || sending) && styles.sendDisabled, pressed && styles.pressed]}><Text style={styles.sendText}>{sending ? '…' : t.send}</Text></Pressable></View></ScrollView></KeyboardAvoidingView><SaliModal visible={Boolean(result)} title="Sali Support" onClose={() => setResult(null)}><Text style={styles.result}>{result}</Text></SaliModal></SafeAreaView>;
+  const { language, t } = useI18n();
+  const publicId = useAccountStore(state => state.home?.user.publicId);
+  const [open, setOpen] = useState<number | null>(null);
+
+  return <SafeAreaView style={styles.safe}>
+    <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <Pressable accessibilityLabel="Назад" onPress={() => router.back()} style={styles.back}><Text style={styles.backText}>‹</Text></Pressable>
+        <Text style={styles.title}>{t.help}</Text>
+      </View>
+      <Text style={styles.intro}>{t.supportIntro}</Text>
+
+      <Animated.View entering={FadeInDown.duration(380)} style={styles.contact}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.contactTitle}>@SaliVPNHelpBot</Text>
+          <Text style={styles.contactText}>Укажите ваш Sali ID: <Text style={styles.id}>{publicId ?? '—'}</Text></Text>
+        </View>
+      </Animated.View>
+      <View style={{ marginTop: 12 }}><SaliButton title={t.writeSupport} onPress={openSupport} /></View>
+
+      <SectionLabel>{t.faq}</SectionLabel>
+      {FAQ[language].map(([question, answer], index) => <Animated.View key={question} entering={FadeInDown.delay(60 + index * 45).duration(340)}>
+        <AccordionItem question={question} answer={answer} open={open === index} onToggle={() => setOpen(open === index ? null : index)} />
+      </Animated.View>)}
+
+      <Pressable onPress={() => openHelp()} style={styles.more}><Text style={styles.moreText}>{t.allArticles} ↗</Text></Pressable>
+    </ScrollView>
+  </SafeAreaView>;
 }
-const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: theme.colors.background }, flex: { flex: 1 }, screen: { padding: 20, paddingTop: 28, paddingBottom: 50 }, header: { flexDirection: 'row', alignItems: 'center', gap: 12 }, back: { width: 46, height: 46, borderRadius: 23, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center' }, backText: { color: theme.colors.textPrimary, fontSize: 36, lineHeight: 38 }, title: { color: theme.colors.textPrimary, fontSize: 30, fontWeight: '800', flex: 1 }, intro: { color: theme.colors.textSecondary, fontSize: 17, lineHeight: 25, marginTop: 20 }, section: { color: theme.colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1.4, marginTop: 28, marginBottom: 10 }, faqCard: { padding: 17, borderRadius: 18, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, marginBottom: 10 }, faqHead: { flexDirection: 'row', alignItems: 'center', gap: 12 }, question: { color: theme.colors.textPrimary, fontSize: 17, lineHeight: 23, fontWeight: '700', flex: 1 }, plus: { color: theme.colors.accent, fontSize: 25 }, answer: { color: theme.colors.textSecondary, fontSize: 15, lineHeight: 22, marginTop: 13 }, form: { padding: 14, borderRadius: 20, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }, input: { minHeight: 130, color: theme.colors.textPrimary, fontSize: 17, lineHeight: 24, textAlignVertical: 'top', padding: 8 }, send: { minHeight: 52, borderRadius: 16, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 10 }, sendDisabled: { opacity: .4 }, pressed: { opacity: .7 }, sendText: { color: theme.colors.background, fontSize: 17, fontWeight: '800' }, result: { color: theme.colors.textSecondary, fontSize: 17, lineHeight: 24 } });
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: theme.colors.background },
+  screen: { padding: 20, paddingBottom: 48 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  back: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.surface, alignItems: 'center', justifyContent: 'center' },
+  backText: { color: theme.colors.textPrimary, fontSize: 32, lineHeight: 34 },
+  title: { flex: 1, color: theme.colors.textPrimary, fontSize: 26, lineHeight: 32, fontFamily: 'SaliSans-Bold' },
+  intro: { color: theme.colors.textSecondary, fontSize: 15, lineHeight: 22, marginTop: 16, marginBottom: 18 },
+  contact: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: theme.radius.lg, backgroundColor: '#0C1A33', borderWidth: 1, borderColor: '#1E3460' },
+  contactTitle: { color: theme.colors.textPrimary, fontSize: 17, fontFamily: 'SaliSans-SemiBold' },
+  contactText: { color: theme.colors.textSecondary, fontSize: 14, marginTop: 4 },
+  id: { color: theme.colors.accent, fontFamily: 'SaliSans-Bold' },
+  more: { alignSelf: 'center', paddingVertical: 16 },
+  moreText: { color: theme.colors.accent, fontSize: 15, fontFamily: 'SaliSans-SemiBold' },
+});

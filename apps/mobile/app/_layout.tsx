@@ -46,9 +46,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AppBootstrap />
       <StatusBar style={introDone ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background }, animation: 'fade_from_bottom', animationDuration: 260 }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background }, animation: 'fade_from_bottom', animationDuration: 320 }}>
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-        <Stack.Screen name="servers" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="servers" options={{ presentation: 'modal', animation: 'slide_from_bottom', gestureEnabled: true }} />
         <Stack.Screen name="activate" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
         <Stack.Screen name="support" options={{ animation: 'slide_from_right' }} />

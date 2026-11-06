@@ -5,20 +5,29 @@ import { vpnEngine } from '../services/vpn/VpnEngine';
 import { ensureSession } from '../services/session';
 import { useAccountStore } from './accountStore';
 import type { VPNConnection, VPNServer, VPNStatus } from '../types';
+import { fallbackServers } from '../data/fallbackServers';
 
 type VpnState = VPNConnection & {
   error: string | null;
   /** True when the server refused because there is no tariff: the UI offers "Ввести код". */
   needsCode: boolean;
   setServer(server: VPNServer): void;
+  adoptServer(servers: VPNServer[]): void;
   setStatus(status: VPNStatus): void;
   clearError(): void;
   toggle(): Promise<void>;
 };
 
 export const useVpnStore = create<VpnState>((set, get) => ({
-  status: 'disconnected', server: { id: 'nl-free', country: 'Нидерланды', countryCode: 'NL', city: 'Амстердам', ping: 34, load: 38, availability: true, premiumOnly: false, access: 'free' }, connectedAt: null, error: null, needsCode: false,
+  status: 'disconnected', server: fallbackServers[0]!, connectedAt: null, error: null, needsCode: false,
   setServer: (server) => { set({ server }); void Haptics.selectionAsync(); },
+  adoptServer: (servers) => {
+    // Swap the offline placeholder for the matching (or recommended) real server once the list loads.
+    const current = get().server;
+    if (current?.remote) return;
+    const next = servers.find((item) => item.countryCode === current?.countryCode && !item.premiumOnly) ?? servers.find((item) => item.recommended) ?? servers[0];
+    if (next) set({ server: next });
+  },
   setStatus: (status) => set({ status }),
   clearError: () => set({ error: null, needsCode: false, status: get().status === 'error' ? 'disconnected' : get().status }),
   toggle: async () => {
@@ -37,7 +46,8 @@ export const useVpnStore = create<VpnState>((set, get) => ({
         await vpnEngine.prepare();
         const deviceKey = await vpnEngine.deviceKey();
         await api.registerCurrentDevice(deviceKey);
-        const result = await api.connect(deviceKey);
+        const server = get().server;
+        const result = await api.connect(deviceKey, server?.remote ? server.id : undefined);
         await vpnEngine.connect(result.config.configText);
         set({ status: 'connected', connectedAt: Date.now() });
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
