@@ -185,7 +185,9 @@ export const api = {
   nodeToken: (telegramId: number, countryCode: string, city?: string) =>
     call<{ name: string; command: string }>('/bot/nodes/token', { telegramId, countryCode, city }, 0),
   nodes: (telegramId: number) =>
-    call<Array<{ name: string; host: string; country: string; active: boolean; online: boolean; users: number | null; connectedNow: number | null; load: number | null }>>('/bot/nodes/list', { telegramId }, 0),
+    call<Array<{ name: string; host: string; country: string; active: boolean; premiumOnly?: boolean; online: boolean; users: number | null; connectedNow: number | null; load: number | null }>>('/bot/nodes/list', { telegramId }, 0),
   nodeActive: (telegramId: number, name: string, isActive: boolean) =>
     call<{ updated: number }>('/bot/nodes/active', { telegramId, name, isActive }, 0),
+  nodePremium: (telegramId: number, name: string, premiumOnly: boolean) =>
+    call<{ updated: number }>('/bot/nodes/premium', { telegramId, name, premiumOnly }, 0),
 };

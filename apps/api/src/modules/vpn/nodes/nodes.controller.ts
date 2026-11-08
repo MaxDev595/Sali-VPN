@@ -20,6 +20,7 @@ class TokenDto extends AdminDto {
   @IsOptional() @IsString() @MaxLength(40) city?: string;
 }
 class ActiveDto extends AdminDto { @IsString() @MaxLength(40) name!: string; @IsBoolean() isActive!: boolean; }
+class PremiumDto extends AdminDto { @IsString() @MaxLength(40) name!: string; @IsBoolean() premiumOnly!: boolean; }
 
 /** Files are served from the repo so a new VPS only needs this API to install itself. */
 function nodeFile(name: string) {
@@ -50,7 +51,7 @@ export class NodesController {
   enroll(@Body() body: EnrollDto) { return this.nodes.enroll(body); }
 }
 
-/** Admin commands from the bot (/addserver, /nodes, /node_off, /node_on). */
+/** Admin commands from the bot (/addserver, /nodes, /node_off, /node_on, /node_free, /node_paid). */
 @Controller('internal/bot/nodes')
 @UseGuards(InternalServiceGuard)
 export class NodesBotController {
@@ -59,5 +60,6 @@ export class NodesBotController {
   @Post('token') token(@Body() body: TokenDto) { return this.nodes.createEnrollToken(body.telegramId, body.countryCode, body.city); }
   @Post('list') list(@Body() body: AdminDto) { return this.nodes.list(body.telegramId); }
   @Post('active') active(@Body() body: ActiveDto) { return this.nodes.setActive(body.telegramId, body.name, body.isActive); }
+  @Post('premium') premium(@Body() body: PremiumDto) { return this.nodes.setPremium(body.telegramId, body.name, body.premiumOnly); }
   @Post('is-admin') isAdmin(@Body() body: AdminDto) { return { admin: this.nodes.isAdmin(body.telegramId) }; }
 }

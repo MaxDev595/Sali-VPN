@@ -94,13 +94,20 @@ export class NodesService {
     const servers = await this.prisma.vpnServer.findMany({ where: { agentUrl: { not: null } }, orderBy: { name: 'asc' } });
     return Promise.all(servers.map(async (s) => {
       const info = await this.nodes.info(s.id).catch(() => null);
-      return { name: s.name, host: s.publicHost, country: s.countryCode, active: s.isActive, online: !!info?.up, users: info?.enabled ?? null, connectedNow: info?.active ?? null, load: info?.load ?? null };
+      return { name: s.name, host: s.publicHost, country: s.countryCode, active: s.isActive, premiumOnly: s.premiumOnly, online: !!info?.up, users: info?.enabled ?? null, connectedNow: info?.active ?? null, load: info?.load ?? null };
     }));
   }
 
   async setActive(telegramId: number, name: string, isActive: boolean) {
     if (!this.isAdmin(telegramId)) throw new ForbiddenException('Только для администратора');
     const res = await this.prisma.vpnServer.updateMany({ where: { name, agentUrl: { not: null } }, data: { isActive } });
+    return { updated: res.count };
+  }
+
+  /** /node_free, /node_paid: who may use the server — everyone, or subscribers only. */
+  async setPremium(telegramId: number, name: string, premiumOnly: boolean) {
+    if (!this.isAdmin(telegramId)) throw new ForbiddenException('Только для администратора');
+    const res = await this.prisma.vpnServer.updateMany({ where: { name, agentUrl: { not: null } }, data: { premiumOnly } });
     return { updated: res.count };
   }
 

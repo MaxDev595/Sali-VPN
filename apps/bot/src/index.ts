@@ -60,6 +60,8 @@ async function main() {
   bot.command('nodes', admin.nodes);
   bot.command('node_off', admin.nodeOff);
   bot.command('node_on', admin.nodeOn);
+  bot.command('node_free', admin.nodeFree);
+  bot.command('node_paid', admin.nodePaid);
 
   bot.hears(menuLabels.buy, billing.buy);
   bot.hears([menuLabels.free, '🎁 Бесплатный день', '🎁 Бесплатный тариф'], billing.free);

@@ -105,7 +105,8 @@ export class HomeController {
     }
     const access = await this.devices.assertCanConnect(authUser.sub, deviceKey);
     const serverId = typeof body?.serverId === 'string' && body.serverId.length <= 40 ? body.serverId : undefined;
-    const account = await this.vpn.ensureHealthyAccount(authUser.sub, serverId);
+    // Free tariff → free servers only; subscription → every location.
+    const account = await this.vpn.ensureHealthyAccount(authUser.sub, serverId, Boolean(access.activeSub));
 
     const activeSub = access.activeSub;
     if (!activeSub) {

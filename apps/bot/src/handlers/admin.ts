@@ -31,8 +31,8 @@ export async function nodes(ctx: Context) {
   try {
     const list = await api.nodes(ctx.from!.id);
     if (!list.length) { await ctx.reply('Серверов пока нет. Добавьте первый: /addserver DE'); return; }
-    const lines = list.map((n) => `${n.online ? '🟢' : '🔴'} <b>${esc(n.name)}</b> ${n.country} · ${n.host}${n.active ? '' : ' · выключен'}\n     пользователей: ${n.users ?? '—'}, сейчас онлайн: ${n.connectedNow ?? '—'}, нагрузка: ${n.load ?? '—'}`);
-    await ctx.replyWithHTML(`<b>VPN-серверы</b>\n\n${lines.join('\n')}\n\nВыключить/включить: /node_off Sali DE-1 · /node_on Sali DE-1`);
+    const lines = list.map((n) => `${n.online ? '🟢' : '🔴'} <b>${esc(n.name)}</b> ${n.country} · ${n.host} · ${n.premiumOnly ? '💎 по подписке' : '🎁 бесплатный'}${n.active ? '' : ' · выключен'}\n     пользователей: ${n.users ?? '—'}, сейчас онлайн: ${n.connectedNow ?? '—'}, нагрузка: ${n.load ?? '—'}`);
+    await ctx.replyWithHTML(`<b>VPN-серверы</b>\n\n${lines.join('\n')}\n\nВыключить/включить: /node_off Sali DE-1 · /node_on Sali DE-1\nДоступ: /node_free Sali DE-1 (всем) · /node_paid Sali DE-1 (только подписка)`);
   } catch (error) { await fail(ctx, error); }
 }
 
@@ -44,5 +44,17 @@ async function toggle(ctx: Context, isActive: boolean) {
   try {
     const { updated } = await api.nodeActive(ctx.from!.id, name, isActive);
     await ctx.reply(updated ? `${name}: ${isActive ? 'включён' : 'выключен для новых подключений'}` : `Сервер «${name}» не найден`);
+  } catch (error) { await fail(ctx, error); }
+}
+
+/** /node_free NAME — everyone may use it; /node_paid NAME — subscribers only. */
+export async function nodeFree(ctx: Context) { await premium(ctx, false); }
+export async function nodePaid(ctx: Context) { await premium(ctx, true); }
+async function premium(ctx: Context, premiumOnly: boolean) {
+  const name = args(ctx).join(' ');
+  if (!name) { await ctx.reply(`Использование: /node_${premiumOnly ? 'paid' : 'free'} Sali DE-1`); return; }
+  try {
+    const { updated } = await api.nodePremium(ctx.from!.id, name, premiumOnly);
+    await ctx.reply(updated ? `${name}: ${premiumOnly ? 'только по подписке 💎' : 'бесплатный, доступен всем 🎁'}` : `Сервер «${name}» не найден`);
   } catch (error) { await fail(ctx, error); }
 }

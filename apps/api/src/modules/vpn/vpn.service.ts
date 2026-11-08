@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -21,11 +21,14 @@ export class VpnService {
     return this.config.get<string>('VPN_PROVIDER') === 'nodes';
   }
 
-  /** Least-loaded active server; with Sali nodes only nodes that answered recently. */
-  private async pickServer(exceptId?: string) {
+  /**
+   * Least-loaded active server; with Sali nodes only nodes that answered recently.
+   * Without a subscription (free tariff) only servers with premiumOnly = false are used.
+   */
+  private async pickServer(exceptId?: string, paid = true) {
     if (this.nodesMode) {
       const nodes = await this.prisma.vpnServer.findMany({
-        where: { isActive: true, agentUrl: { not: null }, ...(exceptId ? { id: { not: exceptId } } : {}) },
+        where: { isActive: true, agentUrl: { not: null }, ...(paid ? {} : { premiumOnly: false }), ...(exceptId ? { id: { not: exceptId } } : {}) },
         orderBy: [{ online: 'desc' }, { currentLoad: 'asc' }],
       });
       for (const node of nodes) {
@@ -44,11 +47,11 @@ export class VpnService {
    * Moves a user's VPN account to another (healthy) node, keeping their keys, so a dead
    * server or a legacy/demo row never blocks connecting.
    */
-  private async moveAccount(userId: string, toServerId?: string) {
+  private async moveAccount(userId: string, toServerId?: string, paid = true) {
     const account = await this.prisma.vpnAccount.findUniqueOrThrow({ where: { userId }, include: { server: true } });
     const target = toServerId
       ? await this.prisma.vpnServer.findUniqueOrThrow({ where: { id: toServerId } })
-      : await this.pickServer(account.serverId);
+      : await this.pickServer(account.serverId, paid);
     const secret = this.config.getOrThrow<string>('JWT_SECRET');
     const privateKey = decryptSecret(account.privateKeyEncrypted, secret);
     const keys = { privateKey, publicKey: wgPublicKeyOf(privateKey) };
@@ -68,21 +71,25 @@ export class VpnService {
     return moved;
   }
 
-  /** In nodes mode: make sure the account sits on a live node (migrating legacy/dead ones). */
-  async ensureHealthyAccount(userId: string, preferredServerId?: string) {
-    const account = await this.ensureAccountForUser(userId);
+  /**
+   * In nodes mode: make sure the account sits on a live node it is allowed to use
+   * (paid servers only with a subscription), migrating legacy/dead ones.
+   */
+  async ensureHealthyAccount(userId: string, preferredServerId?: string, paid = true) {
+    const account = await this.ensureAccountForUser(userId, paid);
     if (!this.nodesMode) return account;
     const server = await this.prisma.vpnServer.findUniqueOrThrow({ where: { id: account.serverId } });
     if (preferredServerId && preferredServerId !== server.id) {
       const preferred = await this.prisma.vpnServer.findFirst({ where: { id: preferredServerId, isActive: true, agentUrl: { not: null } } });
-      if (preferred && (await this.provider.getServerStatus(preferred.id)).isOnline) return this.moveAccount(userId, preferred.id);
+      if (preferred?.premiumOnly && !paid) throw new ForbiddenException('Эта локация доступна только по подписке. На бесплатном тарифе выберите бесплатный сервер.');
+      if (preferred && (await this.provider.getServerStatus(preferred.id)).isOnline) return this.moveAccount(userId, preferred.id, paid);
     }
-    if (!server.agentUrl || !server.isActive) return this.moveAccount(userId);
+    if (!server.agentUrl || !server.isActive || (server.premiumOnly && !paid)) return this.moveAccount(userId, undefined, paid);
     const status = await this.provider.getServerStatus(server.id).catch(() => null);
-    if (!status?.isOnline) return this.moveAccount(userId);
+    if (!status?.isOnline) return this.moveAccount(userId, undefined, paid);
     // Re-create the peer if the node lost it (e.g. it was reinstalled).
     const peer = await this.provider.getUser(account.externalId, account.serverId);
-    if (!peer) return this.moveAccount(userId, server.id);
+    if (!peer) return this.moveAccount(userId, server.id, paid);
     return account;
   }
 
@@ -98,11 +105,11 @@ export class VpnService {
    * the very first time a user hits "Connect VPN" — this is also what starts
    * the free trial (see TrialsService).
    */
-  async ensureAccountForUser(userId: string) {
+  async ensureAccountForUser(userId: string, paid = true) {
     const existing = await this.prisma.vpnAccount.findUnique({ where: { userId } });
     if (existing) return existing;
 
-    const server = await this.pickServer();
+    const server = await this.pickServer(undefined, paid);
     await this.assertServerOnline(server.id);
     const created = await this.provider.createUser({ userId, serverId: server.id });
 

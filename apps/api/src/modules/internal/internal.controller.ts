@@ -50,11 +50,10 @@ export class InternalController {
     const user = await this.users.findByTelegramId(BigInt(dto.telegramId));
     if (!user) throw new Error('User not found — call users/sync first');
 
-    const account = await this.vpn.ensureHealthyAccount(user.id);
+    const activeSub = await this.subscriptions.getActiveForUser(user.id);
+    const account = await this.vpn.ensureHealthyAccount(user.id, undefined, Boolean(activeSub));
     const trial = await this.trials.startTrialIfNeeded(user.id);
     await this.referrals.rewardIfEligible(user.id);
-
-    const activeSub = await this.subscriptions.getActiveForUser(user.id);
     if (activeSub || trial.status === 'ACTIVE') {
       await this.vpn.enable(user.id);
     }
