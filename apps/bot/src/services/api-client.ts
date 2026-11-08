@@ -197,6 +197,9 @@ export const api = {
   adminGrant: (telegramId: number, userId: string, days: number, kind: 'admin' | 'gift', message?: string) =>
     call<{ mode: 'code' | 'direct'; code: string | null; delivered: boolean; devices: string[] }>('/bot/admin/grant', { telegramId, userId, days, kind, message }, 0),
   adminRevoke: (telegramId: number, userId: string) => call<{ subscriptions: number; codes: number }>('/bot/admin/revoke', { telegramId, userId }, 0),
+  adminRevocable: (telegramId: number, userId: string) => call<{ title: string; subscriptions: Array<{ id: string; where: string; plan: string; until: string }>; codes: Array<{ id: string; code: string; what: string }> }>('/bot/admin/revocable', { telegramId, userId }, 0),
+  adminRevokeSub: (telegramId: number, subscriptionId: string, notify: boolean) => call<{ userId: string }>('/bot/admin/revoke-sub', { telegramId, subscriptionId, notify }, 0),
+  adminRevokeCode: (telegramId: number, codeId: string) => call<{ userId: string }>('/bot/admin/revoke-code', { telegramId, codeId }, 0),
   adminBlock: (telegramId: number, userId: string, isBlocked: boolean) => call<{ isBlocked: boolean }>('/bot/admin/block', { telegramId, userId, isBlocked }, 0),
   adminIssued: (telegramId: number) => call<AdminGrantRow[]>('/bot/admin/issued', { telegramId }, 0),
   adminStats: (telegramId: number) => call<AdminStats>('/bot/admin/stats', { telegramId }, 0),

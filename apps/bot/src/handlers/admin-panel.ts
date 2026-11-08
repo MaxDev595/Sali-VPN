@@ -9,14 +9,15 @@ import { nodes as showNodes } from './admin';
  *                      → срок (1 день … бессрочно, или своё число дней)
  *                      → тип: 🛡 от администрации | 🎁 подарок
  *                      → сообщение получателю (необязательно) → подтверждение
- *   🔎 Найти пользователя → карточка: доступ, устройства, оплаты, коды; выдать / забрать / блок
+ *   ⛔ Отозвать → список активных подписок и неиспользованных кодов, отзыв по одной (молча или с уведомлением) или всё сразу
+ *   🔎 Найти пользователя → карточка: доступ, устройства, оплаты, коды; выдать / отозвать / блок
  *   📊 Статистика · 📜 Выданные · 🖥 Серверы
  *
  * Доступ проверяет API (ADMIN_TELEGRAM_IDS) на каждом действии.
  */
 
 const FOREVER = 36_500;
-type Step = 'target' | 'find' | 'days' | 'message';
+type Step = 'target' | 'find' | 'revoke' | 'days' | 'message';
 interface Draft { step?: Step; userId?: string; title?: string; days?: number; kind?: 'admin' | 'gift'; message?: string; at: number }
 const drafts = new Map<number, Draft>();
 const draft = (id: number) => {
@@ -60,7 +61,7 @@ export async function menu(ctx: Context) {
   if (!ctx.callbackQuery && !(await isAdmin(ctx))) return;
   drafts.delete(ctx.from!.id);
   await show(ctx, '🛠 <b>Админ-панель Sali VPN</b>\n\nЧто делаем?', Markup.inlineKeyboard([
-    [Markup.button.callback('🎁 Выдать подписку', 'adm:grant')],
+    [Markup.button.callback('🎁 Выдать подписку', 'adm:grant'), Markup.button.callback('⛔ Отозвать', 'adm:revoke')],
     [Markup.button.callback('🔎 Найти пользователя', 'adm:find'), Markup.button.callback('📊 Статистика', 'adm:stats')],
     [Markup.button.callback('📜 Выданные', 'adm:issued'), Markup.button.callback('🖥 Серверы', 'adm:nodes')],
   ]));
@@ -89,7 +90,7 @@ function card(c: AdminCard) {
 function cardKeyboard(c: AdminCard) {
   return Markup.inlineKeyboard([
     [Markup.button.callback('🎁 Выдать подписку', `adm:g:${c.id}`)],
-    [Markup.button.callback('⛔ Забрать доступ', `adm:rv:${c.id}`), Markup.button.callback(c.isBlocked ? '✅ Разблокировать' : '🚫 Заблокировать', `adm:bl:${c.isBlocked ? 0 : 1}:${c.id}`)],
+    [Markup.button.callback('⛔ Отозвать', `adm:rl:${c.id}`), Markup.button.callback(c.isBlocked ? '✅ Разблокировать' : '🚫 Заблокировать', `adm:bl:${c.isBlocked ? 0 : 1}:${c.id}`)],
     ...c.devices.slice(0, 5).map((d) => [Markup.button.callback(`📱 ${d.publicId}`, `adm:c:${d.id}`)]),
     back,
   ]);
@@ -197,6 +198,34 @@ async function issued(ctx: Context) {
   } catch (error) { await fail(ctx, error); }
 }
 
+/** Active subscriptions and unused codes, each with its own «отозвать» button. */
+async function revokeList(ctx: Context, userId: string) {
+  try {
+    const r = await api.adminRevocable(ctx.from!.id, userId);
+    drafts.delete(ctx.from!.id);
+    const rows: ReturnType<typeof Markup.button.callback>[][] = [];
+    const lines = [`⛔ <b>Отзыв — ${esc(r.title)}</b>`, ''];
+    if (r.subscriptions.length) {
+      lines.push('<b>Активные подписки:</b>');
+      r.subscriptions.forEach((s, i) => {
+        lines.push(`${i + 1}. ${esc(s.plan)} · ${s.until} · ${esc(s.where)}`);
+        rows.push([Markup.button.callback(`⛔ Подписка ${i + 1} (${s.where})`, `adm:rs:${s.id}`)]);
+      });
+    }
+    if (r.codes.length) {
+      lines.push('', '<b>Неактивированные коды:</b>');
+      r.codes.forEach((c, i) => {
+        lines.push(`К${i + 1}. <code>${c.code}</code> · ${esc(c.what)}`);
+        rows.push([Markup.button.callback(`⛔ Код К${i + 1}`, `adm:rc:${c.id}`)]);
+      });
+    }
+    if (!r.subscriptions.length && !r.codes.length) lines.push('Нечего отзывать: активных подписок и неиспользованных кодов нет.');
+    else if (r.subscriptions.length + r.codes.length > 1) rows.push([Markup.button.callback('⛔ Отозвать всё', `adm:rv:${userId}`)]);
+    rows.push([Markup.button.callback('👤 Карточка', `adm:c:${userId}`)], back);
+    await show(ctx, lines.join('\n'), Markup.inlineKeyboard(rows));
+  } catch (error) { await fail(ctx, error); }
+}
+
 /** All panel buttons: callback data «adm:…». */
 export async function callback(ctx: Context) {
   const data = (ctx.callbackQuery as { data?: string } | undefined)?.data ?? '';
@@ -215,6 +244,16 @@ export async function callback(ctx: Context) {
     case 'k': save(id, { kind: a === 'gift' ? 'gift' : 'admin' }); return askMessage(ctx);
     case 'm': save(id, { message: undefined }); return confirm(ctx);
     case 'ok': return grant(ctx);
+    case 'revoke': save(id, { step: 'revoke' }); return show(ctx, `⛔ <b>Отозвать подписку</b>\n\n${ASK_TARGET}`, Markup.inlineKeyboard([back]));
+    case 'rl': return revokeList(ctx, a!);
+    case 'rs': return show(ctx, '⛔ Отозвать эту подписку? Доступ на устройстве закончится сразу.', Markup.inlineKeyboard([
+      [Markup.button.callback('Да, молча', `adm:rsy:${a}:0`), Markup.button.callback('Да и уведомить', `adm:rsy:${a}:1`)],
+      [Markup.button.callback('Нет', 'adm:menu')],
+    ]));
+    case 'rsy':
+      try { const r = await api.adminRevokeSub(id, a!, b === '1'); return show(ctx, `⛔ Подписка отозвана${b === '1' ? ', пользователь уведомлён' : ''}.`, Markup.inlineKeyboard([[Markup.button.callback('↩️ К списку', `adm:rl:${r.userId}`)], back])); } catch (error) { return fail(ctx, error); }
+    case 'rc':
+      try { const r = await api.adminRevokeCode(id, a!); return revokeList(ctx, r.userId); } catch (error) { return fail(ctx, error); }
     case 'rv': return show(ctx, '⛔ Забрать весь доступ у этого пользователя и его устройств? Неактивированные коды от админа тоже отзовутся.', Markup.inlineKeyboard([[Markup.button.callback('Да, забрать', `adm:rvy:${a}`), Markup.button.callback('Нет', `adm:c:${a}`)]]));
     case 'rvy':
       try { const r = await api.adminRevoke(id, a!); return show(ctx, `⛔ Готово: завершено подписок — ${r.subscriptions}, отозвано кодов — ${r.codes}.`, Markup.inlineKeyboard([[Markup.button.callback('👤 Карточка', `adm:c:${a}`)], back])); } catch (error) { return fail(ctx, error); }
@@ -234,7 +273,7 @@ export async function text(ctx: Context, next: () => Promise<void>) {
   const raw = message?.text?.trim() ?? '';
   if (!d?.step || raw.startsWith('/')) { if (d?.step) save(ctx.from!.id, { step: undefined }); return next(); }
   const forwarded = message?.forward_origin?.sender_user?.id ?? message?.forward_from?.id;
-  if (message?.forward_origin && !forwarded && (d.step === 'target' || d.step === 'find')) {
+  if (message?.forward_origin && !forwarded && (d.step === 'target' || d.step === 'find' || d.step === 'revoke')) {
     await ctx.reply('У этого человека скрыт профиль при пересылке. Пришлите его @username или Telegram ID.');
     return;
   }
@@ -246,6 +285,12 @@ export async function text(ctx: Context, next: () => Promise<void>) {
       } catch (error) { return fail(ctx, error); }
     }
     case 'find': return openCard(ctx, forwarded ? String(forwarded) : raw);
+    case 'revoke': {
+      try {
+        const c = await api.adminLookup(ctx.from!.id, forwarded ? String(forwarded) : raw);
+        return revokeList(ctx, c.id);
+      } catch (error) { return fail(ctx, error); }
+    }
     case 'days': {
       const days = Number(raw.replace(/\D/g, ''));
       if (!days || days < 1 || days > FOREVER) { await ctx.reply('Нужно число от 1 до 36500.'); return; }

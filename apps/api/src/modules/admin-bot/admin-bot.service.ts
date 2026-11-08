@@ -184,6 +184,49 @@ export class AdminBotService {
     return { subscriptions: subs.count, codes: codes.count };
   }
 
+  /** Everything that can be taken back: active subscriptions (account + linked apps) and unused codes. */
+  async revocable(adminId: number, userId: string) {
+    this.guard(adminId);
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const linked = user.telegramId ? await this.prisma.user.findMany({ where: { linkedTelegramId: user.telegramId, telegramId: null } }) : [];
+    const owners = new Map([user, ...linked].map((u) => [u.id, u]));
+    const now = new Date();
+    const [subs, codes] = await Promise.all([
+      this.prisma.subscription.findMany({ where: { userId: { in: [...owners.keys()] }, status: SubscriptionStatus.ACTIVE, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }, include: { plan: true }, orderBy: { expiresAt: 'desc' } }),
+      this.prisma.activationCode.findMany({ where: { ownerId: user.id, status: ActivationCodeStatus.ISSUED, expiresAt: { gt: now } }, include: { plan: true }, orderBy: { createdAt: 'desc' }, take: 10 }),
+    ]);
+    const until = (d: Date | null) => (!d || d.getTime() - Date.now() > (FOREVER_DAYS - 400) * 86_400_000 ? 'бессрочно' : `до ${date(d)}`);
+    return {
+      title: this.title(user),
+      subscriptions: subs.map((s) => {
+        const owner = owners.get(s.userId)!;
+        return { id: s.id, where: owner.telegramId ? 'Telegram-аккаунт' : formatPublicId(owner.publicId), plan: s.plan.name, until: until(s.expiresAt) };
+      }),
+      codes: codes.map((c) => ({ id: c.id, code: formatCode(c.code), what: c.kind === ActivationCodeKind.FREE ? '24 часа бесплатно' : `${c.plan?.name ?? 'Sali Pro'} · ${durationText(c.durationDays)}` })),
+    };
+  }
+
+  /** Ends one subscription now (the app loses access on its next check). */
+  async revokeSubscription(adminId: number, subscriptionId: string, notify: boolean) {
+    this.guard(adminId);
+    const sub = await this.prisma.subscription.findUnique({ where: { id: subscriptionId }, include: { plan: true } });
+    if (!sub || sub.status !== SubscriptionStatus.ACTIVE) throw new NotFoundException('Подписка уже не активна');
+    await this.prisma.subscription.update({ where: { id: sub.id }, data: { status: SubscriptionStatus.EXPIRED, expiresAt: new Date(), autoRenew: false } });
+    const stillActive = await this.subscriptions.getActiveForUser(sub.userId);
+    if (!stillActive) await this.vpn.disable(sub.userId).catch(() => undefined);
+    if (notify) await this.notifications.sendHtml(sub.userId, `⛔ <b>Подписка ${esc(sub.plan.name)} отозвана администрацией.</b>\n\nЕсли это ошибка — напишите в поддержку.`).catch(() => undefined);
+    return { userId: sub.userId };
+  }
+
+  /** Makes an unused code invalid. */
+  async revokeCode(adminId: number, codeId: string) {
+    this.guard(adminId);
+    const code = await this.prisma.activationCode.findUnique({ where: { id: codeId } });
+    const res = await this.prisma.activationCode.updateMany({ where: { id: codeId, status: ActivationCodeStatus.ISSUED }, data: { status: ActivationCodeStatus.REVOKED } });
+    if (!res.count || !code) throw new NotFoundException('Код уже активирован или отозван');
+    return { userId: code.ownerId };
+  }
+
   async setBlocked(adminId: number, userId: string, isBlocked: boolean) {
     this.guard(adminId);
     await this.prisma.user.update({ where: { id: userId }, data: { isBlocked } });
