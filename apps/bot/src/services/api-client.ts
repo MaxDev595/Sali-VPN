@@ -190,4 +190,6 @@ export const api = {
     call<{ updated: number }>('/bot/nodes/active', { telegramId, name, isActive }, 0),
   nodePremium: (telegramId: number, name: string, premiumOnly: boolean) =>
     call<{ updated: number }>('/bot/nodes/premium', { telegramId, name, premiumOnly }, 0),
+  grantForever: (telegramId: number, target?: string) =>
+    call<{ telegramId: string; until: string }>('/bot/nodes/grant', { telegramId, target }, 0),
 };

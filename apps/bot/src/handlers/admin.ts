@@ -58,3 +58,12 @@ async function premium(ctx: Context, premiumOnly: boolean) {
     await ctx.reply(updated ? `${name}: ${premiumOnly ? 'только по подписке 💎' : 'бесплатный, доступен всем 🎁'}` : `Сервер «${name}» не найден`);
   } catch (error) { await fail(ctx, error); }
 }
+
+/** /grant [telegramId] — бессрочная подписка (себе, если ID не указан). */
+export async function grant(ctx: Context) {
+  const [target] = args(ctx);
+  try {
+    const res = await api.grantForever(ctx.from!.id, target);
+    await ctx.reply(`✅ Бессрочная подписка выдана (Telegram ID ${res.telegramId}).`);
+  } catch (error) { await fail(ctx, error); }
+}

@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { encryptSecret } from '../crypto.util';
 import { NodesProvider } from '../providers/nodes.provider';
+import { VpnService } from '../vpn.service';
 import { callNode, NodeInfo } from './node-client';
 
 const COUNTRIES: Record<string, [string, string]> = {
@@ -25,6 +26,7 @@ export class NodesService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly nodes: NodesProvider,
+    private readonly vpn: VpnService,
   ) {}
 
   isAdmin(telegramId: number | bigint | string) {
@@ -109,6 +111,21 @@ export class NodesService {
     if (!this.isAdmin(telegramId)) throw new ForbiddenException('Только для администратора');
     const res = await this.prisma.vpnServer.updateMany({ where: { name, agentUrl: { not: null } }, data: { premiumOnly } });
     return { updated: res.count };
+  }
+
+  /** /grant [telegramId] — unlimited subscription (until 2099) for the admin or a given user. */
+  async grantForever(adminId: number, targetTelegramId?: string) {
+    if (!this.isAdmin(adminId)) throw new ForbiddenException('Только для администратора');
+    const tg = BigInt(targetTelegramId && /^\d+$/.test(targetTelegramId) ? targetTelegramId : adminId);
+    const user = await this.prisma.user.findUnique({ where: { telegramId: tg } });
+    if (!user) throw new BadRequestException('Пользователь не найден: пусть сначала нажмёт /start в боте');
+    const plan = await this.prisma.plan.findFirst({ where: { code: 'pro_monthly' } }) ?? await this.prisma.plan.findFirstOrThrow();
+    const until = new Date('2099-12-31T00:00:00Z');
+    const active = await this.prisma.subscription.findFirst({ where: { userId: user.id, status: 'ACTIVE' }, orderBy: { expiresAt: 'desc' } });
+    if (active) await this.prisma.subscription.update({ where: { id: active.id }, data: { expiresAt: until, autoRenew: false } });
+    else await this.prisma.subscription.create({ data: { userId: user.id, planId: plan.id, provider: 'admin', status: 'ACTIVE', startedAt: new Date(), expiresAt: until, autoRenew: false } });
+    try { await this.vpn.ensureAccountForUser(user.id); await this.vpn.enable(user.id); } catch (e) { this.logger.warn(`grant: VPN account not ready yet for ${user.id}: ${(e as Error).message}`); }
+    return { telegramId: tg.toString(), until: until.toISOString() };
   }
 
   /** Every 15 min (with the other sweeps, so Neon can sleep in between): refresh node health. */
