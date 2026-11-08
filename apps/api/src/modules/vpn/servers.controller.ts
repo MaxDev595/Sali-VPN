@@ -1,16 +1,18 @@
 import { Controller, Get, Headers, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('servers')
 @UseGuards(JwtAuthGuard)
 export class ServersController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly config: ConfigService) {}
 
   @Get()
   async list(@Headers('cf-ipcountry') country?: string) {
     const servers = await this.prisma.vpnServer.findMany({
-      where: { isActive: true },
+      // Nodes mode: only enrolled Sali nodes (the seeded legacy rows have no agent).
+      where: { isActive: true, ...(this.config.get<string>('VPN_PROVIDER') === 'nodes' ? { agentUrl: { not: null } } : {}) },
       orderBy: [{ premiumOnly: 'asc' }, { pingMs: 'asc' }],
     });
     const free = servers.filter((server) => !server.premiumOnly);

@@ -4,6 +4,7 @@ import { Context, Telegraf } from 'telegraf';
 import { loadConfig } from './config';
 import { createHandlers } from './handlers';
 import * as admin from './handlers/admin';
+import * as adminPanel from './handlers/admin-panel';
 import { createBillingHandlers } from './handlers/billing';
 import { genericError } from './messages';
 import { menuLabels } from './keyboards';
@@ -62,7 +63,10 @@ async function main() {
   bot.command('node_on', admin.nodeOn);
   bot.command('node_free', admin.nodeFree);
   bot.command('node_paid', admin.nodePaid);
-  bot.command('grant', admin.grant);
+  bot.command('admin', adminPanel.menu);
+  bot.action(/^adm:/, adminPanel.callback);
+  // Admin panel steps (waiting for a name, a number of days, a message) come before the normal text handler.
+  bot.on('text', adminPanel.text);
 
   bot.hears(menuLabels.buy, billing.buy);
   bot.hears([menuLabels.free, '🎁 Бесплатный день', '🎁 Бесплатный тариф'], billing.free);
@@ -125,6 +129,17 @@ async function main() {
   ]).catch((error) => {
     console.warn('Failed to register bot commands; continuing with polling', error);
   });
+  // Admins also see /admin in their command menu.
+  for (const id of (process.env.ADMIN_TELEGRAM_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean)) {
+    await bot.telegram.setMyCommands([
+      { command: 'admin', description: '🛠 Админ-панель' },
+      { command: 'start', description: 'Открыть Sali VPN' },
+      { command: 'buy', description: 'Купить подписку' },
+      { command: 'devices', description: 'Мои устройства' },
+      { command: 'nodes', description: 'VPN-серверы' },
+      { command: 'help', description: 'Помощь и поддержка' },
+    ], { scope: { type: 'chat', chat_id: Number(id) } }).catch(() => undefined);
+  }
 
   if (config.mode === 'webhook') {
     await bot.launch({

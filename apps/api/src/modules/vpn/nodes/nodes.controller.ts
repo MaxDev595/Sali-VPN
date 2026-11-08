@@ -20,7 +20,6 @@ class TokenDto extends AdminDto {
   @IsOptional() @IsString() @MaxLength(40) city?: string;
 }
 class ActiveDto extends AdminDto { @IsString() @MaxLength(40) name!: string; @IsBoolean() isActive!: boolean; }
-class GrantDto extends AdminDto { @IsOptional() @IsString() @MaxLength(20) target?: string; }
 class PremiumDto extends AdminDto { @IsString() @MaxLength(40) name!: string; @IsBoolean() premiumOnly!: boolean; }
 
 /** Files are served from the repo so a new VPS only needs this API to install itself. */
@@ -62,6 +61,5 @@ export class NodesBotController {
   @Post('list') list(@Body() body: AdminDto) { return this.nodes.list(body.telegramId); }
   @Post('active') active(@Body() body: ActiveDto) { return this.nodes.setActive(body.telegramId, body.name, body.isActive); }
   @Post('premium') premium(@Body() body: PremiumDto) { return this.nodes.setPremium(body.telegramId, body.name, body.premiumOnly); }
-  @Post('grant') grant(@Body() body: GrantDto) { return this.nodes.grantForever(body.telegramId, body.target); }
   @Post('is-admin') isAdmin(@Body() body: AdminDto) { return { admin: this.nodes.isAdmin(body.telegramId) }; }
 }

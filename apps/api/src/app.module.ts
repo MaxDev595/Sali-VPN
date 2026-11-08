@@ -22,6 +22,7 @@ import { HomeModule } from './modules/home/home.module';
 import { InternalModule } from './modules/internal/internal.module';
 import { CodesModule } from './modules/codes/codes.module';
 import { BotApiModule } from './modules/bot-api/bot-api.module';
+import { AdminBotModule } from './modules/admin-bot/admin-bot.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { BotApiModule } from './modules/bot-api/bot-api.module';
     InternalModule,
     CodesModule,
     BotApiModule,
+    AdminBotModule,
     HealthModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

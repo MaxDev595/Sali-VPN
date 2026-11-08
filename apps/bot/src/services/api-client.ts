@@ -190,6 +190,56 @@ export const api = {
     call<{ updated: number }>('/bot/nodes/active', { telegramId, name, isActive }, 0),
   nodePremium: (telegramId: number, name: string, premiumOnly: boolean) =>
     call<{ updated: number }>('/bot/nodes/premium', { telegramId, name, premiumOnly }, 0),
-  grantForever: (telegramId: number, target?: string) =>
-    call<{ telegramId: string; until: string }>('/bot/nodes/grant', { telegramId, target }, 0),
+
+  // --- Admin panel (/admin) -------------------------------------------------
+  isAdmin: (telegramId: number) => call<{ admin: boolean }>('/bot/nodes/is-admin', { telegramId }, 1),
+  adminLookup: (telegramId: number, query: string) => call<AdminCard>('/bot/admin/lookup', { telegramId, query }, 0),
+  adminGrant: (telegramId: number, userId: string, days: number, kind: 'admin' | 'gift', message?: string) =>
+    call<{ mode: 'code' | 'direct'; code: string | null; delivered: boolean; devices: string[] }>('/bot/admin/grant', { telegramId, userId, days, kind, message }, 0),
+  adminRevoke: (telegramId: number, userId: string) => call<{ subscriptions: number; codes: number }>('/bot/admin/revoke', { telegramId, userId }, 0),
+  adminBlock: (telegramId: number, userId: string, isBlocked: boolean) => call<{ isBlocked: boolean }>('/bot/admin/block', { telegramId, userId, isBlocked }, 0),
+  adminIssued: (telegramId: number) => call<AdminGrantRow[]>('/bot/admin/issued', { telegramId }, 0),
+  adminStats: (telegramId: number) => call<AdminStats>('/bot/admin/stats', { telegramId }, 0),
 };
+
+export interface AdminCard {
+  id: string;
+  kind: 'telegram' | 'device';
+  title: string;
+  username: string | null;
+  telegramId: string | null;
+  publicId: string;
+  owner: string | null;
+  createdAt: string;
+  isBlocked: boolean;
+  access: string;
+  devices: Array<{ id: string; publicId: string; access: string }>;
+  paidUsd: number;
+  payments: number;
+  codesIssued: number;
+  codesRedeemed: number;
+  invited: number;
+}
+
+export interface AdminGrantRow {
+  to: string;
+  kind: 'admin' | 'gift';
+  duration: string;
+  status: 'ISSUED' | 'REDEEMED' | 'REVOKED' | 'APPLIED';
+  code: string | null;
+  device: string | null;
+  message: string | null;
+  at: string;
+}
+
+export interface AdminStats {
+  telegramUsers: number;
+  devices: number;
+  new24h: number;
+  new7d: number;
+  activeSubscriptions: number;
+  activeTrials: number;
+  revenue: { day: number; dayCount: number; month: number; monthCount: number; total: number; totalCount: number };
+  servers: Array<{ name: string; online: boolean; premiumOnly: boolean; isActive: boolean }>;
+  adminGrants: number;
+}

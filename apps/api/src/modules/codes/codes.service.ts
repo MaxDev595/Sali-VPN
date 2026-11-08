@@ -95,6 +95,11 @@ export class CodesService {
     return this.present(await this.create({ kind, durationDays: plan.durationDays, planId: plan.id, ownerId, note }));
   }
 
+  /** Admin panel: a code with any duration and plan (gift or "from the administration"). */
+  async issueAdmin(ownerId: string, planId: string, durationDays: number, note: string) {
+    return this.present(await this.create({ kind: ActivationCodeKind.GIFT, durationDays, planId, ownerId, note }));
+  }
+
   async listForOwner(ownerId: string) {
     const rows = await this.prisma.activationCode.findMany({
       where: { ownerId, status: { not: ActivationCodeStatus.REVOKED } },
