@@ -35,8 +35,20 @@ function MarkdownDocument({ source }: { source: string }) {
       while (i < lines.length && lines[i].trim().startsWith('- ')) items.push(lines[i++].trim().slice(2).replace(/;$/, ''));
       blocks.push(<ul key={i}>{items.map((item, j) => <li key={j}>{inline(item)}</li>)}</ul>); continue;
     }
+    if (line.startsWith('|')) {
+      const rows: string[][] = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        const cells = lines[i++].trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
+        if (!cells.every((cell) => /^:?-{3,}:?$/.test(cell))) rows.push(cells);
+      }
+      const [head, ...body] = rows;
+      blocks.push(<div key={i} className="sl-legal-table"><table>
+        <thead><tr>{head.map((cell, j) => <th key={j}>{inline(cell)}</th>)}</tr></thead>
+        <tbody>{body.map((row, r) => <tr key={r}>{row.map((cell, j) => <td key={j}>{inline(cell)}</td>)}</tr>)}</tbody>
+      </table></div>); continue;
+    }
     const paragraph: string[] = [];
-    while (i < lines.length && lines[i].trim() && !/^(#{1,3})\s/.test(lines[i].trim()) && !lines[i].trim().startsWith('- ') && lines[i].trim() !== '---') paragraph.push(lines[i++].trim().replace(/\s{2}$/, ''));
+    while (i < lines.length && lines[i].trim() && !/^(#{1,3})\s/.test(lines[i].trim()) && !lines[i].trim().startsWith('- ') && !lines[i].trim().startsWith('|') && lines[i].trim() !== '---') paragraph.push(lines[i++].trim().replace(/\s{2}$/, ''));
     blocks.push(<p key={i}>{inline(paragraph.join(' '))}</p>);
   }
   return <article className="sl-legal-content">{blocks}</article>;

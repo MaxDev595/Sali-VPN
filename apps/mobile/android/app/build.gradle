@@ -85,6 +85,31 @@ def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInRelea
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+/**
+ * Release signing key. Looked up, in order:
+ *  1. environment: SALI_KEYSTORE_FILE, SALI_KEYSTORE_PASSWORD, SALI_KEY_ALIAS, SALI_KEY_PASSWORD (CI);
+ *  2. a properties file: $SALI_KEYSTORE_PROPERTIES or ~/.sali/keystore.properties
+ *     (created by scripts/make-release-key.cmd), with storeFile/storePassword/keyAlias/keyPassword.
+ * The committed debug.keystore is public and is used for debug builds only.
+ */
+def releaseSigning = [:]
+def signingProps = file(System.getenv('SALI_KEYSTORE_PROPERTIES') ?: "${System.getProperty('user.home')}/.sali/keystore.properties")
+if (signingProps.exists()) {
+    def p = new Properties()
+    signingProps.withInputStream { p.load(it) }
+    releaseSigning = [storeFile: p.getProperty('storeFile'), storePassword: p.getProperty('storePassword'),
+                      keyAlias: p.getProperty('keyAlias'), keyPassword: p.getProperty('keyPassword')]
+}
+if (System.getenv('SALI_KEYSTORE_FILE')) {
+    releaseSigning = [storeFile: System.getenv('SALI_KEYSTORE_FILE'), storePassword: System.getenv('SALI_KEYSTORE_PASSWORD'),
+                      keyAlias: System.getenv('SALI_KEY_ALIAS'), keyPassword: System.getenv('SALI_KEY_PASSWORD') ?: System.getenv('SALI_KEYSTORE_PASSWORD')]
+}
+if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } && !releaseSigning.storeFile) {
+    throw new GradleException('Sali release key not found. Run scripts\\make-release-key.cmd once (Windows), ' +
+        'or set SALI_KEYSTORE_FILE / SALI_KEYSTORE_PASSWORD / SALI_KEY_ALIAS in CI. ' +
+        'Release builds are never signed with the public debug key.')
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -116,15 +141,23 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            // Sali's own release key — never in the repository (see releaseSigning above).
+            if (releaseSigning.storeFile) {
+                storeFile file(releaseSigning.storeFile)
+                storePassword releaseSigning.storePassword
+                keyAlias releaseSigning.keyAlias
+                keyPassword releaseSigning.keyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Never the public debug key: anyone could sign a fake "update" with it.
+            signingConfig signingConfigs.release
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"

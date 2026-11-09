@@ -85,7 +85,9 @@ export class NodesProvider implements VPNProvider {
       '[Interface]',
       `PrivateKey = ${params.privateKey}`,
       `Address = ${address}/32`,
-      'DNS = 1.1.1.1, 8.8.8.8',
+      // The node's own no-log resolver, reached inside the tunnel. Older nodes without it fall
+      // back to privacy-focused public resolvers (Quad9, Cloudflare) — never Google.
+      `DNS = ${server.privateDns ? (awg ? '10.67.0.1' : '10.66.0.1') : '9.9.9.9, 1.1.1.1'}`,
       'MTU = 1280',
       ...(awg ? ['Jc', 'Jmin', 'Jmax', 'S1', 'S2', 'H1', 'H2', 'H3', 'H4'].filter((k) => awgParams[k] !== undefined).map((k) => `${k} = ${awgParams[k]}`) : []),
       '',

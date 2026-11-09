@@ -15,6 +15,11 @@ pause
 exit /b
 
 :run
+if not defined SALI_KEYSTORE_FILE if not exist "%USERPROFILE%\.sali\keystore.properties" (
+  echo Release key not found. Run scripts\make-release-key.cmd once, then build again.
+  echo Release APKs are never signed with the public debug key.
+  exit /b 1
+)
 set DST=C:\sali-build
 if not exist C:\sali-android\sdk\platforms\android-35 (
   echo [0/4] Installing JDK 17 and Android SDK into C:\sali-android ...

@@ -67,6 +67,8 @@ export function wgPublicKeyOf(privateKeyB64: string) {
 export interface NodeInfo {
   version: string;
   up: boolean;
+  /** agent >= 2.1: the node's own no-log resolver is running */
+  dns?: boolean;
   peers: number;
   enabled: number;
   active: number;

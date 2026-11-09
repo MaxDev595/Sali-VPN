@@ -94,12 +94,13 @@ model VpnServer {
   // Sali node agent (infrastructure/vpn-node). Null for legacy/demo rows.
   hostname     String?
   agentUrl     String?
-  agentKeyEnc  String?   // encrypted with JWT_SECRET
+  agentKeyEnc  String?   // encrypted with ENCRYPTION_KEY (legacy rows: JWT_SECRET)
   agentCertPem String?   // self-signed agent certificate, pinned
   wgPublicKey  String?
   awgPublicKey String?
   awgPort      Int?
   awgParams    Json?
+  privateDns   Boolean  @default(false) // node runs its own no-log resolver (unbound)
   online       Boolean  @default(false)
   lastSeenAt   DateTime?
 

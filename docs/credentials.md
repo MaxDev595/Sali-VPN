@@ -7,6 +7,7 @@ anywhere in the codebase.
 |---|---|---|
 | `DATABASE_URL` | Your PostgreSQL instance (Docker Compose provides one) | Everything |
 | `JWT_SECRET` | Generate: `openssl rand -hex 32` | App session auth (Android, Windows) |
+| `ENCRYPTION_KEY` | Generate: `openssl rand -hex 32` (Render generates it) | Encrypts client VPN keys and node keys in the database. Never change it once set |
 | `INTERNAL_API_KEY` | Generate: `openssl rand -hex 32` | Bot → API calls |
 | `ADMIN_TELEGRAM_IDS` | Your own numeric Telegram ID (e.g. from [@userinfobot](https://t.me/userinfobot)) | Admin API access |
 | `TELEGRAM_BOT_TOKEN` | [@BotFather](https://t.me/BotFather) → `/newbot` | The bot itself |

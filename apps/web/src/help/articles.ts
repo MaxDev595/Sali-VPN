@@ -102,8 +102,8 @@ export const ARTICLES: Article[] = [
     body: {
       ru: [
         { p: 'DNS — это «телефонная книга» интернета: она превращает адрес сайта в IP-адрес. Без VPN эти запросы обычно уходят провайдеру открытым текстом — он видит каждый сайт и может подменить ответ.' },
-        { p: 'Когда Sali VPN включён, запросы уходят только через зашифрованный туннель к публичным резолверам:' },
-        { facts: [['Основной', 'Cloudflare 1.1.1.1'], ['Резервный', 'Google 8.8.8.8']] },
+        { p: 'Когда Sali VPN включён, запросы уходят через зашифрованный туннель на собственный DNS-сервер на том же VPN-сервере. Он сам опрашивает корневые серверы интернета, проверяет подписи DNSSEC и ничего не записывает. Ни Google, ни Cloudflare ваших запросов не видят.' },
+        { facts: [['Резолвер', 'свой, на VPN-сервере (10.67.0.1)'], ['Журнал запросов', 'выключен'], ['Защита', 'DNSSEC, QNAME minimisation']] },
         { list: [
           'Оператор связи и владелец Wi-Fi не видят адреса сайтов.',
           'Подменить ответ и увести вас на поддельную страницу на стороне сети нельзя.',
@@ -113,8 +113,8 @@ export const ARTICLES: Article[] = [
       ],
       en: [
         { p: 'DNS is the internet’s phone book: it turns a site name into an IP address. Without a VPN these queries usually go to your provider in plain text — they see every site and can tamper with the answer.' },
-        { p: 'With Sali VPN on, queries go only through the encrypted tunnel to public resolvers:' },
-        { facts: [['Primary', 'Cloudflare 1.1.1.1'], ['Fallback', 'Google 8.8.8.8']] },
+        { p: 'With Sali VPN on, queries go through the encrypted tunnel to our own resolver on the same VPN server. It asks the internet’s root servers itself, checks DNSSEC signatures and records nothing. Neither Google nor Cloudflare sees your queries.' },
+        { facts: [['Resolver', 'our own, on the VPN server (10.67.0.1)'], ['Query log', 'off'], ['Protection', 'DNSSEC, QNAME minimisation']] },
         { list: [
           'Your carrier and the Wi-Fi owner cannot see site names.',
           'Nobody on the network can swap the answer and send you to a fake page.',
@@ -234,16 +234,18 @@ export const ARTICLES: Article[] = [
     body: {
       ru: [
         { h: 'Что мы знаем' },
-        { list: ['Telegram ID — чтобы бот мог прислать код и напоминание.', 'Sali ID ваших устройств и сроки тарифов.', 'Платежи: сумма, способ и дата.', 'Технические данные сервера: сколько устройств подключено сейчас — без адресов сайтов.'] },
+        { list: ['Telegram ID — чтобы бот мог прислать код и напоминание.', 'Sali ID ваших устройств и сроки тарифов.', 'Платежи: сумма, способ и дата.', 'Технические данные сервера: сколько устройств подключено сейчас — без адресов сайтов.', 'Пока вы подключены, сервер держит в оперативной памяти ваш IP-адрес — без него ответы не дойдут. На диск он не пишется и забывается после отключения.'] },
         { h: 'Чего мы не знаем' },
-        { list: ['Какие сайты и приложения вы открываете.', 'Ваши DNS-запросы.', 'Содержимое трафика.'] },
+        { list: ['Какие сайты и приложения вы открываете.', 'Ваши DNS-запросы.', 'Содержимое трафика.', 'Историю подключений: когда и откуда вы подключались.'] },
+        { p: 'Другие пользователи VPN не видят ваше устройство: трафик между клиентами на серверах заблокирован.' },
         { p: 'Подробно — в политике конфиденциальности.', to: '/privacy' },
       ],
       en: [
         { h: 'What we know' },
-        { list: ['Your Telegram ID — so the bot can send codes and reminders.', 'Your devices’ Sali IDs and plan dates.', 'Payments: amount, method and date.', 'Server health data: how many devices are connected right now — no site addresses.'] },
+        { list: ['Your Telegram ID — so the bot can send codes and reminders.', 'Your devices’ Sali IDs and plan dates.', 'Payments: amount, method and date.', 'Server health data: how many devices are connected right now — no site addresses.', 'While you are connected, the server keeps your IP address in memory — replies can’t reach you without it. It is never written to disk and is forgotten after you disconnect.'] },
         { h: 'What we don’t' },
-        { list: ['Which sites and apps you open.', 'Your DNS queries.', 'The contents of your traffic.'] },
+        { list: ['Which sites and apps you open.', 'Your DNS queries.', 'The contents of your traffic.', 'Your connection history: when and from where you connected.'] },
+        { p: 'Other VPN users can’t see your device: traffic between clients is blocked on our servers.' },
         { p: 'Details are in the privacy policy.', to: '/privacy' },
       ],
     },

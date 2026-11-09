@@ -41,7 +41,7 @@ export class DevicesService {
     }
 
     return this.prisma.device.create({
-      data: { userId, deviceKey: randomUUID(), name, platform, isActive: true, lastActiveAt: new Date() },
+      data: { userId, deviceKey: randomUUID(), name, platform, isActive: true, lastActiveAt: activityDay() },
     });
   }
 
@@ -63,14 +63,14 @@ export class DevicesService {
         name: dto.name,
         platform: dto.platform,
         isActive: shouldActivate,
-        lastActiveAt: new Date(),
+        lastActiveAt: activityDay(),
       },
       update: {
         name: dto.name,
         platform: dto.platform,
         isActive: shouldActivate,
         revokedAt: shouldActivate ? null : existing?.revokedAt,
-        lastActiveAt: new Date(),
+        lastActiveAt: activityDay(),
       },
     });
   }
@@ -113,7 +113,15 @@ export class DevicesService {
   async touchActive(deviceId: string) {
     return this.prisma.device.update({
       where: { id: deviceId },
-      data: { isActive: true, lastActiveAt: new Date() },
+      data: { isActive: true, lastActiveAt: activityDay() },
     });
   }
+}
+
+/**
+ * Privacy: we keep only the DAY a device was last used (for sorting "My devices"), never the
+ * time of a connection. Overwritten on every use, so it is not a history.
+ */
+function activityDay(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }

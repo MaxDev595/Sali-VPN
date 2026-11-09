@@ -27,7 +27,7 @@ die() { printf '\n\033[1;31mОшибка: %s\033[0m\n' "$*" >&2; exit 1; }
 say "Устанавливаю пакеты"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y -qq
-apt-get install -y -qq software-properties-common curl ca-certificates openssl iptables wireguard-tools nodejs >/dev/null
+apt-get install -y -qq software-properties-common curl ca-certificates openssl iptables wireguard-tools nodejs unbound >/dev/null
 apt-get install -y -qq "linux-headers-$(uname -r)" >/dev/null 2>&1 || apt-get install -y -qq linux-headers-generic >/dev/null
 add-apt-repository -y ppa:amnezia/ppa >/dev/null
 apt-get update -y -qq
@@ -85,9 +85,21 @@ if [ ! -f "$DIR/tls.crt" ]; then
   chmod 600 "$DIR/tls.key"
 fi
 
-nat() { # $1 = subnet, $2 = iface
-  echo "PostUp = iptables -I FORWARD -i %i -j ACCEPT; iptables -I FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -s $1 -o $ETH -j MASQUERADE; iptables -t mangle -A FORWARD -o %i -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu; systemctl --no-block try-restart sali-node-agent"
-  echo "PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -s $1 -o $ETH -j MASQUERADE; iptables -t mangle -D FORWARD -o %i -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu"
+# Privacy rules, inserted above the ACCEPTs (iptables -I puts each new rule first):
+#  - clients can't reach each other, in the same tunnel or across awg0/wg0 (10.66.0.0/15 = both);
+#  - clients can't reach the hoster's private networks or the cloud metadata service.
+PRIVATE_NETS="10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,100.64.0.0/10"
+nat() { # $1 = subnet
+  local up="iptables -I FORWARD -i %i -j ACCEPT; iptables -I FORWARD -o %i -j ACCEPT"
+  up="$up; iptables -I FORWARD -i %i -o $ETH -d $PRIVATE_NETS -j DROP"
+  up="$up; iptables -I FORWARD -s 10.66.0.0/15 -d 10.66.0.0/15 -j DROP"
+  up="$up; iptables -t nat -A POSTROUTING -s $1 -o $ETH -j MASQUERADE; iptables -t mangle -A FORWARD -o %i -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu"
+  local down="iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT"
+  down="$down; iptables -D FORWARD -i %i -o $ETH -d $PRIVATE_NETS -j DROP"
+  down="$down; iptables -D FORWARD -s 10.66.0.0/15 -d 10.66.0.0/15 -j DROP"
+  down="$down; iptables -t nat -D POSTROUTING -s $1 -o $ETH -j MASQUERADE; iptables -t mangle -D FORWARD -o %i -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu"
+  echo "PostUp = $up; systemctl --no-block try-restart sali-node-agent unbound"
+  echo "PostDown = $down"
 }
 
 cat >/etc/amnezia/amneziawg/awg0.conf <<EOF
@@ -114,6 +126,56 @@ ListenPort = $WG_PORT
 $(nat 10.66.0.0/16)
 EOF
 chmod 600 /etc/amnezia/amneziawg/awg0.conf /etc/wireguard/wg0.conf
+
+say "Свой DNS без журналов"
+# Clients resolve names on this server (10.67.0.1 / 10.66.0.1), not at Google or Cloudflare.
+# Unbound resolves recursively from the root servers, with QNAME minimisation and DNSSEC,
+# and logs nothing: no query log, no reply log, verbosity 0.
+cat >/etc/unbound/unbound.conf.d/sali.conf <<'EOF'
+server:
+  interface: 10.67.0.1
+  interface: 10.66.0.1
+  ip-freebind: yes
+  access-control: 0.0.0.0/0 refuse
+  access-control: 10.66.0.0/15 allow
+  verbosity: 0
+  log-queries: no
+  log-replies: no
+  log-servfail: no
+  log-local-actions: no
+  use-syslog: no
+  logfile: ""
+  hide-identity: yes
+  hide-version: yes
+  qname-minimisation: yes
+  harden-glue: yes
+  harden-dnssec-stripped: yes
+  aggressive-nsec: yes
+  prefetch: yes
+  cache-max-ttl: 3600
+  rrset-roundrobin: yes
+  private-address: 10.0.0.0/8
+  private-address: 172.16.0.0/12
+  private-address: 192.168.0.0/16
+  private-address: 169.254.0.0/16
+EOF
+unbound-checkconf >/dev/null || die "ошибка в настройке DNS (unbound-checkconf)"
+systemctl disable --now -q unbound-resolvconf 2>/dev/null || true # keep the server's own resolver untouched
+systemctl enable -q unbound
+
+say "Журналы только в памяти"
+# Nothing about clients is written to disk: the system journal lives in RAM, is capped and
+# forgets entries after a day; it is wiped on reboot. (The tunnels themselves log nothing.)
+mkdir -p /etc/systemd/journald.conf.d
+cat >/etc/systemd/journald.conf.d/90-sali-privacy.conf <<'EOF'
+[Journal]
+Storage=volatile
+RuntimeMaxUse=32M
+MaxRetentionSec=1day
+ForwardToSyslog=no
+EOF
+rm -rf /var/log/journal
+systemctl restart systemd-journald
 
 cat >"$DIR/node.json" <<EOF
 { "apiKey": "$(cat "$DIR/agent.key")", "port": $AGENT_PORT,
@@ -143,13 +205,14 @@ EOF
 systemctl daemon-reload
 systemctl enable -q awg-quick@awg0 wg-quick@wg0 sali-node-agent
 systemctl restart awg-quick@awg0 wg-quick@wg0
-systemctl restart sali-node-agent
+systemctl restart unbound sali-node-agent
 sleep 2
 systemctl is-active -q sali-node-agent || die "агент не запустился: journalctl -u sali-node-agent -n 50"
 
 # Let the API reach the agent and clients reach the tunnels if a firewall is on.
 if command -v ufw >/dev/null && ufw status | grep -q active; then
   ufw allow "$AGENT_PORT"/tcp >/dev/null; ufw allow "$AWG_PORT"/udp >/dev/null; ufw allow "$WG_PORT"/udp >/dev/null
+  for i in awg0 wg0; do ufw allow in on "$i" to any port 53 >/dev/null; done
 fi
 
 say "Подключаю сервер к Sali"

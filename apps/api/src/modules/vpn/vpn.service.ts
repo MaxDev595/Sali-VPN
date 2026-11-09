@@ -1,14 +1,14 @@
-import { ForbiddenException, Inject, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, OnApplicationBootstrap, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VPN_PROVIDER, VPNProvider, VpnProtocol } from './providers/vpn-provider.interface';
-import { encryptSecret, decryptSecret } from './crypto.util';
+import { encryptSecret, decryptSecret, needsReseal } from './crypto.util';
 import { wgPublicKeyOf } from './nodes/node-client';
 import { VpnAccountStatus } from '@prisma/client';
 
 @Injectable()
-export class VpnService {
+export class VpnService implements OnApplicationBootstrap {
   private readonly logger = new Logger(VpnService.name);
 
   constructor(
@@ -16,6 +16,36 @@ export class VpnService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
+
+  onApplicationBootstrap() {
+    // Runs in the background so a slow database never delays startup.
+    void this.resealSecrets().catch((error) => this.logger.error(`re-encryption failed: ${(error as Error).message}`));
+  }
+
+  /**
+   * Moves secrets encrypted with JWT_SECRET to the dedicated ENCRYPTION_KEY (see crypto.util),
+   * so that after this runs JWT_SECRET alone can no longer decrypt any VPN key. Idempotent.
+   */
+  async resealSecrets() {
+    if (!needsReseal('')) return;
+    const legacy = this.config.getOrThrow<string>('JWT_SECRET');
+    let count = 0;
+    const accounts = await this.prisma.vpnAccount.findMany({ select: { id: true, privateKeyEncrypted: true } });
+    for (const a of accounts) {
+      if (!needsReseal(a.privateKeyEncrypted)) continue;
+      const sealed = encryptSecret(decryptSecret(a.privateKeyEncrypted, legacy), legacy);
+      await this.prisma.vpnAccount.update({ where: { id: a.id }, data: { privateKeyEncrypted: sealed } });
+      count++;
+    }
+    const servers = await this.prisma.vpnServer.findMany({ where: { agentKeyEnc: { not: null } }, select: { id: true, agentKeyEnc: true } });
+    for (const s of servers) {
+      if (!s.agentKeyEnc || !needsReseal(s.agentKeyEnc)) continue;
+      const sealed = encryptSecret(decryptSecret(s.agentKeyEnc, legacy), legacy);
+      await this.prisma.vpnServer.update({ where: { id: s.id }, data: { agentKeyEnc: sealed } });
+      count++;
+    }
+    if (count) this.logger.log(`re-encrypted ${count} secret(s) with ENCRYPTION_KEY`);
+  }
 
   private get nodesMode() {
     return this.config.get<string>('VPN_PROVIDER') === 'nodes';

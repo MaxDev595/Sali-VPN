@@ -24,7 +24,7 @@ const { execFileSync } = require('node:child_process');
 const DIR = process.env.SALI_NODE_DIR || '/etc/sali-node';
 const cfg = JSON.parse(fs.readFileSync(path.join(DIR, 'node.json'), 'utf8'));
 const STATE = path.join(DIR, 'peers.json');
-const VERSION = '2.0.0';
+const VERSION = '2.1.0';
 
 // node.json: { apiKey, port, wg: { iface, port, prefix }, awg: { iface, port, prefix, params } }
 const TUNNELS = [
@@ -82,6 +82,9 @@ function handshakes() {
   return out;
 }
 function tunnelsUp() { return TUNNELS.every((t) => publicKeyOf(t)); }
+// The node's own no-log resolver (unbound on the tunnel addresses). When it runs, the API
+// points clients' DNS at it instead of a public resolver.
+function dnsUp() { try { run('systemctl', ['is-active', '--quiet', 'unbound']); return true; } catch { return false; } }
 
 // ---------- http ----------
 const KEY_RE = /^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw480]=$/;
@@ -105,6 +108,7 @@ function info() {
   return {
     version: VERSION,
     up: tunnelsUp(),
+    dns: dnsUp(),
     peers: Object.keys(peers).length,
     enabled: Object.values(peers).filter((p) => p.enabled).length,
     active,

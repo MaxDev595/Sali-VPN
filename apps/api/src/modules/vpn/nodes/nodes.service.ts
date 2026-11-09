@@ -72,7 +72,7 @@ export class NodesService {
       publicHost: input.host, publicPort: info.tunnels.wg.port, provider: 'wireguard',
       agentUrl, agentKeyEnc: encryptSecret(input.agentKey, secret), agentCertPem: input.certPem,
       wgPublicKey: info.tunnels.wg.publicKey, awgPublicKey: info.tunnels.awg.publicKey, awgPort: info.tunnels.awg.port,
-      awgParams: (info.tunnels.awg.params ?? {}) as Prisma.InputJsonValue,
+      awgParams: (info.tunnels.awg.params ?? {}) as Prisma.InputJsonValue, privateDns: info.dns === true,
       online: true, lastSeenAt: new Date(), isActive: true, premiumOnly: false, capacity: 2000, pingMs: 40,
     };
     const existing = await this.prisma.vpnServer.findFirst({ where: { publicHost: input.host } });
@@ -120,7 +120,7 @@ export class NodesService {
       const info = await this.nodes.info(s.id).catch(() => null);
       await this.prisma.vpnServer.update({
         where: { id: s.id },
-        data: info ? { online: info.up, lastSeenAt: new Date(), currentLoad: info.enabled } : { online: false },
+        data: info ? { online: info.up, lastSeenAt: new Date(), currentLoad: info.enabled, privateDns: info.dns === true } : { online: false },
       });
       if (!info) this.logger.warn(`node ${s.name} (${s.publicHost}) is not answering`);
     }

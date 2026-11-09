@@ -72,6 +72,26 @@ jobs:
             -out "$OUT/assets/index.android.bundle" "$RUNNER_TEMP/index.android.js"
           ls -la "$OUT/assets"
 
+      # The release key lives only in repository secrets (made by scripts/make-release-key.cmd).
+      # Without it the build stops: release APKs are never signed with the public debug key.
+      - name: Release signing key
+        env:
+          SALI_KEYSTORE_BASE64: ${{ secrets.SALI_KEYSTORE_BASE64 }}
+          SALI_KEYSTORE_PASSWORD: ${{ secrets.SALI_KEYSTORE_PASSWORD }}
+          SALI_KEY_ALIAS: ${{ secrets.SALI_KEY_ALIAS }}
+        run: |
+          if [ -z "$SALI_KEYSTORE_BASE64" ] || [ -z "$SALI_KEYSTORE_PASSWORD" ]; then
+            echo "::error::Add SALI_KEYSTORE_BASE64, SALI_KEYSTORE_PASSWORD and SALI_KEY_ALIAS to repository secrets (scripts/make-release-key.cmd)."
+            exit 1
+          fi
+          KS="$RUNNER_TEMP/sali-release.jks"
+          echo "$SALI_KEYSTORE_BASE64" | base64 -d > "$KS"
+          {
+            echo "SALI_KEYSTORE_FILE=$KS"
+            echo "SALI_KEYSTORE_PASSWORD=$SALI_KEYSTORE_PASSWORD"
+            echo "SALI_KEY_ALIAS=${SALI_KEY_ALIAS:-sali}"
+          } >> "$GITHUB_ENV"
+
       - name: Build release APK
         working-directory: apps/mobile/android
         run: |
@@ -84,6 +104,12 @@ jobs:
           [ -f "$APK" ] || APK="$(find app/build/outputs/apk/release -name '*.apk' | sort | head -n1)"
           unzip -l "$APK" | grep -q "assets/index.android.bundle" || { echo "JS bundle missing from APK"; exit 1; }
           cp "$APK" "$GITHUB_WORKSPACE/sali-vpn.apk"
+          # Refuse to publish an APK signed with anything but the Sali key.
+          APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n1)"
+          "$APKSIGNER" verify --print-certs "$GITHUB_WORKSPACE/sali-vpn.apk" | tee "$RUNNER_TEMP/certs.txt"
+          if grep -q "CN=Android Debug" "$RUNNER_TEMP/certs.txt"; then echo "::error::APK is signed with the debug key"; exit 1; fi
+          grep "SHA-256" "$RUNNER_TEMP/certs.txt" | head -n1 | sed 's/.*: //' > "$GITHUB_WORKSPACE/sali-vpn.apk.cert-sha256.txt"
+          sha256sum "$GITHUB_WORKSPACE/sali-vpn.apk" | cut -d' ' -f1 > "$GITHUB_WORKSPACE/sali-vpn.apk.sha256.txt"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -95,6 +121,11 @@ jobs:
         with:
           tag_name: apk-latest
           name: Sali VPN — последний APK
-          body: Собрано автоматически из ${{ github.sha }}.
+          body: |
+            Собрано автоматически из ${{ github.sha }}.
+            Подпись: ключ Sali VPN (отпечаток сертификата — в sali-vpn.apk.cert-sha256.txt).
           prerelease: true
-          files: sali-vpn.apk
+          files: |
+            sali-vpn.apk
+            sali-vpn.apk.sha256.txt
+            sali-vpn.apk.cert-sha256.txt

@@ -1,118 +1,125 @@
 # Sali VPN Privacy Policy
 
 **Effective date:** September 5, 2026  
-**Last updated:** September 5, 2026
+**Last updated:** November 9, 2026
 
-This Privacy Policy explains how data may be collected and processed when you use **Sali VPN**, including its Telegram bot, Android and Windows apps, website, API, and VPN infrastructure. By using Sali VPN, you acknowledge that you have read this Policy.
+This policy explains what data **Sali VPN** processes across its Telegram bot, Android and Windows apps, website, API and VPN servers. We are specific about what we keep, what we don't, and why. If anything here differs from how the service actually works, that is a bug and we will fix it.
 
 ## 1. Who we are
-
-**Sali VPN** is a virtual private network service that provides access to VPN servers and related subscription and connection management features.
 
 **Operator:** Sali VPN  
 **Country of registration:** Kazakhstan  
 **Email:** work@salivpn.com  
 **Support:** @SaliVPNHelpBot
 
-## 2. Data we may collect
+## 2. The short version
 
-We aim to collect only data required to operate the service.
+**Sali VPN keeps no activity logs.** We do not store:
 
-### 2.1 Telegram data
+- the sites, apps and services you use;
+- your DNS queries;
+- the contents of your traffic;
+- your real IP address;
+- when you connect or disconnect, or how long sessions last;
+- how much traffic an individual user transfers.
 
-- Telegram User ID;
-- first and last name shown in Telegram;
-- Telegram username, if set;
-- interface language;
-- technical information supplied by the Sali VPN apps (app version, platform, Sali ID);
-- information required for authentication.
+This is not a promise to "try": our database has no fields for any of this, and our VPN servers do not record it (see section 4).
 
-We do not receive your Telegram password.
+## 3. What we keep
 
-### 2.2 Account and subscription data
+Only what the service cannot work without.
 
-We may store an internal user ID, subscription status and plan, start and end dates, activated devices, device limit, issued VPN configurations, selected server, and a technical history of subscription or configuration changes.
+### 3.1 Account
 
-### 2.3 VPN data
+- Sali ID — your account number (e.g. SL-7K4P-Q2M9);
+- Telegram ID, plus the name, username and language Telegram passes to the bot — so the bot can send codes and reminders;
+- an anonymised app-installation identifier (a hash, not a phone number or IMEI) — to link the app to your account;
+- settings: interface language, whether notifications are on.
 
-To provide a connection, Sali VPN may process a WireGuard public key, internal VPN IP, selected server, connection status, transferred data volume where needed for capacity or limits, and configuration creation, update, or deletion dates.
+### 3.2 Subscription and devices
 
-Sali VPN is not designed to keep a history of websites you visit. We do not intentionally retain traffic content, messages, passwords, website content, or DNS requests for advertising profiles. Temporary system logs may be used solely for security and service stability.
+- plan, subscription start and end dates, activation codes and their status;
+- your devices: name, platform and the **day** each was last used (no time of day; overwritten, so there is no history);
+- referral invitations and earned rewards.
 
-## 3. IP addresses and technical logs
+### 3.3 VPN access
 
-Server infrastructure may automatically process an IP address, request date and time, request type, error data, technical identifiers, and information needed to protect APIs and servers. This is used for security, abuse and fraud prevention, diagnostics, and availability monitoring—not advertising profiles.
+- your device's WireGuard public key;
+- the device's private key, **encrypted** (AES-256-GCM with a dedicated key used for nothing else) — so we can give you the same configuration again and move you to another server without a reinstall;
+- your address inside the tunnel (like 10.67.x.x) — it stays the same and reveals nothing about who you are or what you do;
+- the server your device is assigned to.
 
-## 4. Payments
+### 3.4 Payments
 
-Third-party payment providers may process purchases. Sali VPN may receive a payment ID, amount, currency, status, date, and order or subscription ID. We do not store full card numbers, CVV/CVC, or PIN when a third party processes payment. The provider processes payment data under its own privacy policy.
+- amount, currency, method, status and date;
+- the provider's payment ID (Telegram Stars, Paddle);
+- for USDT: receiving address, amount and TON transaction hash.
 
-## 5. Why we use data
+We never receive or store card details — the payment provider handles them.
 
-Data may be used to identify users, provide VPN access, create and manage configurations, manage subscriptions and devices, process payments, select servers, provide support, secure the service, prevent fraud and abuse, diagnose problems, improve reliability and performance, and comply with applicable law.
+### 3.5 Support
 
-## 6. We do not sell personal data
+If you contact support, we keep your messages. Please never send passwords, seed phrases or card details.
 
-Sali VPN does not sell personal data to advertisers, data brokers, or other third parties, and does not use VPN traffic to sell targeted advertising.
+## 4. How our VPN servers work
 
-## 7. Third parties
+- **No traffic logs.** Our servers run AmneziaWG and WireGuard, which keep no connection logs. Our server agent stores only the list of public keys and tunnel addresses, and reports nothing but the number of connected devices and server load.
+- **Our own no-log DNS.** DNS queries are answered on the same VPN server by our resolver (Unbound) with query logging off, DNSSEC validation and QNAME minimisation. Your queries never go to Google or Cloudflare.
+- **System logs live in memory only.** They are size-capped, erased after a day and on reboot. Nothing is written to disk.
+- **Users are isolated.** Traffic between VPN clients is blocked, so other users can't see your device. Access from the VPN to the hosting provider's internal networks is blocked too.
 
-We may use Telegram, VPS and hosting companies, database and cloud providers, payment processors, error monitoring services, and network protection providers. Only information needed for their function is shared. Each provider may process data under its own terms and privacy policy.
+**What is technically unavoidable.** While you are connected, the server keeps your current IP address and the time of the tunnel's last handshake in memory, and the NAT table holds your active connections. Without that, replies from the internet could not reach you. None of it is saved or shared, and it disappears shortly after you disconnect or when the server restarts. Every VPN works this way.
 
-## 8. International processing
+## 5. Third-party services
 
-VPN servers and other components may be located in different countries. Your information may therefore be processed or transmitted through infrastructure outside your country of residence as part of operating an international VPN service.
+| Service | Purpose | What it sees |
+|---|---|---|
+| Telegram | bot, support, Stars payments | your chat with the bot, under Telegram's rules |
+| Render (Frankfurt, Germany) | runs the API and bot | API requests; may keep its own technical logs, including the app's IP address when it calls the API |
+| Neon (Frankfurt, Germany) | database | the data in section 3; VPN keys in it are encrypted |
+| Cloudflare | salivpn.com website | website requests, under its own rules |
+| VPS hosting (e.g. Hetzner) | VPN servers | encrypted tunnel traffic; no access to our keys |
+| Telegram Stars, Paddle, TON network | payments | payment data, under their own rules |
 
-## 9. Retention
+None of them receives a history of your internet activity from us — we don't have one.
 
-We keep data only as long as needed to provide and secure the service and meet legal requirements. Account and subscription data may be kept while your account exists. After deletion, it is deleted or anonymized within a reasonable technical period unless retention is required by law, disputes, fraud prevention, safety, or backup cycles.
+## 6. Why we use data
 
-## 10. Security
+To grant access and configurations, manage subscriptions and devices, take payments, answer support requests, protect the service from abuse (such as claiming the free period twice) and meet binding legal requirements.
 
-Measures may include HTTPS, WireGuard, access controls, protected API authorization, restricted database access, server-side secret storage, software updates, and suspicious-activity monitoring. No internet service can guarantee absolute security.
+We do **not** sell data, show ads, use advertising trackers or build user profiles.
 
-## 11. Device data
+## 7. Government requests
 
-We may store a technical device or configuration ID to count active devices, create separate configurations, disable old configurations, and enforce plan limits.
+We can disclose only what we have, and only under a legally binding request that genuinely applies to Sali VPN. Because we keep no activity history, real IP addresses or connection times, we cannot say who visited which site, or when, through Sali VPN.
 
-## 12. Support
+## 8. Retention and deletion
 
-If you contact support, we may retain the request and related information to respond, troubleshoot, resolve disputes, and improve the service. Do not send passwords, seed phrases, cryptocurrency private keys, card details, or other secrets.
+- Account and subscription data is kept while the account exists.
+- On request to **work@salivpn.com** or @SaliVPNHelpBot we delete your account: we end the subscription, remove your keys from the VPN servers and delete your account data. Payment records may be kept as long as the law requires.
+- Database backups are overwritten on the provider's standard cycle.
 
-## 13. Cookies and local storage
+## 9. Security
 
-The website and the apps may use cookies, local storage, or similar technology when required for authentication, preferences, security, and correct operation. We do not need to use advertising cookies or third-party ad trackers.
+HTTPS for the website and API; WireGuard/AmneziaWG encryption for the VPN; database keys encrypted with a dedicated key; pinned certificates between the API and servers; one-time tokens for adding servers; rate limiting. Android apps are signed with the Sali VPN key, and its certificate fingerprint is published next to every build.
 
-## 14. Your rights
+No service can guarantee absolute security, but we minimise what there is to steal or demand in the first place.
 
-Depending on applicable law, you may have rights to access, correct, delete, restrict, withdraw consent, receive a copy of your data, or complain to a competent authority. Contact **work@salivpn.com**. We may ask you to verify account ownership.
+## 10. Your rights
 
-## 15. Account and data deletion
+You can ask what we hold about you, get a copy, correct it or delete your account. Write to **work@salivpn.com** or @SaliVPNHelpBot. We may ask you to confirm the account is yours (for example, with a message from the linked Telegram account).
 
-You may request deletion through Sali VPN support or an available deletion interface. We may deactivate the subscription, revoke configurations, delete or anonymize account data, remove device links, and stop processing except where retention is legally required. Backup copies expire through their standard retention cycle.
+## 11. Children
 
-## 16. Children
+Sali VPN is not intended for people below the age at which applicable law allows them to consent to data processing on their own. If we learn we received such data improperly, we will delete it.
 
-Sali VPN is not intended for persons below the minimum age at which applicable law allows independent consent to personal-data processing. Data obtained contrary to such requirements may be deleted.
+## 12. Changes
 
-## 17. Legal requests
+We update this policy when the service or the law changes. The current version is at salivpn.com/privacy, with the date of the last update at the top.
 
-We may disclose information when required by a legally binding request from a competent authority that applies to the operator. We cannot disclose more data than we actually hold.
-
-## 18. Limited logging
-
-We follow data-minimization principles and do not intentionally create a database of browsing activity for analysis, advertising, or sale. Technical data required for operations, security, diagnostics, or capacity may be processed temporarily and only as needed.
-
-## 19. Changes to this Policy
-
-We may update this Policy when features, providers, laws, or data practices change. The current version and last-updated date will be published on an official Sali VPN resource.
-
-## 20. Contact
-
-For privacy, deletion, and data-rights requests:
+## 13. Contact
 
 **Sali VPN**  
-**Email:** work@salivpn.com  
-**Telegram:** @SaliVPNHelpBot  
-**Country:** Kazakhstan  
-**Website:** salivpn.com
+Email: **work@salivpn.com**  
+Telegram: **@SaliVPNHelpBot**  
+Website: **salivpn.com**

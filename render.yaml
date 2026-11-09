@@ -44,6 +44,10 @@ services:
         generateValue: true
       - key: INTERNAL_API_KEY
         generateValue: true
+      # Encrypts client VPN keys at rest. Used for nothing else. NEVER change it once set:
+      # stored keys can't be decrypted without it.
+      - key: ENCRYPTION_KEY
+        generateValue: true
       - key: JWT_EXPIRES_IN
         value: 30d
 
