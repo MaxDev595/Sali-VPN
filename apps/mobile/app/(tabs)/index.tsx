@@ -8,6 +8,7 @@ import { BrandMark } from '../../src/components/BrandMark';
 import { Icon } from '../../src/components/Icon';
 import { VPNControl } from '../../src/components/VPNControl';
 import { TelegramLinkCard } from '../../src/components/TelegramLinkCard';
+import { NewsCard } from '../../src/components/NewsCard';
 import { SaliModal } from '../../src/components/SaliModal';
 import { SaliButton } from '../../src/components/SaliButton';
 import { useI18n } from '../../src/i18n';
@@ -74,6 +75,7 @@ export default function VpnScreen() {
       </View>
 
       <Animated.View entering={FadeInDown.duration(380)}><TelegramLinkCard compact /></Animated.View>
+      <NewsCard />
 
       <View style={styles.hero}>
         <Animated.Text key={`k-${status}`} entering={FadeIn.duration(260)} exiting={FadeOut.duration(120)} style={[styles.kicker, active && { color: theme.colors.success }]}>

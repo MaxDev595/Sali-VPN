@@ -1,5 +1,5 @@
 import { Markup, type Context } from 'telegraf';
-import { api, ApiRejection, type AdminCard, type PeopleSegment } from '../services/api-client';
+import { api, ApiRejection, type AdminCard, type AnnouncePlatform, type AnnouncementDraft, type PeopleSegment } from '../services/api-client';
 import { nodes as showNodes } from './admin';
 
 /**
@@ -12,14 +12,16 @@ import { nodes as showNodes } from './admin';
  *   ⛔ Отозвать → список активных подписок и неиспользованных кодов, отзыв по одной (молча или с уведомлением) или всё сразу
  *   🔎 Найти пользователя → карточка: доступ, устройства, оплаты, коды; выдать / отозвать / блок
  *   👥 Пользователи → 💎 платные · 🛡 от админа · 🎁 пробные · ⌛ истёкшие (по 10, листание, тап — карточка)
+ *   📣 Рассылка → 🆕 обновление (платформа, версия) или 📢 новость (заголовок) → ваш текст
+ *                → предпросмотр (кому, показать ли в приложении) → отправка всем, кто в боте; статус доставки
  *   📊 Статистика · 📜 Выданные · 🖥 Серверы
  *
  * Доступ проверяет API (ADMIN_TELEGRAM_IDS) на каждом действии.
  */
 
 const FOREVER = 36_500;
-type Step = 'target' | 'find' | 'revoke' | 'days' | 'message';
-interface Draft { step?: Step; userId?: string; title?: string; days?: number; kind?: 'admin' | 'gift'; message?: string; at: number }
+type Step = 'target' | 'find' | 'revoke' | 'days' | 'message' | 'an_version' | 'an_title' | 'an_body';
+interface Draft { step?: Step; userId?: string; title?: string; days?: number; kind?: 'admin' | 'gift'; message?: string; an?: Partial<AnnouncementDraft>; at: number }
 const drafts = new Map<number, Draft>();
 const draft = (id: number) => {
   const d = drafts.get(id);
@@ -63,7 +65,7 @@ export async function menu(ctx: Context) {
   drafts.delete(ctx.from!.id);
   await show(ctx, '🛠 <b>Админ-панель Sali VPN</b>\n\nЧто делаем?', Markup.inlineKeyboard([
     [Markup.button.callback('🎁 Выдать подписку', 'adm:grant'), Markup.button.callback('⛔ Отозвать', 'adm:revoke')],
-    [Markup.button.callback('👥 Пользователи', 'adm:pp:paid:0')],
+    [Markup.button.callback('👥 Пользователи', 'adm:pp:paid:0'), Markup.button.callback('📣 Рассылка', 'adm:an')],
     [Markup.button.callback('🔎 Найти пользователя', 'adm:find'), Markup.button.callback('📊 Статистика', 'adm:stats')],
     [Markup.button.callback('📜 Выданные', 'adm:issued'), Markup.button.callback('🖥 Серверы', 'adm:nodes')],
   ]));
@@ -301,6 +303,148 @@ async function revokeList(ctx: Context, userId: string) {
   } catch (error) { await fail(ctx, error); }
 }
 
+// ---------------------------------------------------------------------------
+// 📣 Рассылка: update notes and news to everyone in the bot, also shown in the apps.
+// ---------------------------------------------------------------------------
+
+const PLATFORMS: Record<AnnouncePlatform, string> = { android: '📱 Android', windows: '💻 Windows', all: '📱💻 Android и Windows' };
+const an = (id: number) => draft(id)?.an ?? {};
+const setAn = (id: number, patch: Partial<AnnouncementDraft>, step?: Step) => save(id, { an: { ...an(id), ...patch }, step });
+
+async function announceStart(ctx: Context) {
+  save(ctx.from!.id, { an: { showInApp: true }, step: undefined });
+  await show(ctx, [
+    '📣 <b>Рассылка</b>',
+    '',
+    'Сообщение получат все, кто запускал бота и не отключал уведомления. Его же увидят в приложении на главном экране.',
+    '',
+    'Что отправляем?',
+  ].join('\n'), Markup.inlineKeyboard([
+    [Markup.button.callback('🆕 Обновление приложения', 'adm:an:k:UPDATE')],
+    [Markup.button.callback('📢 Новость', 'adm:an:k:NEWS')],
+    [Markup.button.callback('📜 Прошлые рассылки', 'adm:an:h')],
+    back,
+  ]));
+}
+
+async function askPlatform(ctx: Context) {
+  await show(ctx, '🆕 <b>Обновление</b>\n\nДля какой платформы?', Markup.inlineKeyboard([
+    [Markup.button.callback(PLATFORMS.android, 'adm:an:p:android'), Markup.button.callback(PLATFORMS.windows, 'adm:an:p:windows')],
+    [Markup.button.callback(PLATFORMS.all, 'adm:an:p:all')],
+    back,
+  ]));
+}
+
+async function askVersion(ctx: Context) {
+  setAn(ctx.from!.id, {}, 'an_version');
+  await show(ctx, '🔢 Номер версии? Например <b>0.5.4</b>.\nПриложение сравнит его со своей версией и предложит обновиться.', Markup.inlineKeyboard([
+    [Markup.button.callback('Без номера', 'adm:an:v:skip')],
+    back,
+  ]));
+}
+
+async function askBody(ctx: Context) {
+  setAn(ctx.from!.id, {}, 'an_body');
+  const update = an(ctx.from!.id).kind === 'UPDATE';
+  await show(ctx, update
+    ? '✍️ Напишите, что нового, — своими словами. Например:\n\n<i>• VPN работает в фоне\n• В шторке видно сервер и время\n• Исправили смену сервера</i>\n\nСсылки на скачивание бот добавит сам.'
+    : '✍️ Напишите текст новости.', Markup.inlineKeyboard([back]));
+}
+
+async function announcePreview(ctx: Context) {
+  const d = an(ctx.from!.id);
+  if (!d.kind || !d.body) return announceStart(ctx);
+  try {
+    const p = await api.announcePreview(ctx.from!.id, d as AnnouncementDraft);
+    save(ctx.from!.id, { step: undefined });
+    await show(ctx, [
+      '👀 <b>Так увидят пользователи:</b>',
+      '━━━━━━━━━━━━',
+      p.html,
+      '━━━━━━━━━━━━',
+      d.kind === 'UPDATE' ? '<i>+ кнопки «Скачать», «Наш канал», «Сайт»</i>' : '<i>+ кнопки «Наш канал», «Сайт»</i>',
+      '',
+      `📨 Получат в Telegram: <b>${p.recipients}</b> чел.`,
+      `📱 В приложении: <b>${d.showInApp ? 'показать' : 'не показывать'}</b>`,
+    ].join('\n'), Markup.inlineKeyboard([
+      [Markup.button.callback(`✅ Отправить ${p.recipients}`, 'adm:an:go')],
+      [Markup.button.callback(d.showInApp ? '📱 Не показывать в приложении' : '📱 Показать в приложении', `adm:an:app:${d.showInApp ? 0 : 1}`)],
+      [Markup.button.callback('✏️ Изменить текст', 'adm:an:edit'), Markup.button.callback('✖️ Отмена', 'adm:menu')],
+    ]));
+  } catch (error) { await fail(ctx, error); }
+}
+
+async function announceSend(ctx: Context) {
+  const d = an(ctx.from!.id);
+  if (!d.kind || !d.body) return announceStart(ctx);
+  drafts.delete(ctx.from!.id);
+  try {
+    const r = await api.announcePublish(ctx.from!.id, d as AnnouncementDraft);
+    await show(ctx, `🚀 <b>Рассылка запущена</b> — ${r.recipients} чел.\nTelegram разрешает ~25 сообщений в секунду, так что на всех уйдёт около ${Math.max(1, Math.ceil(r.recipients / 20 / 60))} мин.${d.showInApp ? '\n📱 В приложении уже видно.' : ''}`, Markup.inlineKeyboard([
+      [Markup.button.callback('🔄 Статус доставки', `adm:an:st:${r.id}`)],
+      back,
+    ]));
+  } catch (error) { await fail(ctx, error); }
+}
+
+async function announceStatus(ctx: Context, id: string) {
+  try {
+    const s = await api.announceStatus(ctx.from!.id, id);
+    const done = s.delivered + s.failed;
+    await show(ctx, [
+      s.finishedAt ? '✅ <b>Рассылка завершена</b>' : '⏳ <b>Рассылка идёт</b>',
+      '',
+      `Доставлено: <b>${s.delivered}</b> из ${s.recipients}`,
+      s.failed ? `Не дошло: <b>${s.failed}</b> <i>(заблокировали бота или удалили аккаунт)</i>` : null,
+      s.finishedAt ? null : `Обработано: ${done}/${s.recipients}`,
+    ].filter((l) => l !== null).join('\n'), Markup.inlineKeyboard([
+      ...(s.finishedAt ? [] : [[Markup.button.callback('🔄 Обновить', `adm:an:st:${id}`)]]),
+      [Markup.button.callback('📜 Прошлые рассылки', 'adm:an:h')],
+      back,
+    ]));
+  } catch (error) { await fail(ctx, error); }
+}
+
+async function announceHistory(ctx: Context) {
+  try {
+    const rows = await api.announceHistory(ctx.from!.id);
+    const lines = ['📜 <b>Прошлые рассылки</b>', ''];
+    if (!rows.length) lines.push('Пока ничего не отправляли.');
+    rows.forEach((r, i) => {
+      const what = r.kind === 'UPDATE' ? `🆕 Обновление${r.version ? ` ${esc(r.version)}` : ''}` : `📢 ${esc(r.title ?? 'Новость')}`;
+      lines.push(`${i + 1}. ${what} · ${new Date(r.createdAt).toLocaleDateString('ru-RU')}`);
+      lines.push(`    📨 ${r.delivered}/${r.recipients}${r.finished ? '' : ' ⏳'} · 📱 ${r.showInApp ? 'в приложении' : 'скрыто'}`);
+    });
+    const hide = rows.filter((r) => r.showInApp).slice(0, 6).map((r) => Markup.button.callback(`📱✖️ ${rows.indexOf(r) + 1}`, `adm:an:hide:${r.id}`));
+    if (hide.length) lines.push('', '<i>📱✖️ N — убрать из приложения (в Telegram сообщения останутся).</i>');
+    await show(ctx, lines.join('\n'), Markup.inlineKeyboard([
+      ...(hide.length ? [hide] : []),
+      [Markup.button.callback('📣 Новая рассылка', 'adm:an')],
+      back,
+    ]));
+  } catch (error) { await fail(ctx, error); }
+}
+
+async function announceCallback(ctx: Context, a?: string, b?: string) {
+  const id = ctx.from!.id;
+  switch (a) {
+    case 'k':
+      if (b === 'UPDATE') { setAn(id, { kind: 'UPDATE' }); return askPlatform(ctx); }
+      setAn(id, { kind: 'NEWS', platform: undefined, version: undefined }, 'an_title');
+      return show(ctx, '📢 <b>Новость</b>\n\nЗаголовок? Например: <i>Новая страна — Финляндия</i>', Markup.inlineKeyboard([back]));
+    case 'p': setAn(id, { platform: (['android', 'windows', 'all'].includes(b!) ? b : 'all') as AnnouncePlatform }); return askVersion(ctx);
+    case 'v': setAn(id, { version: undefined }); return askBody(ctx);
+    case 'app': setAn(id, { showInApp: b === '1' }); return announcePreview(ctx);
+    case 'edit': return askBody(ctx);
+    case 'go': return announceSend(ctx);
+    case 'st': return announceStatus(ctx, b!);
+    case 'h': return announceHistory(ctx);
+    case 'hide':
+      try { await api.announceHide(id, b!); return announceHistory(ctx); } catch (error) { return fail(ctx, error); }
+    default: return announceStart(ctx);
+  }
+}
+
 /** All panel buttons: callback data «adm:…». */
 export async function callback(ctx: Context) {
   const data = (ctx.callbackQuery as { data?: string } | undefined)?.data ?? '';
@@ -335,6 +479,7 @@ export async function callback(ctx: Context) {
     case 'bl':
       try { await api.adminBlock(id, b!, a === '1'); return openCard(ctx, b!); } catch (error) { return fail(ctx, error); }
     case 'pp': return people(ctx, (['paid', 'granted', 'trial', 'expired'].includes(a!) ? a : 'paid') as PeopleSegment, Math.max(0, Number(b) || 0));
+    case 'an': return announceCallback(ctx, a, b);
     case 'stats': return stats(ctx);
     case 'issued': return issued(ctx);
     case 'nodes': return showNodes(ctx);
@@ -376,5 +521,18 @@ export async function text(ctx: Context, next: () => Promise<void>) {
     case 'message':
       save(ctx.from!.id, { message: raw.slice(0, 700) });
       return confirm(ctx);
+    case 'an_version': {
+      const version = raw.replace(/^v/i, '').slice(0, 20);
+      if (!/^\d+(\.\d+){0,3}$/.test(version)) { await ctx.reply('Версия — цифры через точку, например 0.5.4. Или нажмите «Без номера».'); return; }
+      setAn(ctx.from!.id, { version });
+      return askBody(ctx);
+    }
+    case 'an_title':
+      setAn(ctx.from!.id, { title: raw.slice(0, 80) });
+      return askBody(ctx);
+    case 'an_body':
+      if (raw.length > 3500) { await ctx.reply(`Слишком длинно: ${raw.length} символов, максимум 3500.`); return; }
+      setAn(ctx.from!.id, { body: raw }, undefined);
+      return announcePreview(ctx);
   }
 }

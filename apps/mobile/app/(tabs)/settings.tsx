@@ -83,6 +83,7 @@ export default function ProfileScreen() {
 
       <SectionLabel icon="help">{t.support}</SectionLabel>
       <Group>
+        <Row title="Что нового" onPress={() => router.push('/news')} />
         <Row title={t.help} onPress={() => router.push('/support')} />
         <Row title={t.docs} kind="external" onPress={() => openHelp()} />
         <Row title={t.privacyPolicy} kind="external" onPress={() => openSite('/privacy')} />

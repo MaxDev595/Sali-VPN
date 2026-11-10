@@ -13,3 +13,9 @@ export const supportBotUrl = () => `https://t.me/${SUPPORT_BOT}`;
 export const openHelp = (topic?: HelpTopic) => void Linking.openURL(helpUrl(topic));
 export const openSite = (path: string) => void Linking.openURL(siteUrl(path));
 export const openSupport = () => void Linking.openURL(supportBotUrl());
+
+/** The signed APK (GitHub release). Opening it in the browser downloads the update. */
+const APK = process.env.EXPO_PUBLIC_APK_URL ?? 'https://github.com/MaxDev595/Sali-VPN/releases/download/apk-latest/sali-vpn.apk';
+const NEWS_CHANNEL = process.env.EXPO_PUBLIC_NEWS_CHANNEL ?? 'https://t.me/SaliVpnNews';
+export const openApkDownload = () => void Linking.openURL(APK);
+export const openNewsChannel = () => void Linking.openURL(NEWS_CHANNEL);

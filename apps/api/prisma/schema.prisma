@@ -48,6 +48,7 @@ model User {
   devices        Device[]
   supportTickets SupportTicket[]
   notifications  Notification[]
+  announcements  Announcement[]
 
   // Referral relations: this user was referred by `referredBy`
   referredById  String?
@@ -506,4 +507,40 @@ model ActivationCode {
 
   @@index([ownerId, status])
   @@index([redeemedById])
+}
+
+// ---------------------------------------------------------------------------
+// Announcements: update notes and news from the bot admin panel. Sent to every
+// bot user who allows notifications and shown in the apps (GET /announcements).
+// ---------------------------------------------------------------------------
+
+enum AnnouncementKind {
+  UPDATE
+  NEWS
+}
+
+model Announcement {
+  id          String           @id @default(uuid())
+  kind        AnnouncementKind
+  /// UPDATE: "android" | "windows" | "all". NEWS: null.
+  platform    String?
+  /// App version of an UPDATE, e.g. "0.5.4" (the apps compare it with their own).
+  version     String?
+  /// NEWS headline; UPDATE uses a fixed one.
+  title       String?
+  /// The admin's own words.
+  body        String
+  /// Shown in the apps (otherwise only the Telegram broadcast).
+  showInApp   Boolean          @default(true)
+
+  recipients  Int              @default(0)
+  delivered   Int              @default(0)
+  failed      Int              @default(0)
+  finishedAt  DateTime?
+
+  authorId    String?
+  author      User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+
+  @@index([createdAt])
 }

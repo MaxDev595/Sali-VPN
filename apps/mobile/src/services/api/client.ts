@@ -90,6 +90,8 @@ async function request<T>(path: string, init: RequestInit = {}, retried = false)
   } finally { clearTimeout(timeout); }
 }
 
+export interface Announcement { id: string; kind: 'UPDATE' | 'NEWS'; platform: string | null; version: string | null; title: string; body: string; createdAt: string }
+
 export interface RedeemResult { kind: 'PAID' | 'FREE' | 'GIFT' | 'PROMO'; durationDays: number; planName: string | null; expiresAt: string | null }
 
 /**
@@ -103,5 +105,7 @@ export const api = {
   connect: (deviceKey: string, serverId?: string) => request<{ config: { configText: string }; server?: ApiServer }>('/vpn/connect', { method: 'POST', headers: { 'X-Device-Key': deviceKey }, body: JSON.stringify(serverId ? { serverId } : {}) }),
   disconnect: () => request('/vpn/disconnect', { method: 'POST' }),
   servers: async (): Promise<VPNServer[]> => (await request<ApiServer[]>('/servers')).map(toServer),
+  /** Update notes and news from the bot (public; no sign-in needed). */
+  announcements: () => request<Announcement[]>('/announcements?platform=android'),
   registerCurrentDevice: (deviceKey: string) => request('/devices/current', { method: 'POST', body: JSON.stringify({ deviceKey, name: 'Android', platform: 'ANDROID' }) }),
 };

@@ -15,6 +15,8 @@ import { handleDeepLink } from '../src/services/deepLinks';
 import { usePreferencesStore } from '../src/store/preferencesStore';
 import { useVpnStore } from '../src/store/vpnStore';
 import { useAccountStore } from '../src/store/accountStore';
+import { useNewsStore } from '../src/store/newsStore';
+import { AppState } from 'react-native';
 import { LogoIntro } from '../src/components/LogoIntro';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -25,6 +27,12 @@ function AppBootstrap() {
   const refreshAccount = useAccountStore(state => state.refresh);
   // A VPN left running while the app was closed shows up as connected again, with its timer.
   useEffect(() => useVpnStore.getState().init(), []);
+  // What's new from the bot: on launch and whenever the app comes back to the screen.
+  useEffect(() => {
+    void useNewsStore.getState().load();
+    const sub = AppState.addEventListener('change', state => { if (state === 'active') void useNewsStore.getState().load(); });
+    return () => sub.remove();
+  }, []);
   useEffect(() => {
     void hydrate();
     // Silent sign-in: the installation gets its Sali ID on the very first launch.
@@ -55,6 +63,7 @@ export default function RootLayout() {
         <Stack.Screen name="activate" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
         <Stack.Screen name="support" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="news" options={{ animation: 'slide_from_right' }} />
       </Stack>
       {ready && !introDone && <LogoIntro onFinish={finishIntro} />}
     </QueryClientProvider>

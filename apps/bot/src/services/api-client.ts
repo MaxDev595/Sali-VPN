@@ -204,7 +204,16 @@ export const api = {
   adminIssued: (telegramId: number) => call<AdminGrantRow[]>('/bot/admin/issued', { telegramId }, 0),
   adminStats: (telegramId: number) => call<AdminStats>('/bot/admin/stats', { telegramId }, 0),
   adminPeople: (telegramId: number, segment: PeopleSegment, page: number) => call<AdminPeople>('/bot/admin/people', { telegramId, segment, page }, 0),
+  announcePreview: (telegramId: number, draft: AnnouncementDraft) => call<{ html: string; recipients: number }>('/bot/admin/announce/preview', { telegramId, ...draft }, 0),
+  announcePublish: (telegramId: number, draft: AnnouncementDraft) => call<{ id: string; recipients: number }>('/bot/admin/announce/publish', { telegramId, ...draft }, 0),
+  announceStatus: (telegramId: number, id: string) => call<{ id: string; recipients: number; delivered: number; failed: number; finishedAt: string | null }>('/bot/admin/announce/status', { telegramId, id }, 0),
+  announceHistory: (telegramId: number) => call<AnnouncementRow[]>('/bot/admin/announce/history', { telegramId }, 0),
+  announceHide: (telegramId: number, id: string) => call<{ ok: boolean }>('/bot/admin/announce/hide', { telegramId, id }, 0),
 };
+
+export type AnnouncePlatform = 'android' | 'windows' | 'all';
+export interface AnnouncementDraft { kind: 'UPDATE' | 'NEWS'; platform?: AnnouncePlatform; version?: string; title?: string; body: string; showInApp: boolean }
+export interface AnnouncementRow { id: string; kind: 'UPDATE' | 'NEWS'; version: string | null; title: string | null; platform: string | null; body: string; showInApp: boolean; recipients: number; delivered: number; failed: number; finished: boolean; createdAt: string }
 
 export type PeopleSegment = 'paid' | 'granted' | 'trial' | 'expired';
 export interface AdminPeople {
