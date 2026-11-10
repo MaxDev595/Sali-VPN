@@ -143,6 +143,20 @@ bot.on('message', async (ctx, next) => {
 bot.catch((error, ctx) => console.error(`Unhandled support bot error update=${ctx.update.update_id}`, error));
 
 async function main() {
+  // Profile texts: the intro in an empty chat (description) and «О боте» (short description).
+  const site = (process.env.SITE_URL || 'https://salivpn.com').replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const news = `@${(process.env.NEWS_CHANNEL_URL || 'https://t.me/SaliVpnNews').replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '')}`;
+  const main = `@${(process.env.MAIN_BOT_USERNAME || 'SaliVPNOfficialBot').replace(/^@/, '')}`;
+  for (const [lang, description, short] of [
+    [undefined, `💬 Поддержка SALI VPN — поможем с подключением, оплатой и кодами.\n\nНапишите, что случилось, и пришлите ваш Sali ID (SL-XXXX-XXXX) из приложения — так ответим быстрее.\n\n🛡 Бот SALI VPN: ${main}\n📢 Новости и обновления: ${news}\n🌐 Сайт: ${site}`,
+      `Поддержка SALI VPN. Бот VPN: ${main} · Новости: ${news} · ${site}`],
+    ['en', `💬 SALI VPN support — help with connecting, payments and codes.\n\nTell us what happened and send your Sali ID (SL-XXXX-XXXX) from the app — we'll answer faster.\n\n🛡 SALI VPN bot: ${main}\n📢 News and updates: ${news}\n🌐 Website: ${site}`,
+      `SALI VPN support. VPN bot: ${main} · News: ${news} · ${site}`],
+  ] as const) {
+    await bot.telegram.setMyDescription(description, lang).catch((error) => console.warn('Failed to set support bot description', error));
+    await bot.telegram.setMyShortDescription(short, lang).catch((error) => console.warn('Failed to set support bot short description', error));
+  }
+
   await bot.telegram.setMyCommands([
     { command: 'start', description: 'Открыть поддержку' },
     { command: 'help', description: 'Как связаться с поддержкой' },

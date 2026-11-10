@@ -117,6 +117,20 @@ async function main() {
     await ctx.reply(genericError).catch(() => undefined);
   });
 
+  // Profile texts: the intro in an empty chat (description) and «О боте» (short description).
+  const site = (process.env.SITE_URL || 'https://salivpn.com').replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const news = `@${(process.env.NEWS_CHANNEL_URL || 'https://t.me/SaliVpnNews').replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '')}`;
+  const help = `@${(process.env.SUPPORT_BOT_USERNAME || 'SaliVPNHelpBot').replace(/^@/, '')}`;
+  for (const [lang, description, short] of [
+    [undefined, `SALI VPN — быстрый и надёжный VPN для свободного доступа к интернету.\n\n📢 Новости и обновления: ${news}\n💬 Поддержка: ${help}\n🌐 Сайт: ${site}`,
+      `Быстрый и надёжный VPN. Новости: ${news} · Поддержка: ${help} · ${site}`],
+    ['en', `SALI VPN — a fast and reliable VPN for free access to the internet.\n\n📢 News and updates: ${news}\n💬 Support: ${help}\n🌐 Website: ${site}`,
+      `Fast and reliable VPN. News: ${news} · Support: ${help} · ${site}`],
+  ] as const) {
+    await bot.telegram.setMyDescription(description, lang).catch((error) => console.warn('Failed to set bot description', error));
+    await bot.telegram.setMyShortDescription(short, lang).catch((error) => console.warn('Failed to set bot short description', error));
+  }
+
   await bot.telegram.setMyCommands([
     { command: 'start', description: 'Открыть Sali VPN' },
     { command: 'buy', description: 'Купить подписку' },
