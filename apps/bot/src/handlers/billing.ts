@@ -55,6 +55,16 @@ function callbackData(ctx: Context) {
   return ctx.callbackQuery && 'data' in ctx.callbackQuery ? ctx.callbackQuery.data : '';
 }
 
+/** «SL-7K4P-Q2M9» → «7K4PQ2M9» (callback data) and back. */
+const rawId = (publicId: string) => publicId.replace(/^SL-?/i, '').replace(/-/g, '').toUpperCase();
+const prettyId = (raw: string) => `SL-${raw.slice(0, 4)}-${raw.slice(4)}`;
+function unlinkKeyboard(others: Array<{ publicId: string; platform: string | null }>) {
+  return Markup.inlineKeyboard([
+    ...others.map((o) => [Markup.button.callback(`🔓 Отвязать ${o.platform === 'WINDOWS' ? '💻' : '📱'} ${o.publicId}`, `unl_${rawId(o.publicId)}`)]),
+    [Markup.button.callback('📱 Мои устройства', 'menu_devices')],
+  ]);
+}
+
 export function createBillingHandlers(config: BotConfig) {
   const handlers = {
     /** /start: registers the customer; start=link_<SaliID> claims the app installation ("фиксация клиента"). */
@@ -68,7 +78,12 @@ export function createBillingHandlers(config: BotConfig) {
           return;
         }
         if (result.link) {
-          await ctx.replyWithHTML(linkResultMessage(result.link.status, result.link.publicId), mainReplyKeyboard);
+          await ctx.replyWithHTML(linkResultMessage(result.link.status, result.link.publicId, result.link.share), mainReplyKeyboard);
+          if (result.link.share && !result.link.share.covered) {
+            await ctx.reply('Какое устройство отвязать?', unlinkKeyboard(result.link.share.others));
+            return;
+          }
+          if (result.link.share?.covered) return;
           if (result.link.status === 'linked' || result.link.status === 'already') {
             await ctx.replyWithHTML(
               result.freeUsed ? 'Осталось выбрать тариф 👇' : 'Начните с бесплатного тарифа или сразу выберите подписку 👇',
@@ -246,7 +261,35 @@ export function createBillingHandlers(config: BotConfig) {
     devices: async (ctx: Context) => {
       if (!ctx.from) return;
       try {
-        await ctx.replyWithHTML(devicesMessage(await api.devices(ctx.from.id)), downloadKeyboard());
+        const overview = await api.devices(ctx.from.id);
+        await ctx.replyWithHTML(devicesMessage(overview), Markup.inlineKeyboard([
+          ...overview.devices.map((d) => [Markup.button.callback(`🔓 Отвязать ${d.publicId}`, `unl_${rawId(d.publicId)}`)]),
+          [Markup.button.callback('📲 Скачать приложение', 'menu_download')],
+        ]));
+      } catch (error) {
+        await fail(ctx, error, 'devices');
+      }
+    },
+
+    /** «Отвязать SL-…»: asks first; then frees the place on the subscription. */
+    unlink: async (ctx: Context) => {
+      const data = callbackData(ctx);
+      await ctx.answerCbQuery().catch(() => undefined);
+      if (!ctx.from) return;
+      const ask = data.match(/^unl_([0-9A-Z]{8})$/);
+      if (ask) {
+        await ctx.replyWithHTML(
+          `Отвязать устройство <b>${prettyId(ask[1])}</b>?\n\nОно перестанет пользоваться вашей подпиской, а место освободится для нового. Подписка никуда не пропадёт.`,
+          Markup.inlineKeyboard([[Markup.button.callback('🔓 Да, отвязать', `unly_${ask[1]}`), Markup.button.callback('Нет', 'menu_devices')]]),
+        );
+        return;
+      }
+      const yes = data.match(/^unly_([0-9A-Z]{8})$/);
+      if (!yes) return;
+      try {
+        const r = await api.unlink(ctx.from.id, yes[1]);
+        await ctx.replyWithHTML(`🔓 Устройство <b>${r.publicId}</b> отвязано. Если на новом устройстве приложение уже открыто — нажмите «Подключить».`);
+        await handlers.devices(ctx);
       } catch (error) {
         await fail(ctx, error, 'devices');
       }
@@ -297,7 +340,7 @@ export function createBillingHandlers(config: BotConfig) {
       if (id && /\d/.test(text) && /^\s*SL/i.test(text)) {
         try {
           const result = await api.link(ctx.from.id, `${id[1]}${id[2]}`);
-          await ctx.replyWithHTML(linkResultMessage(result.status, result.publicId));
+          await ctx.replyWithHTML(linkResultMessage(result.status, result.publicId, result.share), result.share && !result.share.covered ? unlinkKeyboard(result.share.others) : undefined);
         } catch (error) {
           await fail(ctx, error, 'link');
         }

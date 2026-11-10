@@ -104,6 +104,7 @@ async function main() {
   bot.action(/^pay_/, billing.payCallback);
   bot.action(/^chk_/, billing.checkPayment);
   bot.action(/^(apply|at)_/, billing.apply);
+  bot.action(/^unly?_/, billing.unlink);
   bot.action(/^faq_/, handlers.faq);
   bot.action(/^language_(ru|en)$/, action((ctx) => billing.start(ctx)));
 

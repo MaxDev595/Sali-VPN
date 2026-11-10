@@ -215,8 +215,8 @@ export class AdminBotService {
     const sub = await this.prisma.subscription.findUnique({ where: { id: subscriptionId }, include: { plan: true } });
     if (!sub || sub.status !== SubscriptionStatus.ACTIVE) throw new NotFoundException('Подписка уже не активна');
     await this.prisma.subscription.update({ where: { id: sub.id }, data: { status: SubscriptionStatus.EXPIRED, expiresAt: new Date(), autoRenew: false } });
-    const stillActive = await this.subscriptions.getActiveForUser(sub.userId);
-    if (!stillActive) await this.vpn.disable(sub.userId).catch(() => undefined);
+    // The owner and every installation that shared it.
+    await this.subscriptions.disableUncovered(sub.userId).catch(() => undefined);
     if (notify) await this.notifications.sendHtml(sub.userId, `⛔ <b>Подписка ${esc(sub.plan.name)} отозвана администрацией.</b>\n\nЕсли это ошибка — напишите в поддержку.`).catch(() => undefined);
     return { userId: sub.userId };
   }

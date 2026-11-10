@@ -97,11 +97,12 @@ export class BotApiController {
     let referred = false;
     const ref = dto.startParam?.match(/^ref_(\d{3,20})$/);
     if (ref && isNew) referred = Boolean(await this.referrals.recordReferralIfNew(user.id, BigInt(ref[1])));
-    let link: { status: string; publicId?: string } | null = null;
+    let link: { status: string; publicId?: string; share?: Awaited<ReturnType<BotApiController['shareOf']>> } | null = null;
     const match = dto.startParam?.match(/^link_([0-9A-Za-z]{8})$/);
     if (match) {
       const result = await this.users.linkAppToTelegram(match[1], BigInt(dto.profile.telegramId));
-      link = { status: result.status, publicId: 'app' in result && result.app ? formatPublicId(result.app.publicId) : undefined };
+      const app = 'app' in result ? result.app : undefined;
+      link = { status: result.status, publicId: app ? formatPublicId(app.publicId) : undefined, share: app && result.status !== 'linked_elsewhere' ? await this.shareOf(BigInt(dto.profile.telegramId), app.id) : null };
     }
     const apps = await this.users.listLinkedApps(BigInt(dto.profile.telegramId));
     const freeUsed = Boolean(await this.prisma.activationCode.findFirst({ where: { ownerId: user.id, kind: 'FREE' } }));
@@ -119,14 +120,59 @@ export class BotApiController {
   async link(@Body() dto: LinkDto) {
     await this.requireUser(dto.telegramId);
     const result = await this.users.linkAppToTelegram(dto.publicId, BigInt(dto.telegramId));
-    return { status: result.status, publicId: 'app' in result && result.app ? formatPublicId(result.app.publicId) : null };
+    const app = 'app' in result ? result.app : undefined;
+    return {
+      status: result.status,
+      publicId: app ? formatPublicId(app.publicId) : null,
+      share: app && result.status !== 'linked_elsewhere' ? await this.shareOf(BigInt(dto.telegramId), app.id) : null,
+    };
+  }
+
+  /**
+   * After linking: does the account's subscription reach this installation?
+   * Up to plan.maxDevices installations share one subscription (phone, PC, a reinstalled app).
+   */
+  private async shareOf(telegramId: bigint, appId: string) {
+    const family = await this.subscriptions.sharing(telegramId);
+    if (!family.sub) return null;
+    const me = family.devices.find((d) => d.id === appId);
+    return {
+      plan: family.sub.plan.name,
+      until: family.sub.expiresAt?.toISOString() ?? null,
+      covered: Boolean(me && (me.covered || me.ownSub || family.sub.userId === appId)),
+      used: family.used,
+      max: family.max,
+      // Installations that could make room (oldest first), for «отвязать».
+      others: family.devices.filter((d) => d.id !== appId && d.covered).map((d) => ({ publicId: formatPublicId(d.publicId), platform: d.platform })),
+    };
+  }
+
+  /**
+   * «Отвязать»: frees a place on the subscription (an old phone, a reinstalled app).
+   * A subscription that installation held moves to the Telegram account, so the rest keep it.
+   */
+  @Post('unlink')
+  async unlink(@Body() dto: LinkDto) {
+    const tg = BigInt(dto.telegramId);
+    const owner = await this.requireUser(dto.telegramId);
+    const app = await this.users.findByPublicId(dto.publicId);
+    if (!app || app.linkedTelegramId !== tg) throw new NotFoundException('Это устройство не привязано к вашему Telegram');
+    await this.prisma.subscription.updateMany({ where: { userId: app.id, status: 'ACTIVE' }, data: { userId: owner.id } });
+    await this.prisma.user.update({ where: { id: app.id }, data: { linkedTelegramId: null, linkedAt: null } });
+    await this.subscriptions.disableUncovered(app.id).catch(() => undefined);
+    return { ok: true, publicId: formatPublicId(app.publicId) };
   }
 
   /** Devices (store-app installations) claimed by this Telegram account, with their access. */
   @Post('devices')
   async devices(@Body() dto: TelegramDto) {
     const apps = await this.users.listLinkedApps(BigInt(dto.telegramId));
-    return Promise.all(apps.map(async (app) => ({ publicId: formatPublicId(app.publicId), linkedAt: app.linkedAt?.toISOString() ?? null, ...(await this.accessOf(app.id)) })));
+    const family = await this.subscriptions.sharing(BigInt(dto.telegramId));
+    const list = await Promise.all(apps.map(async (app) => {
+      const slot = family.devices.find((d) => d.id === app.id);
+      return { publicId: formatPublicId(app.publicId), platform: slot?.platform ?? null, linkedAt: app.linkedAt?.toISOString() ?? null, shared: Boolean(slot?.covered && family.sub && family.sub.userId !== app.id), ...(await this.accessOf(app.id)) };
+    }));
+    return { devices: list, subscription: family.sub ? { plan: family.sub.plan.name, until: family.sub.expiresAt?.toISOString() ?? null, used: family.used, max: family.max } : null };
   }
 
   @Post('plans')

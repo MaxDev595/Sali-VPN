@@ -81,8 +81,25 @@ export interface OwnedCode extends IssuedCode {
   redeemedOn: string | null;
 }
 
+/** The account's subscription as seen by a freshly linked installation (shared by up to `max`). */
+export interface LinkShare {
+  plan: string;
+  until: string | null;
+  covered: boolean;
+  used: number;
+  max: number;
+  others: Array<{ publicId: string; platform: string | null }>;
+}
+
+export interface DevicesOverview {
+  devices: LinkedDevice[];
+  subscription: { plan: string; until: string | null; used: number; max: number } | null;
+}
+
 export interface LinkedDevice {
   publicId: string;
+  platform?: string | null;
+  shared?: boolean;
   linkedAt: string | null;
   tariff: string | null;
   until: string | null;
@@ -162,11 +179,12 @@ export const api = {
 
   // --- Bot billing & activation codes -------------------------------------
   start: (profile: TelegramProfile, startParam?: string) =>
-    call<{ publicId: string; link: { status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId?: string } | null; linkedApps: number; freeUsed: boolean; isBlocked: boolean; referred?: boolean; friendBonusHours?: number }>('/bot/start', { profile, startParam }),
+    call<{ publicId: string; link: { status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId?: string; share?: LinkShare | null } | null; linkedApps: number; freeUsed: boolean; isBlocked: boolean; referred?: boolean; friendBonusHours?: number }>('/bot/start', { profile, startParam }),
   referrals: (telegramId: number) => call<ReferralStats>('/bot/referrals', { telegramId }),
   link: (telegramId: number, publicId: string) =>
-    call<{ status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId: string | null }>('/bot/link', { telegramId, publicId }),
-  devices: (telegramId: number) => call<LinkedDevice[]>('/bot/devices', { telegramId }),
+    call<{ status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId: string | null; share: LinkShare | null }>('/bot/link', { telegramId, publicId }),
+  unlink: (telegramId: number, publicId: string) => call<{ ok: boolean; publicId: string }>('/bot/unlink', { telegramId, publicId }, 0),
+  devices: (telegramId: number) => call<DevicesOverview>('/bot/devices', { telegramId }),
   plans: (telegramId?: number) => call<BotPlan[]>('/bot/plans', telegramId ? { telegramId } : {}),
   purchase: (profile: TelegramProfile, planCode: string, method: 'stars' | 'crypto' | 'card') =>
     call<Purchase>('/bot/purchase', { profile, planCode, method }, 0),

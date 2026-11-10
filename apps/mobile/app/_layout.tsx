@@ -27,10 +27,10 @@ function AppBootstrap() {
   const refreshAccount = useAccountStore(state => state.refresh);
   // A VPN left running while the app was closed shows up as connected again, with its timer.
   useEffect(() => useVpnStore.getState().init(), []);
-  // What's new from the bot: on launch and whenever the app comes back to the screen.
+  // Back from Telegram (linked, bought a code…): fresh access and what's new.
   useEffect(() => {
     void useNewsStore.getState().load();
-    const sub = AppState.addEventListener('change', state => { if (state === 'active') void useNewsStore.getState().load(); });
+    const sub = AppState.addEventListener('change', state => { if (state === 'active') { void useNewsStore.getState().load(); void useAccountStore.getState().refresh(); } });
     return () => sub.remove();
   }, []);
   useEffect(() => {

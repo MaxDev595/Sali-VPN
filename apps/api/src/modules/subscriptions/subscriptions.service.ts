@@ -15,7 +15,8 @@ export class SubscriptionsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async getActiveForUser(userId: string) {
+  /** A subscription this installation / account holds itself. */
+  async getOwnActive(userId: string) {
     const now = new Date();
     return this.prisma.subscription.findFirst({
       where: {
@@ -26,6 +27,72 @@ export class SubscriptionsService {
       include: { plan: true },
       orderBy: { expiresAt: 'desc' },
     });
+  }
+
+  /**
+   * Access of an installation: its own subscription, or the subscription of the
+   * Telegram account it is linked to — shared by up to plan.maxDevices installations
+   * (phone, PC, a reinstalled app…). This is what keeps a subscription after reinstalling.
+   */
+  async getActiveForUser(userId: string) {
+    const own = await this.getOwnActive(userId);
+    if (own) return own;
+    const me = await this.prisma.user.findUnique({ where: { id: userId }, select: { telegramId: true, linkedTelegramId: true, appDeviceKey: true } });
+    const tg = me?.linkedTelegramId ?? me?.telegramId;
+    if (!me?.appDeviceKey || !tg) return null;
+    const family = await this.sharing(tg);
+    return family.sub && family.devices.some((d) => d.id === userId && d.covered) ? family.sub : null;
+  }
+
+  /**
+   * Everything under one Telegram account: the bot user plus every app installation
+   * linked to it. The longest active subscription among them is shared: the installation
+   * that holds it first, then the others in the order they were linked, up to maxDevices.
+   * Installations with a subscription of their own keep it and take no shared slot.
+   */
+  async sharing(telegramId: bigint) {
+    const now = new Date();
+    const members = await this.prisma.user.findMany({
+      where: { OR: [{ telegramId }, { linkedTelegramId: telegramId }] },
+      select: { id: true, publicId: true, appDeviceKey: true, linkedAt: true, createdAt: true, isBlocked: true, devices: { select: { platform: true }, take: 1, orderBy: { createdAt: 'desc' } } },
+    });
+    const subs = await this.prisma.subscription.findMany({
+      where: { userId: { in: members.map((m) => m.id) }, status: SubscriptionStatus.ACTIVE, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+      include: { plan: true },
+      orderBy: { expiresAt: { sort: 'desc', nulls: 'first' } },
+    });
+    const sub = subs[0] ?? null;
+    const owners = new Set(subs.map((s) => s.userId));
+    const since = (m: { linkedAt: Date | null; createdAt: Date }) => (m.linkedAt ?? m.createdAt).getTime();
+    const installs = members
+      .filter((m) => m.appDeviceKey && !m.isBlocked)
+      .sort((a, b) => Number(b.id === sub?.userId) - Number(a.id === sub?.userId) || since(a) - since(b));
+    const max = sub?.plan.maxDevices ?? 0;
+    let used = 0;
+    const devices = installs.map((m) => {
+      const ownSub = owners.has(m.id) && m.id !== sub?.userId;
+      const covered = !ownSub && Boolean(sub) && used < max;
+      if (covered) used += 1;
+      return { id: m.id, publicId: m.publicId, platform: m.devices[0]?.platform ?? null, linkedAt: m.linkedAt, ownSub, covered };
+    });
+    return { sub, max, used, devices };
+  }
+
+  /** After access ends somewhere in a Telegram family: switch off VPN on installations left without access. */
+  async disableUncovered(userId: string) {
+    const me = await this.prisma.user.findUnique({ where: { id: userId }, select: { telegramId: true, linkedTelegramId: true } });
+    const tg = me?.linkedTelegramId ?? me?.telegramId;
+    const ids = tg
+      ? (await this.prisma.user.findMany({ where: { OR: [{ telegramId: tg }, { linkedTelegramId: tg }] }, select: { id: true } })).map((u) => u.id)
+      : [userId];
+    if (!ids.includes(userId)) ids.push(userId);
+    const now = new Date();
+    for (const id of ids) {
+      if (await this.getActiveForUser(id)) continue;
+      const trial = await this.prisma.trial.findUnique({ where: { userId: id } });
+      if (trial && trial.status === 'ACTIVE' && trial.expiresAt > now) continue;
+      await this.vpn.disable(id).catch(() => undefined); // no VPN account yet — nothing to switch off
+    }
   }
 
   async getLatestForUser(userId: string) {
@@ -122,7 +189,8 @@ export class SubscriptionsService {
         where: { id: sub.id },
         data: { status: SubscriptionStatus.EXPIRED },
       });
-      await this.vpn.disable(sub.userId).catch((err) => {
+      // The owner and every installation that shared this subscription.
+      await this.disableUncovered(sub.userId).catch((err) => {
         this.logger.error(`Failed to disable VPN for expired sub user=${sub.userId}`, err);
       });
       await this.notifications.enqueue(sub.userId, 'SUBSCRIPTION_EXPIRED');

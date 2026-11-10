@@ -1,5 +1,5 @@
 import { BotUserState } from './services/api-client';
-import type { BotPlan, IssuedCode, LinkedDevice, OwnedCode, ReferralStats } from './services/api-client';
+import type { BotPlan, DevicesOverview, IssuedCode, LinkShare, OwnedCode, ReferralStats } from './services/api-client';
 
 export const genericError = 'Сервис временно перезапускается. Повторите команду через несколько секунд.';
 
@@ -94,7 +94,11 @@ export function codesListMessage(codes: OwnedCode[]) {
   return ['<b>Мои коды</b>', '', ...lines, '', 'Нажмите на код, чтобы скопировать.'].join('\n');
 }
 
-export function devicesMessage(devices: LinkedDevice[]) {
+const platformIcon = (p?: string | null) => (p === 'WINDOWS' || p === 'MACOS' ? '💻' : '📱');
+const platformName = (p?: string | null) => (p === 'WINDOWS' ? 'ПК (Windows)' : p === 'MACOS' ? 'Mac' : p === 'IOS' ? 'iPhone' : 'Android');
+const untilText = (iso: string | null) => (!iso || new Date(iso).getFullYear() > new Date().getFullYear() + 50 ? 'бессрочно' : `до ${date(iso)}`);
+
+export function devicesMessage({ devices, subscription }: DevicesOverview) {
   if (!devices.length) {
     return [
       '<b>Мои устройства</b>',
@@ -104,22 +108,32 @@ export function devicesMessage(devices: LinkedDevice[]) {
       'Откройте приложение Sali VPN → «Привязать Telegram». Или просто пришлите сюда ваш Sali ID — он выглядит так: <code>SL-XXXX-XXXX</code>.',
     ].join('\n');
   }
+  const head = subscription
+    ? [`💎 <b>${subscription.plan}</b> ${untilText(subscription.until)}`, `Работает на <b>${subscription.used} из ${subscription.max}</b> устройств — телефон, ПК, переустановленное приложение.`, '']
+    : [];
   const lines = devices.map((device) => {
     const status = device.active
-      ? device.until ? `🟢 ${device.tariff} до ${date(device.until)}` : `🟢 ${device.tariff}${device.secondsLeft ? `, осталось ${duration(device.secondsLeft)}` : ''}`
-      : '⚪️ нет активного тарифа';
-    return `📱 <b>${device.publicId}</b>\n     ${status}`;
+      ? device.until ? `🟢 ${device.tariff} ${untilText(device.until)}${device.shared ? ' · общая подписка' : ''}` : `🟢 ${device.tariff}${device.secondsLeft ? `, осталось ${duration(device.secondsLeft)}` : ''}`
+      : subscription ? '⚪️ не входит в подписку — все места заняты' : '⚪️ нет активного тарифа';
+    return `${platformIcon(device.platform)} <b>${device.publicId}</b> · ${platformName(device.platform)}\n     ${status}`;
   });
-  return ['<b>Мои устройства</b>', '', ...lines, '', 'Чтобы добавить ещё одно, пришлите его Sali ID.'].join('\n');
+  return ['<b>Мои устройства</b>', '', ...head, ...lines, '', 'Старое или удалённое устройство можно отвязать кнопкой ниже — освободится место.', 'Чтобы добавить новое, откройте в приложении «Привязать Telegram» или пришлите сюда его Sali ID.'].join('\n');
 }
 
-export function linkResultMessage(status: string, publicId?: string | null) {
-  switch (status) {
-    case 'linked': return `🔗 <b>Устройство ${publicId} привязано</b>\n\nТеперь коды, напоминания об окончании подписки и ответы поддержки будут приходить сюда.`;
-    case 'already': return `Устройство ${publicId} уже привязано к этому Telegram 👌`;
-    case 'linked_elsewhere': return 'Это устройство уже привязано к другому Telegram-аккаунту. Если это ошибка — напишите в поддержку.';
-    default: return 'Не нашли устройство с таким Sali ID. Проверьте номер в приложении: Аккаунт → Sali ID.';
+export function linkResultMessage(status: string, publicId?: string | null, share?: LinkShare | null) {
+  const base = (() => {
+    switch (status) {
+      case 'linked': return `🔗 <b>Устройство ${publicId} привязано</b>\n\nТеперь коды, напоминания об окончании подписки и ответы поддержки будут приходить сюда.`;
+      case 'already': return `Устройство ${publicId} уже привязано к этому Telegram 👌`;
+      case 'linked_elsewhere': return 'Это устройство уже привязано к другому Telegram-аккаунту. Если это ошибка — напишите в поддержку.';
+      default: return 'Не нашли устройство с таким Sali ID. Проверьте номер в приложении: Аккаунт → Sali ID.';
+    }
+  })();
+  if (!share || (status !== 'linked' && status !== 'already')) return base;
+  if (share.covered) {
+    return `${base}\n\n✅ <b>Ваша подписка уже работает на нём</b> — ${share.plan} ${untilText(share.until)}.\nУстройств на подписке: ${share.used} из ${share.max}. Откройте приложение и нажмите «Подключить».`;
   }
+  return `${base}\n\n⚠️ <b>На подписке уже ${share.max} устройства из ${share.max}.</b>\nЕсли вы переустановили приложение или сменили телефон — отвяжите старое устройство, и подписка сразу заработает здесь 👇`;
 }
 
 function money(value: number) {
