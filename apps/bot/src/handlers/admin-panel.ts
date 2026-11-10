@@ -1,5 +1,5 @@
 import { Markup, type Context } from 'telegraf';
-import { api, ApiRejection, type AdminCard } from '../services/api-client';
+import { api, ApiRejection, type AdminCard, type PeopleSegment } from '../services/api-client';
 import { nodes as showNodes } from './admin';
 
 /**
@@ -11,6 +11,7 @@ import { nodes as showNodes } from './admin';
  *                      → сообщение получателю (необязательно) → подтверждение
  *   ⛔ Отозвать → список активных подписок и неиспользованных кодов, отзыв по одной (молча или с уведомлением) или всё сразу
  *   🔎 Найти пользователя → карточка: доступ, устройства, оплаты, коды; выдать / отозвать / блок
+ *   👥 Пользователи → 💎 платные · 🛡 от админа · 🎁 пробные · ⌛ истёкшие (по 10, листание, тап — карточка)
  *   📊 Статистика · 📜 Выданные · 🖥 Серверы
  *
  * Доступ проверяет API (ADMIN_TELEGRAM_IDS) на каждом действии.
@@ -62,6 +63,7 @@ export async function menu(ctx: Context) {
   drafts.delete(ctx.from!.id);
   await show(ctx, '🛠 <b>Админ-панель Sali VPN</b>\n\nЧто делаем?', Markup.inlineKeyboard([
     [Markup.button.callback('🎁 Выдать подписку', 'adm:grant'), Markup.button.callback('⛔ Отозвать', 'adm:revoke')],
+    [Markup.button.callback('👥 Пользователи', 'adm:pp:paid:0')],
     [Markup.button.callback('🔎 Найти пользователя', 'adm:find'), Markup.button.callback('📊 Статистика', 'adm:stats')],
     [Markup.button.callback('📜 Выданные', 'adm:issued'), Markup.button.callback('🖥 Серверы', 'adm:nodes')],
   ]));
@@ -189,6 +191,51 @@ async function stats(ctx: Context) {
   } catch (error) { await fail(ctx, error); }
 }
 
+const SEGMENTS: Record<PeopleSegment, { icon: string; title: string; empty: string }> = {
+  paid: { icon: '💎', title: 'Платные', empty: 'Пока никто не платит.' },
+  granted: { icon: '🛡', title: 'От админа', empty: 'Активных подписок от администрации нет.' },
+  trial: { icon: '🎁', title: 'Пробные', empty: 'Сейчас никто не на бесплатном тарифе.' },
+  expired: { icon: '⌛', title: 'Истёкшие', empty: 'За 30 дней ни у кого не закончился доступ.' },
+};
+
+/** «👥 Пользователи»: who uses the VPN — paid / from admin / trial / expired, 10 per page. */
+async function people(ctx: Context, segment: PeopleSegment, page: number) {
+  try {
+    const r = await api.adminPeople(ctx.from!.id, segment, page);
+    const c = r.counts;
+    const seg = SEGMENTS[segment];
+    const using = c.paid + c.granted + c.trial;
+    const lines = [
+      '👥 <b>Пользователи</b>',
+      '',
+      `С доступом сейчас: <b>${using}</b>${c.online !== null ? ` · 🟢 подключены прямо сейчас: <b>${c.online}</b>` : ''}`,
+      `💎 платные: <b>${c.paid}</b> · 🛡 от админа: <b>${c.granted}</b> · 🎁 пробные: <b>${c.trial}</b>`,
+      `⌛ закончился доступ за 30 дней: <b>${c.expired}</b>`,
+      '',
+      `${seg.icon} <b>${seg.title}</b>${r.pages > 1 ? ` · стр. ${r.page + 1}/${r.pages}` : ''}`,
+    ];
+    if (!r.list.length) lines.push(seg.empty);
+    r.list.forEach((p, i) => {
+      const n = r.page * 10 + i + 1;
+      const who = `${esc(p.name)}${p.username && !p.name.startsWith('@') ? ` @${esc(p.username)}` : ''}`;
+      lines.push(`${n}. ${p.blocked ? '🚫 ' : ''}<b>${who}</b>${p.device ? ` · <code>${p.device}</code>` : ''}`);
+      lines.push(`    ${esc(p.plan)} · ${segment === 'expired' ? 'закончилась' : 'до'} ${p.until}${p.via ? ` · ${esc(p.via)}` : ''}`);
+    });
+    const tabs = (Object.keys(SEGMENTS) as PeopleSegment[]).map((s) => {
+      const count = { paid: c.paid, granted: c.granted, trial: c.trial, expired: c.expired }[s];
+      return Markup.button.callback(`${s === segment ? '• ' : ''}${SEGMENTS[s].icon} ${count}`, `adm:pp:${s}:0`);
+    });
+    const open = r.list.map((p, i) => Markup.button.callback(`${r.page * 10 + i + 1}`, `adm:c:${p.userId}`));
+    const pager = [
+      ...(r.page > 0 ? [Markup.button.callback('◀️', `adm:pp:${segment}:${r.page - 1}`)] : []),
+      Markup.button.callback('🔄', `adm:pp:${segment}:${r.page}`),
+      ...(r.page + 1 < r.pages ? [Markup.button.callback('▶️', `adm:pp:${segment}:${r.page + 1}`)] : []),
+    ];
+    if (r.list.length) lines.push('', '<i>Нажмите номер — откроется карточка.</i>');
+    await show(ctx, lines.join('\n'), Markup.inlineKeyboard([tabs, ...(open.length ? [open.slice(0, 5), open.slice(5)].filter((row) => row.length) : []), pager, back]));
+  } catch (error) { await fail(ctx, error); }
+}
+
 async function issued(ctx: Context) {
   try {
     const rows = await api.adminIssued(ctx.from!.id);
@@ -259,6 +306,7 @@ export async function callback(ctx: Context) {
       try { const r = await api.adminRevoke(id, a!); return show(ctx, `⛔ Готово: завершено подписок — ${r.subscriptions}, отозвано кодов — ${r.codes}.`, Markup.inlineKeyboard([[Markup.button.callback('👤 Карточка', `adm:c:${a}`)], back])); } catch (error) { return fail(ctx, error); }
     case 'bl':
       try { await api.adminBlock(id, b!, a === '1'); return openCard(ctx, b!); } catch (error) { return fail(ctx, error); }
+    case 'pp': return people(ctx, (['paid', 'granted', 'trial', 'expired'].includes(a!) ? a : 'paid') as PeopleSegment, Math.max(0, Number(b) || 0));
     case 'stats': return stats(ctx);
     case 'issued': return issued(ctx);
     case 'nodes': return showNodes(ctx);

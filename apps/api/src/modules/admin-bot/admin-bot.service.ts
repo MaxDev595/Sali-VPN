@@ -26,6 +26,7 @@ export const durationText = (days: number) => {
 };
 
 type Kind = keyof typeof PLANS;
+export type PeopleSegment = 'paid' | 'granted' | 'trial' | 'expired';
 
 /** Bot admin panel (/admin): look up anyone, grant or revoke access, stats. */
 @Injectable()
@@ -258,6 +259,75 @@ export class AdminBotService {
         at: r.createdAt.toISOString(),
       };
     });
+  }
+
+  /**
+   * «👥 Пользователи»: who has access right now, split into segments, 10 per page.
+   *   paid    — active paid subscription (Stars, USDT, card, paid code)
+   *   granted — active subscription from the admin (🛡 or 🎁)
+   *   trial   — free 24 h tariff, no subscription
+   *   expired — access ended in the last 30 days (who to win back)
+   * Only account data — no traffic, sites or connection history (there is none).
+   */
+  async people(adminId: number, segment: PeopleSegment, page = 0) {
+    this.guard(adminId);
+    const now = new Date();
+    const month = new Date(now.getTime() - 30 * 86_400_000);
+    const take = 10, skip = Math.max(0, page) * take;
+    const adminPlan: Prisma.SubscriptionWhereInput = { OR: [{ provider: { startsWith: 'admin_' } }, { plan: { code: { in: [PLANS.admin.code, PLANS.gift.code] } } }] };
+    const active: Prisma.SubscriptionWhereInput = { status: SubscriptionStatus.ACTIVE, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
+    const subWhere: Record<'paid' | 'granted' | 'expired', Prisma.SubscriptionWhereInput> = {
+      paid: { AND: [active, { NOT: adminPlan }] },
+      granted: { AND: [active, adminPlan] },
+      expired: { expiresAt: { gte: month, lte: now }, user: { subscriptions: { none: active } } },
+    };
+    const trialWhere: Prisma.TrialWhereInput = { status: 'ACTIVE', expiresAt: { gt: now }, user: { subscriptions: { none: active } } };
+
+    const [paid, granted, trial, expired, online] = await Promise.all([
+      this.prisma.subscription.count({ where: subWhere.paid }),
+      this.prisma.subscription.count({ where: subWhere.granted }),
+      this.prisma.trial.count({ where: trialWhere }),
+      this.prisma.subscription.groupBy({ by: ['userId'], where: subWhere.expired }).then((g) => g.length), // one row per person
+      this.nodes.list(adminId).then((l) => l.reduce((n, s) => n + (s.connectedNow ?? 0), 0)).catch(() => null),
+    ]);
+
+    type Row = { userId: string; until: Date | null; plan: string; via: string | null };
+    let rows: Row[];
+    if (segment === 'trial') {
+      const t = await this.prisma.trial.findMany({ where: trialWhere, orderBy: { expiresAt: 'asc' }, skip, take });
+      rows = t.map((x) => ({ userId: x.userId, until: x.expiresAt, plan: 'бесплатный тариф', via: null }));
+    } else {
+      const s = await this.prisma.subscription.findMany({
+        where: subWhere[segment], orderBy: segment === 'expired' ? { expiresAt: 'desc' } : { createdAt: 'desc' }, skip, take, include: { plan: true },
+        ...(segment === 'expired' ? { distinct: ['userId'] as Prisma.SubscriptionScalarFieldEnum[] } : {}),
+      });
+      rows = s.map((x) => ({ userId: x.userId, until: x.expiresAt, plan: x.plan.name, via: x.provider }));
+    }
+
+    const users = await this.prisma.user.findMany({ where: { id: { in: rows.map((r) => r.userId) } } });
+    const ownerIds = [...new Set(users.map((u) => u.linkedTelegramId).filter((v): v is bigint => v !== null))];
+    const owners = ownerIds.length ? await this.prisma.user.findMany({ where: { telegramId: { in: ownerIds } } }) : [];
+    const byId = new Map(users.map((u) => [u.id, u]));
+    const ownerOf = new Map(owners.map((o) => [o.telegramId!.toString(), o]));
+    const VIA: Record<string, string> = { telegram_stars: '⭐', crypto_ton: '💵 USDT', paddle: '💳', code: '🔑 код', google_play: 'Google Play', admin_admin: '🛡', admin_gift: '🎁' };
+
+    const list = rows.map((r) => {
+      const u = byId.get(r.userId);
+      const owner = u?.linkedTelegramId ? ownerOf.get(u.linkedTelegramId.toString()) : undefined;
+      const who = u?.telegramId ? u : owner;
+      return {
+        userId: r.userId,
+        name: who ? this.title(who) : u ? this.title(u) : '—',
+        username: who?.username ?? null,
+        device: u && !u.telegramId ? formatPublicId(u.publicId) : null,
+        plan: r.plan,
+        until: !r.until || r.until.getTime() - now.getTime() > (FOREVER_DAYS - 400) * 86_400_000 ? 'бессрочно' : date(r.until),
+        via: r.via ? (VIA[r.via] ?? r.via) : null,
+        blocked: u?.isBlocked ?? false,
+      };
+    });
+    const total = { paid, granted, trial, expired }[segment];
+    return { segment, page, pages: Math.max(1, Math.ceil(total / take)), counts: { paid, granted, trial, expired, online }, list };
   }
 
   async stats(adminId: number) {

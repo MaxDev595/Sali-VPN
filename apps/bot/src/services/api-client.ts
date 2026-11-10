@@ -203,7 +203,17 @@ export const api = {
   adminBlock: (telegramId: number, userId: string, isBlocked: boolean) => call<{ isBlocked: boolean }>('/bot/admin/block', { telegramId, userId, isBlocked }, 0),
   adminIssued: (telegramId: number) => call<AdminGrantRow[]>('/bot/admin/issued', { telegramId }, 0),
   adminStats: (telegramId: number) => call<AdminStats>('/bot/admin/stats', { telegramId }, 0),
+  adminPeople: (telegramId: number, segment: PeopleSegment, page: number) => call<AdminPeople>('/bot/admin/people', { telegramId, segment, page }, 0),
 };
+
+export type PeopleSegment = 'paid' | 'granted' | 'trial' | 'expired';
+export interface AdminPeople {
+  segment: PeopleSegment;
+  page: number;
+  pages: number;
+  counts: { paid: number; granted: number; trial: number; expired: number; online: number | null };
+  list: Array<{ userId: string; name: string; username: string | null; device: string | null; plan: string; until: string; via: string | null; blocked: boolean }>;
+}
 
 export interface AdminCard {
   id: string;

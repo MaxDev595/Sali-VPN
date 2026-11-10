@@ -1,7 +1,7 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { InternalServiceGuard } from '../../common/guards/internal-service.guard';
-import { AdminBotService, FOREVER_DAYS } from './admin-bot.service';
+import { AdminBotService, FOREVER_DAYS, type PeopleSegment } from './admin-bot.service';
 
 class AdminDto { @IsInt() telegramId!: number; }
 class LookupDto extends AdminDto { @IsString() @MaxLength(80) query!: string; }
@@ -14,6 +14,10 @@ class GrantDto extends UserDto {
 class RevokeSubDto extends AdminDto { @IsString() @MaxLength(40) subscriptionId!: string; @IsOptional() @IsBoolean() notify?: boolean; }
 class RevokeCodeDto extends AdminDto { @IsString() @MaxLength(40) codeId!: string; }
 class BlockDto extends UserDto { @IsBoolean() isBlocked!: boolean; }
+class PeopleDto extends AdminDto {
+  @IsIn(['paid', 'granted', 'trial', 'expired']) segment!: PeopleSegment;
+  @IsOptional() @IsInt() @Min(0) @Max(10_000) page?: number;
+}
 
 /** Bot admin panel (/admin). Every call re-checks ADMIN_TELEGRAM_IDS. */
 @Controller('internal/bot/admin')
@@ -30,4 +34,5 @@ export class AdminBotController {
   @Post('block') block(@Body() b: BlockDto) { return this.admin.setBlocked(b.telegramId, b.userId, b.isBlocked); }
   @Post('issued') issued(@Body() b: AdminDto) { return this.admin.issued(b.telegramId); }
   @Post('stats') stats(@Body() b: AdminDto) { return this.admin.stats(b.telegramId); }
+  @Post('people') people(@Body() b: PeopleDto) { return this.admin.people(b.telegramId, b.segment, b.page ?? 0); }
 }
