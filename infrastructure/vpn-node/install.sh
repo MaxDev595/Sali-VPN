@@ -215,6 +215,11 @@ if command -v ufw >/dev/null && ufw status | grep -q active; then
   for i in awg0 wg0; do ufw allow in on "$i" to any port 53 >/dev/null; done
 fi
 
+say "Защищаю сам сервер"
+# SSH by admin keys only, fail2ban, automatic security updates. Never fatal for the VPN itself.
+curl -fsSL "$API/api/v1/nodes/harden.sh" | SALI_API="$API" bash || warn_harden=1
+[ -z "${warn_harden:-}" ] || printf '\n\033[1;33m!! Защиту сервера включить не удалось — запустите позже: curl -fsSL %s/api/v1/nodes/harden.sh | bash\033[0m\n' "$API"
+
 say "Подключаю сервер к Sali"
 SALI_TOKEN="$TOKEN" SALI_API="$API" SALI_IP="$IP" SALI_DIR="$DIR" node - <<'EOF'
 const fs = require('fs');

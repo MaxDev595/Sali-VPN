@@ -42,6 +42,15 @@ export class NodesController {
   @Header('content-type', 'text/x-shellscript; charset=utf-8')
   installScript() { return nodeFile('install.sh'); }
 
+  @Get('harden.sh')
+  @Header('content-type', 'text/x-shellscript; charset=utf-8')
+  hardenScript() { return nodeFile('harden.sh'); }
+
+  /** Public SSH keys of the admins (public by nature — safe to serve). */
+  @Get('admin_keys.pub')
+  @Header('content-type', 'text/plain; charset=utf-8')
+  adminKeys() { return nodeFile('admin_keys.pub'); }
+
   @Get('agent.js')
   @Header('content-type', 'application/javascript; charset=utf-8')
   agent() { return nodeFile('agent.js'); }

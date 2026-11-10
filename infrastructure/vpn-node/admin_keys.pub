@@ -1,0 +1,3 @@
+# Public SSH keys of Sali VPN admins (public by design). harden.sh installs them on every node.
+# One key per line. harden.sh only adds keys; to revoke one, delete it from /root/.ssh/authorized_keys on each node.
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAnycb/HfBZJhKGHpuNj9eoDl5YurZt92eEvrhuu9CB3 sali-admin@PIROZHOK

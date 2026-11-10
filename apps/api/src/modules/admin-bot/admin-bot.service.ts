@@ -145,6 +145,7 @@ export class AdminBotService {
       const sent = await this.notifications.sendHtml(user.id,
         `${head}\n\nВаш код: <code>${code.display}</code>\n\nОткройте приложение Sali VPN → «Ввести код» и вставьте его. Или пришлите код сюда — привяжу к вашему устройству.`,
       ).catch(() => false);
+      void this.nodes.notifyAdmins(`Админ ${adminId} выдал код на подписку «${plan.name}» (${durationText(days)}) аккаунту ${formatPublicId(user.publicId)}.`);
       return { mode: 'code' as const, code: code.display, delivered: sent, devices: [] as string[] };
     }
 
@@ -169,6 +170,7 @@ export class AdminBotService {
       // Audit trail for «Выданные». REVOKED keeps it out of the customer's «Мои коды» and unusable as a code.
       data: { code: `ADM${Date.now().toString(36).toUpperCase()}`.slice(0, 12).padEnd(12, '0'), kind: ActivationCodeKind.GIFT, status: ActivationCodeStatus.REVOKED, durationDays: days, planId: plan.id, ownerId: user.id, redeemedById: targets[0]!.id, redeemedAt: new Date(), expiresAt: new Date(), note },
     }).catch(() => undefined);
+    void this.nodes.notifyAdmins(`Админ ${adminId} выдал подписку «${plan.name}» на ${durationText(days)} аккаунту ${formatPublicId(user.publicId)}.`);
     return { mode: 'direct' as const, code: null, delivered: sent, devices: applied };
   }
 

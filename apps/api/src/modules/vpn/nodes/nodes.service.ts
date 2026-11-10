@@ -31,6 +31,22 @@ export class NodesService {
     return (this.config.get<string>('ADMIN_TELEGRAM_IDS') ?? '').split(',').map((s) => s.trim()).filter(Boolean).includes(String(telegramId));
   }
 
+  /**
+   * Security alert to every admin (ADMIN_TELEGRAM_IDS) about sensitive actions: a server joined the
+   * network, a subscription was granted by hand. If someone hijacks an admin account, the other admins
+   * (and the owner on another device) see it immediately. Never throws.
+   */
+  async notifyAdmins(text: string) {
+    const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
+    const ids = (this.config.get<string>('ADMIN_TELEGRAM_IDS') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (!token || !ids.length) return;
+    await Promise.all(ids.map((chatId) => fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: `🔐 Безопасность\n\n${text}`, disable_notification: false }),
+    }).catch((error) => this.logger.warn(`admin alert to ${chatId} failed: ${(error as Error).message}`))));
+  }
+
   private apiUrl() {
     return (this.config.get<string>('PUBLIC_API_URL') ?? 'https://api.salivpn.com').replace(/\/$/, '');
   }
@@ -73,12 +89,16 @@ export class NodesService {
       agentUrl, agentKeyEnc: encryptSecret(input.agentKey, secret), agentCertPem: input.certPem,
       wgPublicKey: info.tunnels.wg.publicKey, awgPublicKey: info.tunnels.awg.publicKey, awgPort: info.tunnels.awg.port,
       awgParams: (info.tunnels.awg.params ?? {}) as Prisma.InputJsonValue, privateDns: info.dns === true,
-      online: true, lastSeenAt: new Date(), isActive: true, premiumOnly: false, capacity: 2000, pingMs: 40,
+      online: true, lastSeenAt: new Date(),
     };
     const existing = await this.prisma.vpnServer.findFirst({ where: { publicHost: input.host } });
+    // A re-install keeps the admin's settings (on/off, free/paid, capacity); only a new server gets defaults.
     const server = existing
       ? await this.prisma.vpnServer.update({ where: { id: existing.id }, data })
-      : await this.prisma.vpnServer.create({ data: { name: record.name, ...data } });
+      : await this.prisma.vpnServer.create({ data: { name: record.name, ...data, isActive: true, premiumOnly: false, capacity: 2000, pingMs: 40 } });
+    void this.notifyAdmins(existing
+      ? `🛠 Сервер ${server.name} (${input.host}) переустановлен.`
+      : `🆕 Подключён новый сервер ${server.name} (${input.host}).`);
     await this.prisma.nodeEnrollToken.update({ where: { id: record.id }, data: { usedAt: new Date(), serverId: server.id } });
     // Demo rows from the seed (no agent) disappear from the server list once real nodes exist.
     await this.prisma.vpnServer.updateMany({ where: { agentUrl: null, isActive: true }, data: { isActive: false } });
