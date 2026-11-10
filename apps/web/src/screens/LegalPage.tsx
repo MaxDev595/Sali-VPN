@@ -48,8 +48,14 @@ function MarkdownDocument({ source }: { source: string }) {
       </table></div>); continue;
     }
     const paragraph: string[] = [];
-    while (i < lines.length && lines[i].trim() && !/^(#{1,3})\s/.test(lines[i].trim()) && !lines[i].trim().startsWith('- ') && !lines[i].trim().startsWith('|') && lines[i].trim() !== '---') paragraph.push(lines[i++].trim().replace(/\s{2}$/, ''));
-    blocks.push(<p key={i}>{inline(paragraph.join(' '))}</p>);
+    // A line ending with "\" or two spaces is a hard line break (Markdown); otherwise lines join.
+    const breaks: boolean[] = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,3})\s/.test(lines[i].trim()) && !lines[i].trim().startsWith('- ') && !lines[i].trim().startsWith('|') && lines[i].trim() !== '---') {
+      const raw = lines[i++];
+      breaks.push(/(\\|\s{2})$/.test(raw.replace(/\r$/, '')));
+      paragraph.push(raw.trim().replace(/\\$/, '').trim());
+    }
+    blocks.push(<p key={i}>{paragraph.map((text, j) => <Fragment key={j}>{inline(text)}{j < paragraph.length - 1 ? (breaks[j] ? <br /> : ' ') : null}</Fragment>)}</p>);
   }
   return <article className="sl-legal-content">{blocks}</article>;
 }
