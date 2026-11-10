@@ -12,6 +12,8 @@ type VpnState = VPNConnection & {
   /** True when the server refused because there is no tariff: the UI offers "Ввести код". */
   needsCode: boolean;
   setServer(server: VPNServer): void;
+  /** Moves a live tunnel to the selected server (new config from the API, swapped in place). */
+  reconnect(previous?: VPNServer): Promise<void>;
   adoptServer(servers: VPNServer[]): void;
   setStatus(status: VPNStatus): void;
   clearError(): void;
@@ -20,7 +22,36 @@ type VpnState = VPNConnection & {
 
 export const useVpnStore = create<VpnState>((set, get) => ({
   status: 'disconnected', server: fallbackServers[0]!, connectedAt: null, error: null, needsCode: false,
-  setServer: (server) => { set({ server }); void Haptics.selectionAsync(); },
+  setServer: (server) => {
+    const previous = get().server;
+    set({ server });
+    void Haptics.selectionAsync();
+    // Picking another location while connected must actually move the tunnel, not just the label.
+    if (previous?.id !== server.id && get().status === 'connected') void get().reconnect(previous ?? undefined);
+  },
+  reconnect: async (previous) => {
+    if (get().status !== 'connected') return;
+    set({ status: 'connecting', error: null, needsCode: false });
+    try {
+      const deviceKey = await vpnEngine.deviceKey();
+      const server = get().server;
+      const result = await api.connect(deviceKey, server?.remote ? server.id : undefined);
+      // The native backend brings the old tunnel down and the new one up with this config.
+      await vpnEngine.connect(result.config.configText);
+      set({ status: 'connected', connectedAt: Date.now() });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Не удалось сменить сервер';
+      const needsCode = error instanceof ApiError && error.status === 403;
+      // If the old tunnel is still up, stay on it and put the old server back in the UI.
+      const still = await vpnEngine.status().catch(() => 'disconnected' as VPNStatus);
+      if (still === 'connected') set({ status: 'connected', server: previous ?? get().server, error: message, needsCode });
+      else set({ status: needsCode ? 'disconnected' : 'error', connectedAt: null, error: message, needsCode });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      void useAccountStore.getState().refresh();
+    }
+  },
   adoptServer: (servers) => {
     // Swap the offline placeholder for the matching (or recommended) real server once the list loads.
     const current = get().server;
