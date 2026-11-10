@@ -248,11 +248,22 @@ export interface AdminGrantRow {
 export interface AdminStats {
   telegramUsers: number;
   devices: number;
+  linkedDevices?: number;
   new24h: number;
   new7d: number;
+  new30d?: number;
+  activeDevices7d?: number;
   activeSubscriptions: number;
   activeTrials: number;
-  revenue: { day: number; dayCount: number; month: number; monthCount: number; total: number; totalCount: number };
-  servers: Array<{ name: string; online: boolean; premiumOnly: boolean; isActive: boolean }>;
+  access?: { paid: number; granted: number; trial: number; expired30d: number; expiringPaid3d: number; onlineNow: number | null };
+  revenue: {
+    day: number; dayCount: number; month: number; monthCount: number; total: number; totalCount: number;
+    week?: number; weekCount?: number; avgCheck30d?: number; payers?: number; payers30d?: number; refunds?: number;
+    byMethod30d?: Array<{ method: string; sum: number; count: number }>;
+  };
+  conversion?: { payersOfUsers: number; freeOfUsers: number };
+  codes?: { freeIssued: number; freeRedeemed: number; paid30d: number; paidRedeemed30d: number };
+  referrals?: { total: number; rewarded: number };
+  servers: Array<{ name: string; online: boolean; premiumOnly: boolean; isActive: boolean; users?: number; connectedNow?: number | null }>;
   adminGrants: number;
 }

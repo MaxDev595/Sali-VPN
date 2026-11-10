@@ -173,21 +173,47 @@ async function grant(ctx: Context) {
 async function stats(ctx: Context) {
   try {
     const s = await api.adminStats(ctx.from!.id);
-    const servers = s.servers.map((n) => `${n.online ? '🟢' : '🔴'} ${esc(n.name)} · ${n.premiumOnly ? '💎' : '🎁'}${n.isActive ? '' : ' · выкл'}`).join('\n') || '—';
+    const pct = (x: number) => `${Math.round(x * 100)}%`;
+    const a = s.access;
+    const r = s.revenue;
+    const servers = s.servers.map((n) => `${n.online ? '🟢' : '🔴'} ${esc(n.name)} · ${n.premiumOnly ? '💎' : '🎁'}`
+      + `${n.users !== undefined ? ` · 👤 ${n.users}` : ''}${n.connectedNow != null ? ` · сейчас ${n.connectedNow}` : ''}${n.isActive ? '' : ' · выкл'}`).join('\n') || '—';
+    const methods = r.byMethod30d?.length ? r.byMethod30d.map((m) => `   ${esc(m.method)}: <b>${usd(m.sum)}</b> (${m.count})`).join('\n') : '   оплат пока не было';
     await show(ctx, [
-      '📊 <b>Статистика</b>',
+      '📊 <b>Статистика Sali VPN</b>',
       '',
-      `👤 Telegram: <b>${s.telegramUsers}</b> · 📱 устройств: <b>${s.devices}</b>`,
-      `🆕 за 24 ч: <b>${s.new24h}</b> · за 7 дней: <b>${s.new7d}</b>`,
-      `💎 активных подписок: <b>${s.activeSubscriptions}</b> · 🎁 бесплатный тариф: <b>${s.activeTrials}</b>`,
+      '<b>👥 Аудитория</b>',
+      `Telegram: <b>${s.telegramUsers}</b> · 📱 приложений: <b>${s.devices}</b>${s.linkedDevices !== undefined ? ` (привязано ${s.linkedDevices})` : ''}`,
+      `🆕 новых: 24 ч <b>${s.new24h}</b> · 7 дн <b>${s.new7d}</b>${s.new30d !== undefined ? ` · 30 дн <b>${s.new30d}</b>` : ''}`,
+      s.activeDevices7d !== undefined ? `📲 пользовались за 7 дней: <b>${s.activeDevices7d}</b> устройств` : null,
       '',
-      `💰 за 24 ч: <b>${usd(s.revenue.day)}</b> (${s.revenue.dayCount})`,
-      `💰 за 30 дней: <b>${usd(s.revenue.month)}</b> (${s.revenue.monthCount})`,
-      `💰 всего: <b>${usd(s.revenue.total)}</b> (${s.revenue.totalCount})`,
+      '<b>🔐 Доступ сейчас</b>',
+      a ? `💎 платные: <b>${a.paid}</b> · 🛡 от админа: <b>${a.granted}</b> · 🎁 пробные: <b>${a.trial}</b>` : `💎 подписок: <b>${s.activeSubscriptions}</b> · 🎁 пробных: <b>${s.activeTrials}</b>`,
+      a?.onlineNow != null ? `🟢 подключены прямо сейчас: <b>${a.onlineNow}</b>` : null,
+      a ? `⏳ платная заканчивается за 3 дня: <b>${a.expiringPaid3d}</b> · ⌛ закончилась за 30 дн: <b>${a.expired30d}</b>` : null,
+      '',
+      '<b>💰 Деньги</b>',
+      `24 ч: <b>${usd(r.day)}</b> (${r.dayCount})${r.week !== undefined ? ` · 7 дн: <b>${usd(r.week)}</b> (${r.weekCount})` : ''}`,
+      `30 дн: <b>${usd(r.month)}</b> (${r.monthCount})${r.avgCheck30d ? ` · средний чек ${usd(r.avgCheck30d)}` : ''}`,
+      `всего: <b>${usd(r.total)}</b> (${r.totalCount})${r.refunds ? ` · возвратов: ${r.refunds}` : ''}`,
+      r.byMethod30d ? `Способы оплаты за 30 дн:\n${methods}` : null,
+      r.payers !== undefined ? `🧾 платили хоть раз: <b>${r.payers}</b> чел. · за 30 дн: <b>${r.payers30d}</b>` : null,
+      '',
+      s.conversion ? '<b>📈 Конверсия</b>' : null,
+      s.conversion ? `взяли бесплатный тариф: <b>${pct(s.conversion.freeOfUsers)}</b> · стали платить: <b>${pct(s.conversion.payersOfUsers)}</b> от пользователей Telegram` : null,
+      s.codes ? `🔑 бесплатные коды: выдано ${s.codes.freeIssued}, активировано ${s.codes.freeRedeemed}` : null,
+      s.codes ? `🔑 платные коды за 30 дн: куплено ${s.codes.paid30d}, активировано ${s.codes.paidRedeemed30d}` : null,
+      s.referrals ? `👥 приглашений: ${s.referrals.total}, с наградой: ${s.referrals.rewarded}` : null,
       `🛡 выдано админом: <b>${s.adminGrants}</b>`,
       '',
+      '<b>🖥 Серверы</b> <i>(👤 закреплено пользователей)</i>',
       servers,
-    ].join('\n'), Markup.inlineKeyboard([[Markup.button.callback('🔄 Обновить', 'adm:stats')], back]));
+      '',
+      `<i>Обновлено ${new Date().toLocaleTimeString('ru-RU', { timeZone: 'Asia/Almaty', hour: '2-digit', minute: '2-digit' })}</i>`,
+    ].filter((line) => line !== null).join('\n'), Markup.inlineKeyboard([
+      [Markup.button.callback('🔄 Обновить', 'adm:stats'), Markup.button.callback('👥 Пользователи', 'adm:pp:paid:0')],
+      back,
+    ]));
   } catch (error) { await fail(ctx, error); }
 }
 

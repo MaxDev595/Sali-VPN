@@ -261,6 +261,20 @@ export class AdminBotService {
     });
   }
 
+  /** Who counts as paid / from admin / trial / expired — shared by «Пользователи» and «Статистика». */
+  private segments(now: Date) {
+    const month = new Date(now.getTime() - 30 * 86_400_000);
+    const adminPlan: Prisma.SubscriptionWhereInput = { OR: [{ provider: 'admin' }, { provider: { startsWith: 'admin_' } }, { plan: { code: { in: [PLANS.admin.code, PLANS.gift.code] } } }] };
+    const active: Prisma.SubscriptionWhereInput = { status: SubscriptionStatus.ACTIVE, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
+    const subWhere: Record<'paid' | 'granted' | 'expired', Prisma.SubscriptionWhereInput> = {
+      paid: { AND: [active, { NOT: adminPlan }] },
+      granted: { AND: [active, adminPlan] },
+      expired: { expiresAt: { gte: month, lte: now }, user: { subscriptions: { none: active } } },
+    };
+    const trialWhere: Prisma.TrialWhereInput = { status: 'ACTIVE', expiresAt: { gt: now }, user: { subscriptions: { none: active } } };
+    return { adminPlan, active, subWhere, trialWhere };
+  }
+
   /**
    * «👥 Пользователи»: who has access right now, split into segments, 10 per page.
    *   paid    — active paid subscription (Stars, USDT, card, paid code)
@@ -272,16 +286,8 @@ export class AdminBotService {
   async people(adminId: number, segment: PeopleSegment, page = 0) {
     this.guard(adminId);
     const now = new Date();
-    const month = new Date(now.getTime() - 30 * 86_400_000);
     const take = 10, skip = Math.max(0, page) * take;
-    const adminPlan: Prisma.SubscriptionWhereInput = { OR: [{ provider: 'admin' }, { provider: { startsWith: 'admin_' } }, { plan: { code: { in: [PLANS.admin.code, PLANS.gift.code] } } }] };
-    const active: Prisma.SubscriptionWhereInput = { status: SubscriptionStatus.ACTIVE, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
-    const subWhere: Record<'paid' | 'granted' | 'expired', Prisma.SubscriptionWhereInput> = {
-      paid: { AND: [active, { NOT: adminPlan }] },
-      granted: { AND: [active, adminPlan] },
-      expired: { expiresAt: { gte: month, lte: now }, user: { subscriptions: { none: active } } },
-    };
-    const trialWhere: Prisma.TrialWhereInput = { status: 'ACTIVE', expiresAt: { gt: now }, user: { subscriptions: { none: active } } };
+    const { subWhere, trialWhere } = this.segments(now);
 
     const [paid, granted, trial, expired, online] = await Promise.all([
       this.prisma.subscription.count({ where: subWhere.paid }),
@@ -330,28 +336,79 @@ export class AdminBotService {
     return { segment, page, pages: Math.max(1, Math.ceil(total / take)), counts: { paid, granted, trial, expired, online }, list };
   }
 
+  /** «📊 Статистика»: audience, access, money, conversion, codes, referrals, servers. Counts only. */
   async stats(adminId: number) {
     this.guard(adminId);
     const now = new Date();
-    const day = new Date(now.getTime() - 86_400_000), week = new Date(now.getTime() - 7 * 86_400_000), month = new Date(now.getTime() - 30 * 86_400_000);
-    const paid = (since?: Date) => this.prisma.payment.aggregate({ where: { status: PaymentStatus.SUCCEEDED, ...(since ? { createdAt: { gte: since } } : {}) }, _sum: { amountUsd: true }, _count: true });
-    const [tgUsers, devices, new24, new7, subs, trials, p24, p30, pAll, servers, gifts] = await Promise.all([
+    const ago = (days: number) => new Date(now.getTime() - days * 86_400_000);
+    const day = ago(1), week = ago(7), month = ago(30);
+    const { subWhere, trialWhere } = this.segments(now);
+    const ok = { status: PaymentStatus.SUCCEEDED };
+    const paid = (since?: Date) => this.prisma.payment.aggregate({ where: { ...ok, ...(since ? { createdAt: { gte: since } } : {}) }, _sum: { amountUsd: true }, _count: true });
+    const [
+      tgUsers, devices, linked, new24, new7, new30, active7,
+      paidNow, granted, trials, expired, expiring3,
+      p24, p7, p30, pAll, byMethod, payers, payers30, refunds,
+      freeIssued, freeRedeemed, paidCodes30, paidRedeemed30, giftsAdmin,
+      refAll, refRewarded,
+      servers, perServer, online,
+    ] = await Promise.all([
       this.prisma.user.count({ where: { telegramId: { not: null } } }),
       this.prisma.user.count({ where: { telegramId: null } }),
+      this.prisma.user.count({ where: { telegramId: null, linkedTelegramId: { not: null } } }),
       this.prisma.user.count({ where: { createdAt: { gte: day } } }),
       this.prisma.user.count({ where: { createdAt: { gte: week } } }),
-      this.prisma.subscription.count({ where: { status: SubscriptionStatus.ACTIVE, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
-      this.prisma.trial.count({ where: { status: 'ACTIVE', expiresAt: { gt: now } } }),
-      paid(day), paid(month), paid(),
-      this.prisma.vpnServer.findMany({ where: { agentUrl: { not: null } }, select: { name: true, online: true, premiumOnly: true, isActive: true } }),
+      this.prisma.user.count({ where: { createdAt: { gte: month } } }),
+      this.prisma.device.count({ where: { lastActiveAt: { gte: week } } }),
+      this.prisma.subscription.count({ where: subWhere.paid }),
+      this.prisma.subscription.count({ where: subWhere.granted }),
+      this.prisma.trial.count({ where: trialWhere }),
+      this.prisma.subscription.groupBy({ by: ['userId'], where: subWhere.expired }).then((g) => g.length),
+      this.prisma.subscription.count({ where: { AND: [subWhere.paid, { expiresAt: { gt: now, lte: new Date(now.getTime() + 3 * 86_400_000) } }] } }),
+      paid(day), paid(week), paid(month), paid(),
+      this.prisma.payment.groupBy({ by: ['provider'], where: { ...ok, createdAt: { gte: month } }, _sum: { amountUsd: true }, _count: true }),
+      this.prisma.payment.groupBy({ by: ['userId'], where: ok }).then((g) => g.length),
+      this.prisma.payment.groupBy({ by: ['userId'], where: { ...ok, createdAt: { gte: month } } }).then((g) => g.length),
+      this.prisma.payment.count({ where: { status: PaymentStatus.REFUNDED } }),
+      this.prisma.activationCode.count({ where: { kind: ActivationCodeKind.FREE } }),
+      this.prisma.activationCode.count({ where: { kind: ActivationCodeKind.FREE, status: ActivationCodeStatus.REDEEMED } }),
+      this.prisma.activationCode.count({ where: { kind: ActivationCodeKind.PAID, createdAt: { gte: month } } }),
+      this.prisma.activationCode.count({ where: { kind: ActivationCodeKind.PAID, createdAt: { gte: month }, status: ActivationCodeStatus.REDEEMED } }),
       this.prisma.activationCode.count({ where: { note: { startsWith: NOTE_PREFIX } } }),
+      this.prisma.referral.count(),
+      this.prisma.referral.count({ where: { status: 'REWARDED' } }),
+      this.prisma.vpnServer.findMany({ where: { agentUrl: { not: null } }, select: { id: true, name: true, online: true, premiumOnly: true, isActive: true } }),
+      this.prisma.vpnAccount.groupBy({ by: ['serverId'], _count: true }),
+      this.nodes.list(adminId).catch(() => null),
     ]);
     const usd = (a: { _sum: { amountUsd: Prisma.Decimal | null } }) => Number(a._sum.amountUsd ?? 0);
+    const users = new Map(perServer.map((r) => [r.serverId, r._count]));
+    const live = new Map((online ?? []).map((n) => [n.name, n.connectedNow ?? null]));
+    const METHOD: Record<string, string> = { telegram_stars: '⭐ Stars', crypto_ton: '💵 USDT', crypto: '💵 USDT', paddle: '💳 Карта', google_play: '▶️ Google Play', manual: '✍️ Вручную' };
     return {
-      telegramUsers: tgUsers, devices, new24h: new24, new7d: new7,
-      activeSubscriptions: subs, activeTrials: trials,
-      revenue: { day: usd(p24), dayCount: p24._count, month: usd(p30), monthCount: p30._count, total: usd(pAll), totalCount: pAll._count },
-      servers, adminGrants: gifts,
+      telegramUsers: tgUsers, devices, linkedDevices: linked, new24h: new24, new7d: new7, new30d: new30, activeDevices7d: active7,
+      access: {
+        paid: paidNow, granted, trial: trials, expired30d: expired, expiringPaid3d: expiring3,
+        onlineNow: online ? online.reduce((n, s) => n + (s.connectedNow ?? 0), 0) : null,
+      },
+      // kept for older bot builds
+      activeSubscriptions: paidNow + granted, activeTrials: trials,
+      revenue: {
+        day: usd(p24), dayCount: p24._count, week: usd(p7), weekCount: p7._count,
+        month: usd(p30), monthCount: p30._count, total: usd(pAll), totalCount: pAll._count,
+        avgCheck30d: p30._count ? usd(p30) / p30._count : 0,
+        byMethod30d: byMethod.map((m) => ({ method: METHOD[m.provider] ?? m.provider, sum: Number(m._sum.amountUsd ?? 0), count: m._count })).sort((a, b) => b.sum - a.sum),
+        payers, payers30d: payers30, refunds,
+      },
+      conversion: {
+        // share of Telegram users who ever paid / who took the free tariff
+        payersOfUsers: tgUsers ? payers / tgUsers : 0,
+        freeOfUsers: tgUsers ? freeIssued / tgUsers : 0,
+      },
+      codes: { freeIssued, freeRedeemed, paid30d: paidCodes30, paidRedeemed30d: paidRedeemed30 },
+      referrals: { total: refAll, rewarded: refRewarded },
+      servers: servers.map((s) => ({ name: s.name, online: s.online, premiumOnly: s.premiumOnly, isActive: s.isActive, users: users.get(s.id) ?? 0, connectedNow: live.get(s.name) ?? null })),
+      adminGrants: giftsAdmin,
     };
   }
 }
