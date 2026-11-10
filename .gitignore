@@ -29,3 +29,5 @@ build-apk.log
 
 # desktop installer resources (icon, NSIS include)
 !desktop/build/
+Sali-VPN-Mobile/
+build-apk.log
