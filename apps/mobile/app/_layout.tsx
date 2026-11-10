@@ -13,6 +13,7 @@ import { theme } from '../src/theme';
 import { fontAssets } from '../src/theme/fonts';
 import { handleDeepLink } from '../src/services/deepLinks';
 import { usePreferencesStore } from '../src/store/preferencesStore';
+import { useVpnStore } from '../src/store/vpnStore';
 import { useAccountStore } from '../src/store/accountStore';
 import { LogoIntro } from '../src/components/LogoIntro';
 
@@ -22,6 +23,8 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, sta
 function AppBootstrap() {
   const hydrate = usePreferencesStore(state => state.hydrate);
   const refreshAccount = useAccountStore(state => state.refresh);
+  // A VPN left running while the app was closed shows up as connected again, with its timer.
+  useEffect(() => useVpnStore.getState().init(), []);
   useEffect(() => {
     void hydrate();
     // Silent sign-in: the installation gets its Sali ID on the very first launch.

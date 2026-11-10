@@ -10,6 +10,7 @@ import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { UsersService } from '../users/users.service';
 import { HomeStateDTO } from '@sali/types';
 import { DevicesService } from '../devices/devices.service';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller()
 @UseGuards(JwtAuthGuard)
@@ -20,6 +21,7 @@ export class HomeController {
     private readonly subscriptions: SubscriptionsService,
     private readonly users: UsersService,
     private readonly devices: DevicesService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get('home')
@@ -121,7 +123,16 @@ export class HomeController {
     if (!activeSub) await this.trials.startSession(authUser.sub);
 
     const config = await this.vpn.getConnectionConfig(authUser.sub, protocol);
-    return { account, config };
+    // The server the tunnel really goes to (the API may pick another one than asked for),
+    // so the app shows the right location.
+    const server = await this.prisma.vpnServer.findUnique({ where: { id: account.serverId } });
+    return {
+      account, config,
+      server: server && {
+        id: server.id, name: server.name, location: server.location, countryCode: server.countryCode, city: server.city,
+        premiumOnly: server.premiumOnly, pingMs: server.pingMs, currentLoad: server.currentLoad, capacity: server.capacity, recommended: false,
+      },
+    };
   }
 
   @Post('vpn/disconnect')

@@ -20,6 +20,9 @@
         <action android:name="android.net.VpnService"/>
       </intent-filter>
     </service>
+    <service android:name=".SaliVpnForegroundService" android:exported="false" android:foregroundServiceType="specialUse">
+      <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Ongoing VPN status: uptime, server and a disconnect button while the user's VPN tunnel is on"/>
+    </service>
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>

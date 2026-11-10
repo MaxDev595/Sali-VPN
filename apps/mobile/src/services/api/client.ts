@@ -1,8 +1,9 @@
 import { secureStorage } from '../secureStorage';
+import { vpnEngine } from '../vpn/VpnEngine';
 import type { HomeState, VPNServer } from '../../types';
 import { COUNTRY_NAMES } from '../../data/fallbackServers';
 
-interface ApiServer { id: string; name: string; location: string; countryCode: string | null; city: string | null; premiumOnly: boolean; pingMs: number | null; currentLoad: number; capacity: number | null; recommended: boolean }
+export interface ApiServer { id: string; name: string; location: string; countryCode: string | null; city: string | null; premiumOnly: boolean; pingMs: number | null; currentLoad: number; capacity: number | null; recommended: boolean }
 
 const builtInApi = String(process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 const DISCOVERY_URL = 'https://salivpn.com/config.json';
@@ -25,9 +26,38 @@ function resolveBaseUrl() {
   })();
   return apiBase;
 }
+/** API server row → the app's server model. */
+export function toServer(row: ApiServer): VPNServer {
+  return {
+    id: row.id,
+    country: COUNTRY_NAMES[row.countryCode ?? '']?.ru ?? row.location,
+    countryCode: row.countryCode ?? '',
+    city: row.city ?? row.location,
+    ping: row.pingMs ?? null,
+    load: row.capacity ? Math.round(((row.currentLoad ?? 0) / row.capacity) * 100) : null,
+    availability: true,
+    premiumOnly: row.premiumOnly,
+    access: row.premiumOnly ? 'premium' : 'free',
+    recommended: row.recommended ?? false,
+    remote: true,
+  };
+}
+
 export class ApiError extends Error { constructor(message: string, readonly code: string, readonly status: number) { super(message); } }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+/**
+ * Sign-in tokens expire (7 days). On 401 the app silently signs in again with its installation
+ * key and repeats the request once — otherwise, a week after install, the server list and
+ * everything else would stop loading.
+ */
+async function relogin() {
+  await secureStorage.clearToken();
+  const deviceKey = await vpnEngine.deviceKey();
+  const auth = await request<{ token: string }>('/auth/app', { method: 'POST', body: JSON.stringify({ deviceKey }) }, true);
+  await secureStorage.setToken(auth.token);
+}
+
+async function request<T>(path: string, init: RequestInit = {}, retried = false): Promise<T> {
   const token = await secureStorage.getToken();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
@@ -42,6 +72,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
         ...init.headers,
       },
     });
+    if (response.status === 401 && !retried && path !== '/auth/app') {
+      clearTimeout(timeout);
+      await relogin();
+      return request<T>(path, init, true);
+    }
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as { message?: string | string[]; code?: string };
       const message = Array.isArray(body.message) ? body.message[0] : body.message;
@@ -65,23 +100,8 @@ export const api = {
   appLogin: (deviceKey: string) => request<{ token: string; publicId: string }>('/auth/app', { method: 'POST', body: JSON.stringify({ deviceKey }) }),
   home: () => request<HomeState>('/home'),
   redeem: (code: string) => request<RedeemResult>('/codes/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
-  connect: (deviceKey: string, serverId?: string) => request<{ config: { configText: string; serverLocation: string; allocatedIp: string } }>('/vpn/connect', { method: 'POST', headers: { 'X-Device-Key': deviceKey }, body: JSON.stringify(serverId ? { serverId } : {}) }),
+  connect: (deviceKey: string, serverId?: string) => request<{ config: { configText: string }; server?: ApiServer }>('/vpn/connect', { method: 'POST', headers: { 'X-Device-Key': deviceKey }, body: JSON.stringify(serverId ? { serverId } : {}) }),
   disconnect: () => request('/vpn/disconnect', { method: 'POST' }),
-  servers: async (): Promise<VPNServer[]> => {
-    const rows = await request<ApiServer[]>('/servers');
-    return rows.map((row) => ({
-      id: row.id,
-      country: COUNTRY_NAMES[row.countryCode ?? '']?.ru ?? row.location,
-      countryCode: row.countryCode ?? '',
-      city: row.city ?? row.location,
-      ping: row.pingMs ?? null,
-      load: row.capacity ? Math.round((row.currentLoad / row.capacity) * 100) : null,
-      availability: true,
-      premiumOnly: row.premiumOnly,
-      access: row.premiumOnly ? 'premium' : 'free',
-      recommended: row.recommended,
-      remote: true,
-    }));
-  },
+  servers: async (): Promise<VPNServer[]> => (await request<ApiServer[]>('/servers')).map(toServer),
   registerCurrentDevice: (deviceKey: string) => request('/devices/current', { method: 'POST', body: JSON.stringify({ deviceKey, name: 'Android', platform: 'ANDROID' }) }),
 };

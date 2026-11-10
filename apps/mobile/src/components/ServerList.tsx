@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useEffect } from 'react';
 import { Text } from './Text';
@@ -19,7 +19,13 @@ export function useServers() {
   const query = useQuery({ queryKey: ['servers'], queryFn: async () => { await ensureSession(); return api.servers(); }, retry: 1, staleTime: 60_000 });
   const adopt = useVpnStore(state => state.adoptServer);
   useEffect(() => { if (query.data?.length) adopt(query.data); }, [adopt, query.data]);
-  return { servers: query.data?.length ? query.data : fallbackServers, offline: query.isError, loading: query.isLoading };
+  return {
+    servers: query.data?.length ? query.data : fallbackServers,
+    offline: query.isError,
+    loading: query.isLoading,
+    refreshing: query.isRefetching,
+    refresh: () => { void query.refetch(); },
+  };
 }
 
 function Load({ value }: { value: number | null }) {
@@ -30,7 +36,7 @@ function Load({ value }: { value: number | null }) {
 
 export function ServerList({ onPicked, header }: { onPicked?(server: VPNServer): void; header?: React.ReactElement }) {
   const { t } = useI18n();
-  const { servers, offline } = useServers();
+  const { servers, offline, refreshing, refresh } = useServers();
   const { server: selected, setServer, status } = useVpnStore();
   const access = useAccountStore(state => state.access);
   const hasPlan = access === 'premium';
@@ -46,7 +52,11 @@ export function ServerList({ onPicked, header }: { onPicked?(server: VPNServer):
     keyExtractor={item => item.id}
     contentContainerStyle={styles.list}
     showsVerticalScrollIndicator={false}
-    ListHeaderComponent={<>{header}{offline && <Text style={styles.offline}>{t.offline}</Text>}</>}
+    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={theme.colors.accent} colors={[theme.colors.accent]} />}
+    ListHeaderComponent={<>{header}{offline && <Pressable onPress={refresh} accessibilityRole="button" style={styles.offlineBox}>
+      <Text style={styles.offline}>{t.offline}</Text>
+      <Text style={styles.retry}>{refreshing ? t.refreshing : t.refresh}</Text>
+    </Pressable>}</>}
     ListFooterComponent={<Pressable onPress={() => openHelp('servers')} style={styles.footer}><Text style={styles.footerText}>{t.serversHelp}</Text><Icon name="external" size={15} color={theme.colors.accent} /></Pressable>}
     renderItem={({ item, index }) => {
       const isSelected = selected?.id === item.id || (!selected?.remote && selected?.countryCode === item.countryCode && !item.premiumOnly);
@@ -72,7 +82,9 @@ export function ServerList({ onPicked, header }: { onPicked?(server: VPNServer):
 
 const styles = StyleSheet.create({
   list: { paddingHorizontal: 20, paddingBottom: 40, gap: 10 },
-  offline: { color: theme.colors.warning, fontSize: 13, lineHeight: 19, marginBottom: 6 },
+  offline: { color: theme.colors.warning, fontSize: 13, lineHeight: 19 },
+  offlineBox: { marginBottom: 8, gap: 4 },
+  retry: { color: theme.colors.accent, fontSize: 13, fontWeight: '600' },
   row: { minHeight: 74, borderRadius: theme.radius.lg, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
   selected: { borderColor: 'rgba(255,197,135,.45)', backgroundColor: theme.colors.surfaceElevated },
   pressed: { transform: [{ scale: .985 }] },

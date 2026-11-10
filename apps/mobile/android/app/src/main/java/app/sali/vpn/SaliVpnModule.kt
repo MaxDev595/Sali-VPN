@@ -4,13 +4,12 @@ import android.app.Activity
 import android.content.Intent
 import android.net.VpnService
 import com.facebook.react.bridge.ActivityEventListener
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.modules.core.DeviceEventManagerModule
-import com.wireguard.android.backend.GoBackend
-import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
@@ -24,21 +23,13 @@ class SaliVpnModule(private val context: ReactApplicationContext) :
     private const val PREPARE_REQUEST = 7351
   }
 
-  private val backend by lazy { GoBackend(context) }
   private var preparePromise: Promise? = null
   private var status = "disconnected"
 
-  private val tunnel = object : Tunnel {
-    override fun getName(): String = "Sali"
-
-    override fun onStateChange(newState: Tunnel.State) {
-      status = if (newState == Tunnel.State.UP) "connected" else "disconnected"
-      emitStatus(status)
-    }
-  }
-
   init {
     context.addActivityEventListener(this)
+    // The tunnel lives in SaliTunnel (process-wide); this module only mirrors it to JS.
+    SaliTunnel.listener = { next -> status = next; emitStatus(next) }
   }
 
   override fun getName(): String = "SaliVpn"
@@ -59,20 +50,21 @@ class SaliVpnModule(private val context: ReactApplicationContext) :
     activity.startActivityForResult(intent, PREPARE_REQUEST)
   }
 
+  /** label: what the notification shows, e.g. «Германия · Франкфурт»; serverId: for the UI after a restart. */
   @ReactMethod
-  fun connect(configText: String, promise: Promise) {
+  fun connect(configText: String, label: String?, serverId: String?, promise: Promise) {
     try {
       status = "connecting"
       emitStatus(status)
       val config = Config.parse(
         ByteArrayInputStream(configText.toByteArray(StandardCharsets.UTF_8)),
       )
-      backend.setState(tunnel, Tunnel.State.UP, config)
+      SaliTunnel.up(context, config, label ?: "", serverId ?: "")
       status = "connected"
       emitStatus(status)
       promise.resolve(null)
     } catch (error: Throwable) {
-      status = "error"
+      status = if (SaliTunnel.isUp(context)) "connected" else "error"
       emitStatus(status)
       promise.reject("VPN_CONNECT_FAILED", error.message, error)
     }
@@ -83,7 +75,7 @@ class SaliVpnModule(private val context: ReactApplicationContext) :
     try {
       status = "disconnecting"
       emitStatus(status)
-      backend.setState(tunnel, Tunnel.State.DOWN, null)
+      SaliTunnel.down(context)
       status = "disconnected"
       emitStatus(status)
       promise.resolve(null)
@@ -96,12 +88,20 @@ class SaliVpnModule(private val context: ReactApplicationContext) :
 
   @ReactMethod
   fun getStatus(promise: Promise) {
-    try {
-      status = if (backend.getState(tunnel) == Tunnel.State.UP) "connected" else "disconnected"
-      promise.resolve(status)
-    } catch (_: Throwable) {
-      promise.resolve(status)
-    }
+    status = if (SaliTunnel.isUp(context)) "connected" else "disconnected"
+    promise.resolve(status)
+  }
+
+  /** Current session for the UI after the app is reopened: status, start time, server. */
+  @ReactMethod
+  fun getSession(promise: Promise) {
+    val up = SaliTunnel.isUp(context)
+    promise.resolve(Arguments.createMap().apply {
+      putString("status", if (up) "connected" else "disconnected")
+      putDouble("connectedAt", if (up) SaliTunnel.connectedAt.toDouble() else 0.0)
+      putString("serverId", if (up) SaliTunnel.serverId else "")
+      putString("label", if (up) SaliTunnel.serverLabel else "")
+    })
   }
 
   /** Stable across app reinstalls; opaque hash avoids exposing ANDROID_ID. */

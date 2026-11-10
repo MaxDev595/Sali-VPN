@@ -131,8 +131,8 @@ android {
         applicationId 'app.sali.vpn'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 17
-        versionName "0.5.2"
+        versionCode 18
+        versionName "0.5.3"
     }
     signingConfigs {
         debug {
@@ -198,6 +198,8 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation("com.wireguard.android:tunnel:1.0.20230706")
+    // ServiceCompat.startForeground with a service type (VPN status notification).
+    implementation("androidx.core:core:1.13.1")
     implementation("com.android.billingclient:billing:9.1.0")
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
