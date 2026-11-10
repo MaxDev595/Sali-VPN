@@ -115,7 +115,8 @@ export function devicesMessage({ devices, subscription }: DevicesOverview) {
     const status = device.active
       ? device.until ? `🟢 ${device.tariff} ${untilText(device.until)}${device.shared ? ' · общая подписка' : ''}` : `🟢 ${device.tariff}${device.secondsLeft ? `, осталось ${duration(device.secondsLeft)}` : ''}`
       : subscription ? '⚪️ не входит в подписку — все места заняты' : '⚪️ нет активного тарифа';
-    return `${platformIcon(device.platform)} <b>${device.publicId}</b> · ${platformName(device.platform)}\n     ${status}`;
+    const used = device.idleDays == null ? '\n     ⚠️ ещё ни разу не подключалось' : device.idleDays >= 14 ? `\n     ⚠️ не используется ${device.idleDays} дн. — можно отвязать` : '';
+    return `${platformIcon(device.platform)} <b>${device.publicId}</b> · ${platformName(device.platform)}\n     ${status}${used}`;
   });
   return ['<b>Мои устройства</b>', '', ...head, ...lines, '', 'Старое или удалённое устройство можно отвязать кнопкой ниже — освободится место.', 'Чтобы добавить новое, откройте в приложении «Привязать Telegram» или пришлите сюда его Sali ID.'].join('\n');
 }

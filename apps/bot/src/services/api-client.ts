@@ -100,6 +100,7 @@ export interface LinkedDevice {
   publicId: string;
   platform?: string | null;
   shared?: boolean;
+  idleDays?: number | null;
   linkedAt: string | null;
   tariff: string | null;
   until: string | null;

@@ -154,12 +154,10 @@ export class BotApiController {
   @Post('unlink')
   async unlink(@Body() dto: LinkDto) {
     const tg = BigInt(dto.telegramId);
-    const owner = await this.requireUser(dto.telegramId);
-    const app = await this.users.findByPublicId(dto.publicId);
-    if (!app || app.linkedTelegramId !== tg) throw new NotFoundException('Это устройство не привязано к вашему Telegram');
-    await this.prisma.subscription.updateMany({ where: { userId: app.id, status: 'ACTIVE' }, data: { userId: owner.id } });
-    await this.prisma.user.update({ where: { id: app.id }, data: { linkedTelegramId: null, linkedAt: null } });
-    await this.subscriptions.disableUncovered(app.id).catch(() => undefined);
+    await this.requireUser(dto.telegramId);
+    const found = await this.users.findByPublicId(dto.publicId);
+    const app = found && await this.subscriptions.unlinkInstallation(tg, found.id);
+    if (!app) throw new NotFoundException('Это устройство не привязано к вашему Telegram');
     return { ok: true, publicId: formatPublicId(app.publicId) };
   }
 
@@ -170,7 +168,7 @@ export class BotApiController {
     const family = await this.subscriptions.sharing(BigInt(dto.telegramId));
     const list = await Promise.all(apps.map(async (app) => {
       const slot = family.devices.find((d) => d.id === app.id);
-      return { publicId: formatPublicId(app.publicId), platform: slot?.platform ?? null, linkedAt: app.linkedAt?.toISOString() ?? null, shared: Boolean(slot?.covered && family.sub && family.sub.userId !== app.id), ...(await this.accessOf(app.id)) };
+      return { publicId: formatPublicId(app.publicId), platform: slot?.platform ?? null, idleDays: slot?.lastActiveAt ? Math.floor((Date.now() - slot.lastActiveAt.getTime()) / 86_400_000) : null, linkedAt: app.linkedAt?.toISOString() ?? null, shared: Boolean(slot?.covered && family.sub && family.sub.userId !== app.id), ...(await this.accessOf(app.id)) };
     }));
     return { devices: list, subscription: family.sub ? { plan: family.sub.plan.name, until: family.sub.expiresAt?.toISOString() ?? null, used: family.used, max: family.max } : null };
   }

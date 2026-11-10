@@ -54,7 +54,7 @@ export class SubscriptionsService {
     const now = new Date();
     const members = await this.prisma.user.findMany({
       where: { OR: [{ telegramId }, { linkedTelegramId: telegramId }] },
-      select: { id: true, publicId: true, appDeviceKey: true, linkedAt: true, createdAt: true, isBlocked: true, devices: { select: { platform: true }, take: 1, orderBy: { createdAt: 'desc' } } },
+      select: { id: true, publicId: true, appDeviceKey: true, linkedAt: true, createdAt: true, isBlocked: true, devices: { select: { platform: true, lastActiveAt: true }, take: 1, orderBy: { lastActiveAt: { sort: 'desc', nulls: 'last' } } } },
     });
     const subs = await this.prisma.subscription.findMany({
       where: { userId: { in: members.map((m) => m.id) }, status: SubscriptionStatus.ACTIVE, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
@@ -73,9 +73,26 @@ export class SubscriptionsService {
       const ownSub = owners.has(m.id) && m.id !== sub?.userId;
       const covered = !ownSub && Boolean(sub) && used < max;
       if (covered) used += 1;
-      return { id: m.id, publicId: m.publicId, platform: m.devices[0]?.platform ?? null, linkedAt: m.linkedAt, ownSub, covered };
+      return { id: m.id, publicId: m.publicId, platform: m.devices[0]?.platform ?? null, lastActiveAt: m.devices[0]?.lastActiveAt ?? null, linkedAt: m.linkedAt, ownSub, covered };
     });
     return { sub, max, used, devices };
+  }
+
+  /**
+   * Removes an installation from a Telegram account (an old phone, a reinstalled app):
+   * frees its place on the subscription. A subscription it held moves to the account's
+   * bot user, so the other installations keep it.
+   */
+  async unlinkInstallation(telegramId: bigint, appId: string) {
+    const [app, owner] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: appId } }),
+      this.prisma.user.findUnique({ where: { telegramId } }),
+    ]);
+    if (!app || app.linkedTelegramId !== telegramId || !app.appDeviceKey) return null;
+    if (owner) await this.prisma.subscription.updateMany({ where: { userId: app.id, status: SubscriptionStatus.ACTIVE }, data: { userId: owner.id } });
+    await this.prisma.user.update({ where: { id: app.id }, data: { linkedTelegramId: null, linkedAt: null } });
+    await this.disableUncovered(app.id).catch(() => undefined);
+    return app;
   }
 
   /** After access ends somewhere in a Telegram family: switch off VPN on installations left without access. */

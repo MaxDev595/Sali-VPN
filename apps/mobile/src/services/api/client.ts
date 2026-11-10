@@ -92,6 +92,9 @@ async function request<T>(path: string, init: RequestInit = {}, retried = false)
 
 export interface Announcement { id: string; kind: 'UPDATE' | 'NEWS'; platform: string | null; version: string | null; title: string; body: string; createdAt: string }
 
+export interface AccountDevice { publicId: string; platform: string | null; current: boolean; covered: boolean; lastActiveAt: string | null; idleDays: number | null }
+export interface AccountDevices { linked: boolean; subscription: { plan: string; until: string | null; used: number; max: number } | null; devices: AccountDevice[] }
+
 export interface RedeemResult { kind: 'PAID' | 'FREE' | 'GIFT' | 'PROMO'; durationDays: number; planName: string | null; expiresAt: string | null }
 
 /**
@@ -107,5 +110,8 @@ export const api = {
   servers: async (): Promise<VPNServer[]> => (await request<ApiServer[]>('/servers')).map(toServer),
   /** Update notes and news from the bot (public; no sign-in needed). */
   announcements: () => request<Announcement[]>('/announcements?platform=android'),
+  /** Every installation under this Telegram account (they share one subscription). */
+  accountDevices: () => request<AccountDevices>('/devices/account'),
+  unlinkDevice: (publicId: string) => request<{ ok: boolean }>('/devices/account/unlink', { method: 'POST', body: JSON.stringify({ publicId }) }),
   registerCurrentDevice: (deviceKey: string) => request('/devices/current', { method: 'POST', body: JSON.stringify({ deviceKey, name: 'Android', platform: 'ANDROID' }) }),
 };

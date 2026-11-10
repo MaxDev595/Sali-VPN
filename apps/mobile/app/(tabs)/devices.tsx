@@ -5,6 +5,7 @@ import { Text } from '../../src/components/Text';
 import { PlatformIcon } from '../../src/components/PlatformIcon';
 import { Icon } from '../../src/components/Icon';
 import { SectionLabel } from '../../src/components/List';
+import { AccountDevices } from '../../src/components/AccountDevices';
 import { useAccountStore } from '../../src/store/accountStore';
 import { telegramBotUrl, telegramLinkUrl } from '../../src/services/session';
 import { openHelp } from '../../src/services/links';
@@ -12,8 +13,8 @@ import { useI18n } from '../../src/i18n';
 import { theme } from '../../src/theme';
 
 /**
- * Every device row opens salivpn.com/help/devices: how Sali ID, linking and
- * "one code — one device" work. The list of linked devices itself lives in the bot.
+ * This installation, every installation of the account (shared subscription, remove old ones)
+ * and where Sali VPN runs.
  */
 export default function DevicesScreen() {
   const { t } = useI18n();
@@ -28,7 +29,7 @@ export default function DevicesScreen() {
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
     <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>{t.devices}</Text>
-      <Text style={styles.subtitle}>Один код — одно устройство. Все ваши устройства видны в боте: «Мои устройства».</Text>
+      <Text style={styles.subtitle}>Одна подписка — до 3 устройств: телефон, ПК, переустановленное приложение. Ненужные можно удалить здесь или в боте.</Text>
 
       <Animated.View entering={FadeInDown.duration(380)}>
         <Pressable accessibilityRole="link" onPress={() => openHelp('devices')} style={({ pressed }) => [styles.current, pressed && styles.pressed]}>
@@ -48,6 +49,8 @@ export default function DevicesScreen() {
         </Pressable>
       </Animated.View>
 
+      <AccountDevices />
+
       <SectionLabel icon="devices">SALI VPN ЕСТЬ НА</SectionLabel>
       {platforms.map((item, index) => <Animated.View key={item.id} entering={FadeInDown.delay(80 + index * 60).duration(360)}>
         <Pressable accessibilityRole="link" onPress={() => openHelp('devices')} style={({ pressed }) => [styles.platform, pressed && styles.pressed]}>
@@ -59,7 +62,7 @@ export default function DevicesScreen() {
 
       <View style={styles.add}>
         <Text style={styles.addTitle}>Добавить устройство</Text>
-        <Text style={styles.addText}>Установите Sali VPN на второе устройство, привяжите его к Telegram и активируйте код кнопкой в боте — он спросит, на какое устройство.</Text>
+        <Text style={styles.addText}>Установите Sali VPN на телефон или ПК и привяжите его к тому же Telegram — подписка заработает на нём сама (до 3 устройств).</Text>
         <Pressable onPress={() => void Linking.openURL(home && !home.user.telegramLinked ? telegramLinkUrl(home.user.publicId) : telegramBotUrl())} style={({ pressed }) => [styles.addButton, pressed && { opacity: .8 }]}><Text style={styles.addButtonText}>Открыть бота</Text></Pressable>
       </View>
     </ScrollView>
