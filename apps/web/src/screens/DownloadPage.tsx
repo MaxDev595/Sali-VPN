@@ -59,6 +59,7 @@ const t = {
     ] as [string, string][],
     safety: 'Загрузки идут с официального GitHub Sali VPN. Версия и контрольные суммы — на странице релизов.',
     releases: 'Все версии', ctaTitle: 'Готово? Возьмите 24 часа бесплатно', ctaText: 'Откройте бота — он пришлёт код за пару секунд.', openBot: 'Открыть бота',
+    channel: 'Скачать в Telegram', channelText: 'Каждая новая версия выходит файлом в нашем канале @SaliVpnNews — удобно, если GitHub грузится медленно. Там же новости и обновления.', openChannel: 'Открыть канал',
   },
   en: {
     back: 'Back home', eyebrow: 'Download', title: 'Sali VPN for phone and computer',
@@ -106,6 +107,7 @@ const t = {
     ] as [string, string][],
     safety: 'Downloads come from the official Sali VPN GitHub. Versions and checksums are on the releases page.',
     releases: 'All versions', ctaTitle: 'Ready? Get 24 hours free', ctaText: 'Open the bot — it sends a code in seconds.', openBot: 'Open the bot',
+    channel: 'Download in Telegram', channelText: 'Every new version is posted as a file in our channel @SaliVpnNews — handy if GitHub is slow. News and updates are there too.', openChannel: 'Open the channel',
   },
 } satisfies Record<LandingLanguage, unknown>;
 
@@ -161,6 +163,7 @@ export function DownloadPage() {
             <h2>{c.apple.name}</h2><p className="sv-dl-sub">{c.apple.sub}</p><p className="sv-dl-note">{c.apple.text}</p>
           </article>
         </div>
+        <div className="sv-dl-free sv-dl-channel"><Icon name="telegram" /><div><b>{c.channel}</b><span>{c.channelText}</span></div><a className="sv-btn sv-btn-ghost" href={DOWNLOADS.channel} target="_blank" rel="noreferrer"><Icon name="telegram-glyph" />{c.openChannel}</a></div>
         <div className="sv-dl-free"><Icon name="gift" /><div><b>{c.free}</b><span>{c.freeText}</span></div><a className="sv-btn sv-btn-ghost" href={`${DOWNLOADS.bot}?start=free`}><Icon name="telegram-glyph" />{c.openBot}</a></div>
       </div>
     </section>

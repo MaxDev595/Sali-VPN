@@ -122,6 +122,8 @@ export function downloadKeyboard() {
   const windows = process.env.WINDOWS_DOWNLOAD_URL || `${RELEASES}/desktop-latest/SaliVPN-Setup.exe`;
   return Markup.inlineKeyboard([
     [Markup.button.url('📱 Android (APK)', apk), Markup.button.url('💻 Windows', windows)],
+    // Every release is also posted as a file in the news channel — a mirror if GitHub is slow.
+    [Markup.button.url('📢 Скачать в нашем канале', process.env.NEWS_CHANNEL_URL || 'https://t.me/SaliVpnNews')],
     [Markup.button.url('📖 Инструкция по установке', process.env.DOWNLOAD_PAGE_URL || 'https://salivpn.com/download')],
   ]);
 }

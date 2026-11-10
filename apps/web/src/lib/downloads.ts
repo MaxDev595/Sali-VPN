@@ -9,4 +9,6 @@ export const DOWNLOADS = {
   windowsPortable: env.VITE_WINDOWS_PORTABLE_URL ?? `${RELEASES}/desktop-latest/SaliVPN-Portable.exe`,
   bot: (env.VITE_TELEGRAM_BOT_URL ?? 'https://t.me/SaliVPNOfficialBot').replace(/\/$/, ''),
   support: env.VITE_SUPPORT_URL ?? 'https://t.me/SaliVPNHelpBot',
+  /** News channel: every release is posted there as a file — a mirror if GitHub is slow or blocked. */
+  channel: env.VITE_CHANNEL_URL ?? 'https://t.me/SaliVpnNews',
 };
