@@ -1,7 +1,7 @@
 # Sali VPN Privacy Policy
 
 **Effective date:** September 5, 2026  
-**Last updated:** November 9, 2026
+**Last updated:** November 10, 2026
 
 This policy explains what data **Sali VPN** processes across its Telegram bot, Android and Windows apps, website, API and VPN servers. We are specific about what we keep, what we don't, and why. If anything here differs from how the service actually works, that is a bug and we will fix it.
 
@@ -75,8 +75,8 @@ If you contact support, we keep your messages. Please never send passwords, seed
 | Service | Purpose | What it sees |
 |---|---|---|
 | Telegram | bot, support, Stars payments | your chat with the bot, under Telegram's rules |
-| Render (Frankfurt, Germany) | runs the API and bot | API requests; may keep its own technical logs, including the app's IP address when it calls the API |
-| Neon (Frankfurt, Germany) | database | the data in section 3; VPN keys in it are encrypted |
+| Render (USA) | runs the API and bot | API requests; may keep its own technical logs, including the app's IP address when it calls the API |
+| Neon | database | the data in section 3; VPN keys in it are encrypted |
 | Cloudflare | salivpn.com website | website requests, under its own rules |
 | VPS hosting (e.g. Hetzner) | VPN servers | encrypted tunnel traffic; no access to our keys |
 | Telegram Stars, Paddle, TON network | payments | payment data, under their own rules |
