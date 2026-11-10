@@ -218,8 +218,10 @@ async function people(ctx: Context, segment: PeopleSegment, page: number) {
     r.list.forEach((p, i) => {
       const n = r.page * 10 + i + 1;
       const who = `${esc(p.name)}${p.username && !p.name.startsWith('@') ? ` @${esc(p.username)}` : ''}`;
-      lines.push(`${n}. ${p.blocked ? '🚫 ' : ''}<b>${who}</b>${p.device ? ` · <code>${p.device}</code>` : ''}`);
-      lines.push(`    ${esc(p.plan)} · ${segment === 'expired' ? 'закончилась' : 'до'} ${p.until}${p.via ? ` · ${esc(p.via)}` : ''}`);
+      const deviceOnly = p.device && p.name.includes(p.device);
+      lines.push(`${n}. ${p.blocked ? '🚫 ' : ''}${deviceOnly ? `📱 <code>${p.device}</code> <i>(без Telegram)</i>` : `<b>${who}</b>${p.device ? ` · <code>${p.device}</code>` : ''}`}`);
+      const until = p.until === 'бессрочно' ? '♾ бессрочно' : `${segment === 'expired' ? 'закончилась' : 'до'} ${p.until}`;
+      lines.push(`    ${esc(p.plan)} · ${until}${p.via ? ` · ${esc(p.via)}` : ''}`);
     });
     const tabs = (Object.keys(SEGMENTS) as PeopleSegment[]).map((s) => {
       const count = { paid: c.paid, granted: c.granted, trial: c.trial, expired: c.expired }[s];
