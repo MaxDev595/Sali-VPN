@@ -274,7 +274,7 @@ export class AdminBotService {
     const now = new Date();
     const month = new Date(now.getTime() - 30 * 86_400_000);
     const take = 10, skip = Math.max(0, page) * take;
-    const adminPlan: Prisma.SubscriptionWhereInput = { OR: [{ provider: { startsWith: 'admin_' } }, { plan: { code: { in: [PLANS.admin.code, PLANS.gift.code] } } }] };
+    const adminPlan: Prisma.SubscriptionWhereInput = { OR: [{ provider: 'admin' }, { provider: { startsWith: 'admin_' } }, { plan: { code: { in: [PLANS.admin.code, PLANS.gift.code] } } }] };
     const active: Prisma.SubscriptionWhereInput = { status: SubscriptionStatus.ACTIVE, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
     const subWhere: Record<'paid' | 'granted' | 'expired', Prisma.SubscriptionWhereInput> = {
       paid: { AND: [active, { NOT: adminPlan }] },
@@ -309,7 +309,7 @@ export class AdminBotService {
     const owners = ownerIds.length ? await this.prisma.user.findMany({ where: { telegramId: { in: ownerIds } } }) : [];
     const byId = new Map(users.map((u) => [u.id, u]));
     const ownerOf = new Map(owners.map((o) => [o.telegramId!.toString(), o]));
-    const VIA: Record<string, string> = { telegram_stars: '⭐', crypto_ton: '💵 USDT', paddle: '💳', code: '🔑 код', google_play: 'Google Play', admin_admin: '🛡', admin_gift: '🎁' };
+    const VIA: Record<string, string> = { telegram_stars: '⭐', crypto_ton: '💵 USDT', paddle: '💳', code: '🔑 код', google_play: 'Google Play', admin: '🛡', admin_admin: '🛡', admin_gift: '🎁' };
 
     const list = rows.map((r) => {
       const u = byId.get(r.userId);
@@ -321,7 +321,7 @@ export class AdminBotService {
         username: who?.username ?? null,
         device: u && !u.telegramId ? formatPublicId(u.publicId) : null,
         plan: r.plan,
-        until: !r.until || r.until.getTime() - now.getTime() > (FOREVER_DAYS - 400) * 86_400_000 ? 'бессрочно' : date(r.until),
+        until: !r.until || r.until.getTime() - now.getTime() > 50 * 365 * 86_400_000 ? 'бессрочно' : date(r.until), // 50+ years = «forever» grants
         via: r.via ? (VIA[r.via] ?? r.via) : null,
         blocked: u?.isBlocked ?? false,
       };
