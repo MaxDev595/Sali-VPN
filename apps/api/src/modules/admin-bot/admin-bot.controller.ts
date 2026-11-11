@@ -11,6 +11,7 @@ class GrantDto extends UserDto {
   @IsIn(['admin', 'gift']) kind!: 'admin' | 'gift';
   @IsOptional() @IsString() @MaxLength(700) message?: string;
 }
+class CodeDto extends AdminDto { @IsInt() days!: number; }
 class RevokeSubDto extends AdminDto { @IsString() @MaxLength(40) subscriptionId!: string; @IsOptional() @IsBoolean() notify?: boolean; }
 class RevokeCodeDto extends AdminDto { @IsString() @MaxLength(40) codeId!: string; }
 class BlockDto extends UserDto { @IsBoolean() isBlocked!: boolean; }
@@ -27,6 +28,8 @@ export class AdminBotController {
 
   @Post('lookup') lookup(@Body() b: LookupDto) { return this.admin.lookup(b.telegramId, b.query); }
   @Post('grant') grant(@Body() b: GrantDto) { return this.admin.grant(b.telegramId, b.userId, b.days, b.kind, b.message); }
+  @Post('code') code(@Body() b: CodeDto) { return this.admin.createCode(b.telegramId, b.days); }
+  @Post('diagnose') diagnose(@Body() b: UserDto) { return this.admin.diagnose(b.telegramId, b.userId); }
   @Post('revoke') revoke(@Body() b: UserDto) { return this.admin.revoke(b.telegramId, b.userId); }
   @Post('revocable') revocable(@Body() b: UserDto) { return this.admin.revocable(b.telegramId, b.userId); }
   @Post('revoke-sub') revokeSub(@Body() b: RevokeSubDto) { return this.admin.revokeSubscription(b.telegramId, b.subscriptionId, b.notify ?? false); }

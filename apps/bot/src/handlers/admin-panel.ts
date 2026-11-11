@@ -20,7 +20,7 @@ import { nodes as showNodes } from './admin';
  */
 
 const FOREVER = 36_500;
-type Step = 'target' | 'find' | 'revoke' | 'days' | 'message' | 'an_version' | 'an_title' | 'an_body';
+type Step = 'target' | 'find' | 'revoke' | 'days' | 'message' | 'diag' | 'code_days' | 'an_version' | 'an_title' | 'an_body';
 interface Draft { step?: Step; userId?: string; title?: string; days?: number; kind?: 'admin' | 'gift'; message?: string; an?: Partial<AnnouncementDraft>; at: number }
 const drafts = new Map<number, Draft>();
 const draft = (id: number) => {
@@ -64,7 +64,8 @@ export async function menu(ctx: Context) {
   if (!ctx.callbackQuery && !(await isAdmin(ctx))) return;
   drafts.delete(ctx.from!.id);
   await show(ctx, '🛠 <b>Админ-панель Sali VPN</b>\n\nЧто делаем?', Markup.inlineKeyboard([
-    [Markup.button.callback('🎁 Выдать подписку', 'adm:grant'), Markup.button.callback('⛔ Отозвать', 'adm:revoke')],
+    [Markup.button.callback('🎁 Выдать подписку', 'adm:grant'), Markup.button.callback('🎟 Создать код', 'adm:code')],
+    [Markup.button.callback('🩺 Почему не работает', 'adm:diag'), Markup.button.callback('⛔ Отозвать', 'adm:revoke')],
     [Markup.button.callback('👥 Пользователи', 'adm:pp:paid:0'), Markup.button.callback('📣 Рассылка', 'adm:an')],
     [Markup.button.callback('🔎 Найти пользователя', 'adm:find'), Markup.button.callback('📊 Статистика', 'adm:stats')],
     [Markup.button.callback('📜 Выданные', 'adm:issued'), Markup.button.callback('🖥 Серверы', 'adm:nodes')],
@@ -93,7 +94,7 @@ function card(c: AdminCard) {
 
 function cardKeyboard(c: AdminCard) {
   return Markup.inlineKeyboard([
-    [Markup.button.callback('🎁 Выдать подписку', `adm:g:${c.id}`)],
+    [Markup.button.callback('🎁 Выдать подписку', `adm:g:${c.id}`), Markup.button.callback('🩺 Почему не работает', `adm:dg:${c.id}`)],
     [Markup.button.callback('⛔ Отозвать', `adm:rl:${c.id}`), Markup.button.callback(c.isBlocked ? '✅ Разблокировать' : '🚫 Заблокировать', `adm:bl:${c.isBlocked ? 0 : 1}:${c.id}`)],
     ...c.devices.slice(0, 5).map((d) => [Markup.button.callback(`📱 ${d.publicId}`, `adm:c:${d.id}`)]),
     back,
@@ -112,12 +113,69 @@ async function chooseDuration(ctx: Context, userId: string) {
   try {
     const c = await api.adminLookup(ctx.from!.id, userId);
     save(ctx.from!.id, { userId: c.id, title: c.title, step: undefined, days: undefined, kind: undefined, message: undefined });
-    const where = c.kind === 'device' ? `на устройство <code>${c.publicId}</code>` : c.devices.length ? `на ${c.devices.length === 1 ? 'устройство' : 'все устройства'} ${c.devices.map((d) => `<code>${d.publicId}</code>`).join(', ')}` : 'кодом в Telegram (устройств пока нет)';
-    await show(ctx, `🎁 Подписка для <b>${esc(c.title)}</b>\nПридёт ${where}.\n\nНа какой срок?`, Markup.inlineKeyboard([
+    save(ctx.from!.id, { kind: 'gift' });
+    const where = c.kind === 'device'
+      ? `Включится <b>сразу</b> в приложении на <code>${c.publicId}</code> — клиенту ничего делать не надо.`
+      : `Клиенту придёт <b>код</b> в Telegram${c.devices.length ? ' с кнопкой «⚡ Активировать»' : ''} — он вставит его в приложении. Код увидите и вы.`;
+    await show(ctx, `🎁 Подписка для <b>${esc(c.title)}</b>\n${where}\n\nНа какой срок?`, Markup.inlineKeyboard([
       [1, 3, 7].map((d) => Markup.button.callback(dur(d), `adm:d:${d}`)),
       [30, 90, 180].map((d) => Markup.button.callback(dur(d), `adm:d:${d}`)),
       [Markup.button.callback('1 год', 'adm:d:365'), Markup.button.callback('♾ Бессрочно', `adm:d:${FOREVER}`)],
       [Markup.button.callback('✏️ Своё число дней', 'adm:d:custom')],
+      back,
+    ]));
+  } catch (error) { await fail(ctx, error); }
+}
+
+function durationKeyboard(prefix: string) {
+  return Markup.inlineKeyboard([
+    [1, 3, 7].map((d) => Markup.button.callback(dur(d), `${prefix}:${d}`)),
+    [30, 90, 180].map((d) => Markup.button.callback(dur(d), `${prefix}:${d}`)),
+    [Markup.button.callback('1 год', `${prefix}:365`), Markup.button.callback('♾ Бессрочно', `${prefix}:${FOREVER}`)],
+    [Markup.button.callback('✏️ Своё число дней', `${prefix}:custom`)],
+    back,
+  ]);
+}
+
+/** Ready-to-forward text for the client: the code and three steps. */
+function forwardText(code: string, days: number) {
+  return [
+    `🎁 Вам подписка Sali VPN — ${dur(days)}.`,
+    '',
+    `Ваш код: <code>${code}</code>`,
+    '',
+    'Как включить:',
+    '1. Скачайте приложение: salivpn.com/download (или в @SaliVpnNews)',
+    '2. Откройте его и нажмите «Код» на главном экране',
+    '3. Вставьте код → «Активировать» → «Подключить»',
+  ].join('\n');
+}
+
+/** «🎟 Создать код»: a code with no recipient + the text to forward. */
+async function makeCode(ctx: Context, days: number) {
+  try {
+    const r = await api.adminCode(ctx.from!.id, days);
+    await show(ctx, `🎟 <b>Код готов</b> — ${r.plan}, ${dur(days)}\n\n<code>${r.code}</code>\n\nДействует для активации до ${new Date(r.expiresAt).toLocaleDateString('ru-RU')}. Ниже — готовый текст для клиента, просто перешлите его 👇`, Markup.inlineKeyboard([
+      [Markup.button.callback('🎟 Ещё код', 'adm:code')],
+      back,
+    ]));
+    await ctx.replyWithHTML(forwardText(r.code, days));
+  } catch (error) { await fail(ctx, error); }
+}
+
+/** «🩺 Почему не работает»: what blocks this client, in plain words. */
+async function diagnose(ctx: Context, userId: string) {
+  try {
+    const r = await api.adminDiagnose(ctx.from!.id, userId);
+    await show(ctx, [
+      `🩺 <b>${esc(r.title)}</b>`,
+      '',
+      ...(r.lines.length ? [...r.lines, ''] : []),
+      '<b>Что мешает:</b>',
+      ...r.problems,
+    ].join('\n'), Markup.inlineKeyboard([
+      [Markup.button.callback('🎁 Выдать подписку', `adm:g:${userId}`), Markup.button.callback('🔄 Ещё раз', `adm:dg:${userId}`)],
+      [Markup.button.callback('👤 Карточка', `adm:c:${userId}`)],
       back,
     ]));
   } catch (error) { await fail(ctx, error); }
@@ -149,10 +207,12 @@ async function confirm(ctx: Context) {
     '',
     `Кому: <b>${esc(d.title ?? '')}</b>`,
     `Срок: <b>${dur(d.days)}</b>`,
-    `Тип: <b>${kindLabel(d.kind)}</b>`,
-    d.message ? `Сообщение: <i>${esc(d.message)}</i>` : 'Сообщение: —',
-  ].join('\n');
-  await show(ctx, html, Markup.inlineKeyboard([[Markup.button.callback('✅ Выдать', 'adm:ok'), Markup.button.callback('✖️ Отмена', 'adm:menu')]]));
+    d.message ? `Сообщение: <i>${esc(d.message)}</i>` : null,
+  ].filter((l) => l !== null).join('\n');
+  await show(ctx, html, Markup.inlineKeyboard([
+    [Markup.button.callback('✅ Выдать', 'adm:ok')],
+    [Markup.button.callback(d.message ? '💬 Изменить сообщение' : '💬 Добавить сообщение', 'adm:msg'), Markup.button.callback('✖️ Отмена', 'adm:menu')],
+  ]));
 }
 
 async function grant(ctx: Context) {
@@ -161,14 +221,18 @@ async function grant(ctx: Context) {
   drafts.delete(ctx.from!.id);
   try {
     const r = await api.adminGrant(ctx.from!.id, d.userId, d.days, d.kind, d.message);
-    const where = r.mode === 'direct'
-      ? `Включена на ${r.devices.length > 1 ? 'устройствах' : 'устройстве'} <b>${r.devices.join(', ')}</b>.`
-      : `Устройств нет — отправил код <code>${r.code}</code>.`;
-    const note = r.delivered ? '📨 Получатель уведомлён в Telegram.' : '⚠️ Написать получателю не удалось (он не открывал бота). Передайте сами' + (r.code ? ` код <code>${r.code}</code>.` : '.');
-    await show(ctx, `✅ <b>Готово</b> — ${dur(d.days)}, ${kindLabel(d.kind).toLowerCase()}, для <b>${esc(d.title ?? '')}</b>.\n${where}\n${note}`, Markup.inlineKeyboard([
-      [Markup.button.callback('👤 Карточка', `adm:c:${d.userId}`), Markup.button.callback('🎁 Ещё', 'adm:grant')],
+    const lines = [
+      `✅ <b>Готово</b> — ${dur(d.days)} для <b>${esc(d.title ?? '')}</b>`,
+      '',
+      r.mode === 'direct' ? `⚡ Уже включена в приложении на <b>${r.devices.join(', ')}</b> — клиенту достаточно нажать «Подключить».` : `🔑 Код: <code>${r.code}</code>`,
+      r.activationError ? `⚠️ Сразу включить не вышло (${esc(r.activationError)}) — клиент введёт код сам.` : null,
+      r.delivered ? '📨 Клиенту отправлено в Telegram.' : '⚠️ Написать клиенту в Telegram не удалось (он не запускал бота). Перешлите ему текст ниже 👇',
+    ].filter((l) => l !== null);
+    await show(ctx, lines.join('\n'), Markup.inlineKeyboard([
+      [Markup.button.callback('🩺 Проверить клиента', `adm:dg:${d.userId}`), Markup.button.callback('🎁 Ещё', 'adm:grant')],
       back,
     ]));
+    if (!r.delivered && r.mode === 'code') await ctx.replyWithHTML(forwardText(r.code, d.days));
   } catch (error) { await fail(ctx, error); }
 }
 
@@ -459,9 +523,15 @@ export async function callback(ctx: Context) {
     case 'g': return chooseDuration(ctx, a!);
     case 'd':
       if (a === 'custom') { save(id, { step: 'days' }); return show(ctx, '✏️ Сколько дней? Пришлите число, например <b>45</b>.', Markup.inlineKeyboard([back])); }
-      save(id, { days: Number(a) }); return chooseKind(ctx);
-    case 'k': save(id, { kind: a === 'gift' ? 'gift' : 'admin' }); return askMessage(ctx);
+      save(id, { days: Number(a), kind: draft(id)?.kind ?? 'gift' }); return confirm(ctx);
+    case 'msg': return askMessage(ctx);
     case 'm': save(id, { message: undefined }); return confirm(ctx);
+    case 'code': save(id, { step: undefined }); return show(ctx, '🎟 <b>Код без получателя</b>\n\nСоздам код — перешлёте его кому угодно. Человек вставит его в приложении и подписка включится.\n\nНа какой срок?', durationKeyboard('adm:cd'));
+    case 'cd':
+      if (a === 'custom') { save(id, { step: 'code_days' }); return show(ctx, '✏️ Сколько дней? Пришлите число, например <b>45</b>.', Markup.inlineKeyboard([back])); }
+      return makeCode(ctx, Number(a));
+    case 'diag': save(id, { step: 'diag' }); return show(ctx, `🩺 <b>Почему у клиента не работает VPN</b>\n\n${ASK_TARGET}`, Markup.inlineKeyboard([back]));
+    case 'dg': return diagnose(ctx, a!);
     case 'ok': return grant(ctx);
     case 'revoke': save(id, { step: 'revoke' }); return show(ctx, `⛔ <b>Отозвать подписку</b>\n\n${ASK_TARGET}`, Markup.inlineKeyboard([back]));
     case 'rl': return revokeList(ctx, a!);
@@ -506,6 +576,18 @@ export async function text(ctx: Context, next: () => Promise<void>) {
       } catch (error) { return fail(ctx, error); }
     }
     case 'find': return openCard(ctx, forwarded ? String(forwarded) : raw);
+    case 'diag': {
+      try {
+        const c = await api.adminLookup(ctx.from!.id, forwarded ? String(forwarded) : raw);
+        return diagnose(ctx, c.id);
+      } catch (error) { return fail(ctx, error); }
+    }
+    case 'code_days': {
+      const days = Number(raw.replace(/\D/g, ''));
+      if (!days || days < 1 || days > FOREVER) { await ctx.reply('Нужно число от 1 до 36500.'); return; }
+      save(ctx.from!.id, { step: undefined });
+      return makeCode(ctx, days);
+    }
     case 'revoke': {
       try {
         const c = await api.adminLookup(ctx.from!.id, forwarded ? String(forwarded) : raw);
@@ -515,8 +597,8 @@ export async function text(ctx: Context, next: () => Promise<void>) {
     case 'days': {
       const days = Number(raw.replace(/\D/g, ''));
       if (!days || days < 1 || days > FOREVER) { await ctx.reply('Нужно число от 1 до 36500.'); return; }
-      save(ctx.from!.id, { days, step: undefined });
-      return chooseKind(ctx);
+      save(ctx.from!.id, { days, step: undefined, kind: draft(ctx.from!.id)?.kind ?? 'gift' });
+      return confirm(ctx);
     }
     case 'message':
       save(ctx.from!.id, { message: raw.slice(0, 700) });

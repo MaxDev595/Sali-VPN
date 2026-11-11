@@ -214,7 +214,9 @@ export const api = {
   isAdmin: (telegramId: number) => call<{ admin: boolean }>('/bot/nodes/is-admin', { telegramId }, 1),
   adminLookup: (telegramId: number, query: string) => call<AdminCard>('/bot/admin/lookup', { telegramId, query }, 0),
   adminGrant: (telegramId: number, userId: string, days: number, kind: 'admin' | 'gift', message?: string) =>
-    call<{ mode: 'code' | 'direct'; code: string | null; delivered: boolean; devices: string[] }>('/bot/admin/grant', { telegramId, userId, days, kind, message }, 0),
+    call<{ mode: 'code' | 'direct'; code: string; delivered: boolean; devices: string[]; activationError: string | null }>('/bot/admin/grant', { telegramId, userId, days, kind, message }, 0),
+  adminCode: (telegramId: number, days: number) => call<{ code: string; plan: string; days: number; expiresAt: string }>('/bot/admin/code', { telegramId, days }, 0),
+  adminDiagnose: (telegramId: number, userId: string) => call<{ title: string; lines: string[]; problems: string[] }>('/bot/admin/diagnose', { telegramId, userId }, 0),
   adminRevoke: (telegramId: number, userId: string) => call<{ subscriptions: number; codes: number }>('/bot/admin/revoke', { telegramId, userId }, 0),
   adminRevocable: (telegramId: number, userId: string) => call<{ title: string; subscriptions: Array<{ id: string; where: string; plan: string; until: string }>; codes: Array<{ id: string; code: string; what: string }> }>('/bot/admin/revocable', { telegramId, userId }, 0),
   adminRevokeSub: (telegramId: number, subscriptionId: string, notify: boolean) => call<{ userId: string }>('/bot/admin/revoke-sub', { telegramId, subscriptionId, notify }, 0),
