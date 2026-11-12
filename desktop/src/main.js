@@ -105,6 +105,12 @@ ipcMain.handle('home', async () => {
 ipcMain.handle('redeem', async (_event, code) => {
   try { return { ok: true, result: await api.redeem(String(code)) }; } catch (error) { return { ok: false, error: errorMessage(error) }; }
 });
+ipcMain.handle('account:devices', async () => {
+  try { return { ok: true, data: await api.accountDevices() }; } catch (error) { return { ok: false, error: errorMessage(error) }; }
+});
+ipcMain.handle('account:unlink', async (_event, publicId) => {
+  try { await api.unlinkDevice(String(publicId)); return { ok: true }; } catch (error) { return { ok: false, error: errorMessage(error) }; }
+});
 ipcMain.handle('vpn:connect', () => connect());
 ipcMain.handle('vpn:disconnect', () => disconnect());
 ipcMain.handle('vpn:state', async () => ({ state: vpnState, serverLocation, connectedAt: store.get('connectedAt') ?? null }));

@@ -61,14 +61,14 @@
             </div>
 
             <div class="actions">
-              <button class="btn btn-peach" id="enterCode"><img src="assets/key-glyph.png" alt="" />Ввести код</button>
-              <button class="btn btn-ghost" id="getCode"><img src="assets/telegram-glyph.png" alt="" /><span id="getCodeLabel">Получить код в боте</span></button>
+              <button class="btn btn-peach" id="getCode"><img src="assets/telegram-glyph.png" alt="" /><span id="getCodeLabel">Войти через Telegram</span></button>
+              <button class="btn btn-ghost" id="enterCode"><img src="assets/key-glyph.png" alt="" />У меня есть код</button>
             </div>
 
             <section class="link-card" id="linkCard" hidden>
               <img src="assets/link-glyph.png" alt="" />
-              <div><b>Привяжите Telegram</b><span>Бот запомнит этот компьютер — коды можно будет активировать одной кнопкой.</span></div>
-              <button class="btn-small" id="linkBtn">Привязать</button>
+              <div><b>Бот не ответил?</b><span id="linkHint">В Telegram нажмите «Запустить». Если бот молчит — отправьте ему номер этого компьютера, он уже скопирован.</span></div>
+              <button class="btn-small" id="linkBtn">Открыть бота</button>
             </section>
 
             <p class="hint"><kbd>Пробел</kbd> — подключить или отключить</p>
@@ -78,20 +78,24 @@
 
       <!-- Devices: every row opens salivpn.com/help/devices -->
       <section class="page" data-page="devices" id="page-devices" hidden>
-        <header class="page-head"><h2>Устройства</h2><p>Один код — одно устройство. Все ваши устройства видны в боте: «Мои устройства».</p></header>
+        <header class="page-head"><h2>Устройства</h2><p>Одна подписка — до 3 устройств: компьютер, телефон и ещё одно. Ненужные можно удалить здесь или в боте.</p></header>
         <button class="device current" data-help="devices">
           <span class="dev-icon"><img src="assets/windows-glyph.png" alt="" /></span>
           <span class="dev-copy"><small>ЭТОТ КОМПЬЮТЕР</small><b>Windows</b></span>
           <span class="dev-facts"><span>Sali ID <b id="devId">—</b></span><span>Тариф <b id="devTariff">—</b></span><span>Telegram <b id="devTg">—</b></span></span>
           <i class="ico ico-external ext" aria-hidden="true"></i>
         </button>
+        <section id="accountBox" hidden>
+          <p class="label"><i class="ico ico-devices" aria-hidden="true"></i>УСТРОЙСТВА АККАУНТА <span id="accountSlots"></span></p>
+          <div class="acc-list" id="accountList"></div>
+        </section>
         <p class="label"><i class="ico ico-devices" aria-hidden="true"></i>SALI VPN ЕСТЬ НА</p>
         <div class="dev-list">
           <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/android-glyph.png" alt="" /></span><span class="dev-copy"><b>Android</b><small>Телефоны и планшеты · Android 7+</small></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
           <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/windows-glyph.png" alt="" /></span><span class="dev-copy"><b>Windows</b><small>Компьютеры и ноутбуки · Windows 10, 11</small></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
         </div>
         <div class="add">
-          <div><b>Добавить устройство</b><span>Установите Sali VPN на второе устройство, привяжите его к Telegram и активируйте код кнопкой в боте.</span></div>
+          <div><b>Добавить устройство</b><span>Установите Sali VPN на телефон и нажмите «Войти через Telegram» — подписка заработает на нём сама.</span></div>
           <button class="btn btn-ghost" id="phone">Скачать на телефон</button>
         </div>
       </section>

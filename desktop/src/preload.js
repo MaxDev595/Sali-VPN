@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('sali', {
   home: () => ipcRenderer.invoke('home'),
   redeem: (code) => ipcRenderer.invoke('redeem', code),
+  accountDevices: () => ipcRenderer.invoke('account:devices'),
+  unlinkDevice: (publicId) => ipcRenderer.invoke('account:unlink', publicId),
   connect: () => ipcRenderer.invoke('vpn:connect'),
   disconnect: () => ipcRenderer.invoke('vpn:disconnect'),
   vpnState: () => ipcRenderer.invoke('vpn:state'),

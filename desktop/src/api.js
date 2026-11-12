@@ -95,5 +95,7 @@ module.exports = {
   redeem: (code) => authed(() => request('/codes/redeem', { method: 'POST', body: { code } })),
   connect: () => authed(() => request('/vpn/connect', { method: 'POST', headers: { 'X-Device-Key': store.deviceKey() } })),
   disconnect: () => authed(() => request('/vpn/disconnect', { method: 'POST' })).catch(() => undefined),
+  accountDevices: () => authed(() => request('/devices/account')),
+  unlinkDevice: (publicId) => authed(() => request('/devices/account/unlink', { method: 'POST', body: { publicId } })),
   support: (message) => authed(() => request('/support/tickets', { method: 'POST', body: { category: 'other', message } })),
 };

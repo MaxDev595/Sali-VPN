@@ -9,6 +9,7 @@ const el = {
   toast: $('toast'), support: $('support'), phone: $('phone'), version: $('version'),
   nav: $('nav'), navDrop: $('navDrop'), devId: $('devId'), devTariff: $('devTariff'), devTg: $('devTg'),
   rowTelegram: $('rowTelegram'), tgValue: $('tgValue'), tgHint: $('tgHint'), supportId: $('supportId'), faq: $('faq'),
+  accountBox: $('accountBox'), accountList: $('accountList'), accountSlots: $('accountSlots'),
 };
 
 let home = null;
@@ -21,9 +22,9 @@ const flagFor = (location) => (FLAGS.find(([re]) => re.test(location || '')) || 
 const FAQ = [
   ['VPN не подключается', 'Проверьте, что тариф активен (карточка «Тариф»), выключите другие VPN и прокси, затем попробуйте снова. Windows может спросить разрешение для службы WireGuard — его нужно подтвердить.'],
   ['Подключился, но сайты не открываются', 'Отключитесь и подключитесь снова — Sali перенесёт вас на рабочий сервер. Если используете свой DNS или прокси в браузере, выключите их.'],
-  ['Куда вводить код?', 'Кнопка «Ввести код» на странице VPN. Регистр и дефисы не важны — код можно просто вставить кнопкой «Вставить».'],
-  ['Как получить 24 часа бесплатно?', 'Нажмите «24 часа бесплатно» — откроется наш Telegram-бот. Он пришлёт код, который нужно ввести здесь.'],
-  ['Можно на нескольких устройствах?', 'Да. Один код активирует одно устройство: купите код для каждого и активируйте его кнопкой в боте — он спросит, на какое устройство.'],
+  ['Как начать?', 'Нажмите «Войти через Telegram», в Telegram — «Запустить». Компьютер подключится к вашему аккаунту, и сразу включатся 24 часа бесплатно.'],
+  ['Где купить подписку?', 'В нашем Telegram-боте. После оплаты она сама появится здесь и на всех ваших устройствах — ничего вводить не нужно.'],
+  ['Можно на нескольких устройствах?', 'Да, до 3: компьютер, телефон и ещё одно. Подписка на аккаунте, поэтому работает на всех сразу. Ненужные устройства удаляются на вкладке «Устройства».'],
   ['VPN работает, когда окно закрыто?', 'Да. Закрытие окна сворачивает Sali в область уведомлений, VPN остаётся включённым. Отключить его можно там же, правой кнопкой по значку.'],
 ];
 
@@ -60,29 +61,29 @@ function render() {
   el.power.disabled = busy;
 
   el.statusTitle.textContent = on ? 'Соединение защищено' : vpn.state === 'connecting' ? 'Рисуем туннель…' : vpn.state === 'disconnecting' ? 'Отключаемся…' : 'VPN выключен';
-  el.statusSub.textContent = vpn.detail || (on ? 'Весь трафик компьютера идёт через Sali' : busy ? ' ' : a.kind === 'none' ? 'Активируйте код, чтобы подключиться' : 'Нажмите на знак, чтобы подключиться');
+  el.statusSub.textContent = vpn.detail || (on ? 'Весь трафик компьютера идёт через Sali' : busy ? ' ' : a.kind === 'none' ? (linkedNow() ? 'Купите подписку в Telegram-боте' : 'Войдите через Telegram — 24 часа бесплатно') : 'Нажмите на знак, чтобы подключиться');
   el.power.setAttribute('aria-label', on ? 'Отключить VPN' : 'Подключить VPN');
   el.timer.textContent = on && vpn.connectedAt ? hms((Date.now() - vpn.connectedAt) / 1000) : ' ';
 
   el.tariffStub.className = 'stub' + (a.kind === 'none' ? ' none' : '');
   if (a.kind === 'paid') { el.accessMain.textContent = a.until ? `до ${new Date(a.until).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}` : 'Подписка'; el.accessSub.textContent = a.plan || 'Подписка'; }
   else if (a.kind === 'trial') { el.accessMain.innerHTML = `<span class="mono">${hms(a.left)}</span>`; el.accessSub.textContent = 'Бесплатно'; }
-  else if (a.kind === 'none') { el.accessMain.textContent = 'Ввести код'; el.accessSub.textContent = a.hadTrial ? 'Тариф закончился' : 'Нет тарифа'; }
+  else if (a.kind === 'none') { el.accessMain.textContent = linkedNow() ? 'Купить' : 'Войти'; el.accessSub.textContent = a.hadTrial ? 'Тариф закончился' : linkedNow() ? 'Нет подписки' : 'через Telegram'; }
   else { el.accessMain.textContent = '—'; el.accessSub.textContent = 'Проверяем доступ…'; }
 
-  el.getCodeLabel.textContent = a.kind === 'none' && !a.hadTrial ? '24 часа бесплатно' : a.kind === 'none' ? 'Купить в боте' : 'Мои коды в боте';
+  el.getCodeLabel.textContent = !linkedNow() ? 'Войти через Telegram' : a.kind === 'none' ? 'Купить подписку' : 'Моя подписка в боте';
   el.server.textContent = vpn.serverLocation || 'Автовыбор';
   el.flag.src = `assets/${flagFor(vpn.serverLocation)}.png`;
 
   const linked = Boolean(home && home.user && home.user.telegramLinked);
-  el.linkCard.hidden = !home || linked;
+  el.linkCard.hidden = !home || linked || !linkStarted;
   const id = home && home.user ? home.user.publicId : '—';
   el.publicId.textContent = home && home.user ? id : '····-····';
   el.devId.textContent = id; el.supportId.textContent = id;
   el.devTariff.textContent = a.kind === 'paid' ? 'подписка' : a.kind === 'trial' ? 'бесплатный' : a.kind === 'none' ? 'нет' : '—';
   el.devTg.textContent = home ? (linked ? 'привязан' : 'не привязан') : '—';
   el.tgValue.textContent = home ? (linked ? 'Привязан' : 'Привязать') : '—';
-  el.tgHint.textContent = linked ? 'Коды и напоминания приходят в бот' : 'Привяжите, чтобы активировать коды одной кнопкой';
+  el.tgHint.textContent = linked ? 'Подписка на аккаунте — работает на всех ваших устройствах' : 'Войдите, чтобы получить 24 часа бесплатно';
 }
 
 function escapeHtml(text) { return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
@@ -97,11 +98,11 @@ async function loadHome({ quiet = false } = {}) {
 async function togglePower() {
   if (el.power.disabled) return;
   if (vpn.state === 'connected') { await window.sali.disconnect(); return; }
-  if (access().kind === 'none') { openSheet(); return; }
+  if (access().kind === 'none') { primaryAction(); return; }
   const result = await window.sali.connect();
   if (!result.ok) {
     toast(result.error, 'err');
-    if (result.status === 403) openSheet();
+    if (result.status === 403) primaryAction();
   }
   void loadHome({ quiet: true });
 }
@@ -184,7 +185,7 @@ function formatCode(raw) {
 function openSheet() { el.sheet.hidden = false; el.error.hidden = true; setTimeout(() => el.input.focus(), 60); }
 function closeSheet() { el.sheet.hidden = true; el.input.value = ''; }
 el.enterCode.addEventListener('click', openSheet);
-el.tariffStub.addEventListener('click', openSheet);
+el.tariffStub.addEventListener('click', () => (access().kind === 'none' || !linkedNow() ? primaryAction() : go('devices')));
 el.cancel.addEventListener('click', closeSheet);
 el.sheet.addEventListener('click', (event) => { if (event.target === el.sheet) closeSheet(); });
 el.input.addEventListener('input', () => { el.input.value = formatCode(el.input.value); el.error.hidden = true; });
@@ -214,11 +215,65 @@ document.addEventListener('keydown', (event) => {
 });
 
 /* bot, links */
+/* «Войти через Telegram»: copies this PC's number (if Telegram drops the start link the
+   customer pastes it into the bot), opens the bot and watches the account until it is linked. */
+let linkStarted = false;
+let linkWatch = null;
 const linkToBot = () => {
-  const id = (home && home.user && home.user.publicId || '').replace(/[^0-9A-Z]/gi, '').replace(/^SL/i, '');
-  void window.sali.openBot(id ? `link_${id}` : undefined);
+  if (!home || !home.user) return;
+  const id = home.user.publicId.replace(/[^0-9A-Z]/gi, '').replace(/^SL/i, '');
+  void window.sali.copy(home.user.publicId);
+  void window.sali.openBot(`link_${id}`);
+  linkStarted = true; render();
+  toast('В Telegram нажмите «Запустить». Номер компьютера скопирован — если бот молчит, вставьте его в чат.', 'ok');
+  clearInterval(linkWatch);
+  const started = Date.now();
+  linkWatch = setInterval(async () => {
+    await loadHome({ quiet: true });
+    if (linkedNow() || Date.now() - started > 120000) { clearInterval(linkWatch); if (linkedNow()) { toast('Готово! Компьютер подключён к вашему аккаунту.', 'ok'); void loadAccount(); } }
+  }, 3000);
 };
-el.getCode.addEventListener('click', () => { const a = access(); void window.sali.openBot(a.kind === 'none' && !a.hadTrial ? 'free' : a.kind === 'none' ? 'buy' : undefined); });
+function linkedNow() { return Boolean(home && home.user && home.user.telegramLinked); }
+function primaryAction() {
+  if (!linkedNow()) return linkToBot();
+  if (access().kind === 'none') return void window.sali.openBot('buy');
+  return void window.sali.openBot();
+}
+el.getCode.addEventListener('click', primaryAction);
+
+/* Devices of the account: one subscription for up to 3; old ones can be removed here. */
+async function loadAccount() {
+  if (!linkedNow()) { el.accountBox.hidden = true; return; }
+  const response = await window.sali.accountDevices();
+  if (!response.ok || !response.data || !response.data.linked) { el.accountBox.hidden = true; return; }
+  const { devices, subscription } = response.data;
+  el.accountBox.hidden = false;
+  el.accountSlots.textContent = subscription ? `· ${subscription.used} из ${subscription.max}` : '';
+  el.accountList.innerHTML = '';
+  devices.forEach((d) => {
+    const row = document.createElement('div');
+    row.className = 'acc-row';
+    const idle = !d.current && (d.idleDays === null || d.idleDays >= 14);
+    const used = d.current ? 'этот компьютер' : d.idleDays === null ? 'ещё не подключалось' : d.idleDays === 0 ? 'VPN сегодня' : `VPN ${d.idleDays} дн. назад`;
+    row.innerHTML = `<img src="assets/${d.platform === 'WINDOWS' ? 'windows' : 'android'}-glyph.png" alt="" /><span class="acc-copy"><b>${d.platform === 'WINDOWS' ? 'Windows' : 'Android'} · ${escapeHtml(d.publicId)}</b><span class="${idle ? 'idle' : ''}">${d.covered ? 'в подписке' : 'не входит в подписку'} · ${used}</span></span>`;
+    if (d.current) { const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = 'ЭТО'; row.appendChild(tag); }
+    else {
+      const button = document.createElement('button');
+      button.textContent = 'Удалить';
+      button.addEventListener('click', async () => {
+        if (button.dataset.sure !== '1') { button.dataset.sure = '1'; button.textContent = 'Точно удалить?'; return; }
+        button.disabled = true;
+        const result = await window.sali.unlinkDevice(d.publicId);
+        if (!result.ok) { toast(result.error, 'err'); button.disabled = false; return; }
+        toast(`${d.publicId} удалено — место освободилось.`, 'ok');
+        void loadAccount(); void loadHome({ quiet: true });
+      });
+      row.appendChild(button);
+    }
+    el.accountList.appendChild(row);
+  });
+}
+tabs.forEach((button) => button.addEventListener('click', () => { if (button.dataset.page === 'devices') void loadAccount(); }));
 el.linkBtn.addEventListener('click', linkToBot);
 el.rowTelegram.addEventListener('click', () => { if (home && home.user && !home.user.telegramLinked) linkToBot(); else void window.sali.openBot(); });
 el.idChip.addEventListener('click', async () => { if (!home) return; await window.sali.copy(home.user.publicId); toast('Sali ID скопирован', 'ok'); });
@@ -232,6 +287,7 @@ el.phone.addEventListener('click', () => void window.sali.openDownload());
   vpn = { ...vpn, ...state };
   render();
   await loadHome();
+  void loadAccount();
   setInterval(render, 1000);
   setInterval(() => void loadHome({ quiet: true }), 60000);
   window.addEventListener('focus', () => void loadHome({ quiet: true }));
