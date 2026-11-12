@@ -37,9 +37,26 @@ function saveState() {
   writeFileSync(stateFile, JSON.stringify(state), 'utf8');
 }
 
+/**
+ * Who answers support. Render wipes local files on every deploy, so the admin must not live
+ * only in state.json: SUPPORT_ADMIN_CHAT_ID / ADMIN_TELEGRAM_IDS (Render env) always work;
+ * the admin who pressed /start is remembered on top of that.
+ */
+const envAdmins = [process.env.SUPPORT_ADMIN_CHAT_ID, process.env.ADMIN_TELEGRAM_IDS]
+  .flatMap((v) => (v ?? '').split(','))
+  .map((v) => Number(v.trim()))
+  .filter((v) => Number.isSafeInteger(v) && v > 0);
+const adminIds = () => [...new Set([...envAdmins, ...(state.adminChatId ? [state.adminChatId] : [])])];
+/** Where new requests go: the support admin first, otherwise the first admin. */
+const supportChat = () => Number(process.env.SUPPORT_ADMIN_CHAT_ID?.split(',')[0]) || state.adminChatId || envAdmins[0] || null;
+
 function isConfiguredAdmin(ctx: Context) {
-  return Boolean(ctx.from && state.adminChatId === ctx.from.id);
+  return Boolean(ctx.from && adminIds().includes(ctx.from.id));
 }
+
+/** The client's chat id is written into every message the admin gets — replies never depend on saved state. */
+const MARK = /#id(\d{4,16})\b/;
+const mark = (chatId: number) => `#id${chatId}`;
 
 function hasAdminUsername(ctx: Context) {
   return ctx.from?.username?.toLowerCase() === adminUsername.toLowerCase();
@@ -62,7 +79,7 @@ function senderDetails(ctx: Context) {
   if (!ctx.from) return 'Пользователь не определён';
   const name = [ctx.from.first_name, ctx.from.last_name].filter(Boolean).join(' ');
   const username = ctx.from.username ? `@${ctx.from.username}` : 'не указан';
-  return ['Новое обращение в поддержку', `Имя: ${name || 'не указано'}`, `Username: ${username}`, `Telegram ID: ${ctx.from.id}`, '', 'Ответьте на сообщение ниже, чтобы ответ ушёл пользователю.'].join('\n');
+  return [`📩 Обращение от ${name || 'клиента'} (${username}) · ${mark(ctx.from.id)}`, 'Нажмите «Ответить» на это сообщение — ответ уйдёт клиенту.'].join('\n');
 }
 
 async function showWelcome(ctx: Context) {
@@ -74,13 +91,9 @@ async function showWelcome(ctx: Context) {
 }
 
 bot.start(async (ctx) => {
-  if (hasAdminUsername(ctx)) {
-    if (state.adminChatId && state.adminChatId !== ctx.from.id) {
-      await ctx.reply('Администратор уже зарегистрирован.');
-      return;
-    }
+  if (hasAdminUsername(ctx) && !isConfiguredAdmin(ctx)) {
     state.adminChatId = ctx.from.id;
-    saveState();
+    try { saveState(); } catch (error) { console.warn('Support state not saved', error); }
   }
   await showWelcome(ctx);
 });
@@ -105,35 +118,52 @@ bot.on('message', async (ctx, next) => {
   if ('text' in ctx.message && ctx.message.text.startsWith('/')) return next();
 
   if (isConfiguredAdmin(ctx)) {
-    const repliedTo = 'reply_to_message' in ctx.message ? ctx.message.reply_to_message?.message_id : undefined;
-    const userChatId = repliedTo ? state.replies[String(repliedTo)] : undefined;
+    const replied = 'reply_to_message' in ctx.message ? ctx.message.reply_to_message : undefined;
+    if (!replied) {
+      await ctx.reply('Чтобы ответить клиенту, нажмите «Ответить» на его обращении (там есть метка #id…).');
+      return;
+    }
+    const repliedText = ('text' in replied && replied.text) || ('caption' in replied && replied.caption) || '';
+    const fromMark = repliedText.match(MARK)?.[1];
+    const userChatId = fromMark ? Number(fromMark) : state.replies[String(replied.message_id)];
     if (!userChatId) {
-      await ctx.reply('Чтобы ответить клиенту, нажмите «Ответить» именно на его пересланном сообщении.');
+      await ctx.reply('Не нашёл, кому ответить: нажмите «Ответить» на сообщении с меткой #id… клиента.');
       return;
     }
     try {
       await ctx.telegram.copyMessage(userChatId, ctx.chat.id, ctx.message.message_id);
-      await ctx.reply('Ответ отправлен пользователю.');
+      await ctx.reply('✅ Ответ отправлен клиенту.');
     } catch (error) {
       console.error('Failed to send admin reply', error);
-      await ctx.reply('Не удалось отправить ответ пользователю.');
+      await ctx.reply('Не удалось отправить ответ: клиент мог заблокировать бота.');
     }
     return;
   }
 
-  if (!state.adminChatId) {
-    await ctx.reply(`Поддержка ещё не активирована администратором. Напишите нам на почту: ${supportEmail}`);
+  const target = supportChat();
+  if (!target) {
+    console.error('Support has no admin: set SUPPORT_ADMIN_CHAT_ID or ADMIN_TELEGRAM_IDS in Render');
+    await ctx.reply(`Не удалось передать сообщение. Напишите нам на почту: ${supportEmail}`);
     return;
   }
 
   try {
-    await ctx.telegram.sendMessage(state.adminChatId, senderDetails(ctx));
-    const copied = await ctx.telegram.copyMessage(state.adminChatId, ctx.chat.id, ctx.message.message_id);
-    state.replies[String(copied.message_id)] = ctx.chat.id;
-    const keys = Object.keys(state.replies);
-    for (const key of keys.slice(0, Math.max(0, keys.length - 2000))) delete state.replies[key];
-    saveState();
-    await ctx.reply('Спасибо! Сообщение передано в поддержку. Мы ответим вам как можно скорее.');
+    const header = senderDetails(ctx);
+    const msg = ctx.message;
+    if ('text' in msg) {
+      // One message: who wrote + what — replying to it is all the admin needs.
+      await ctx.telegram.sendMessage(target, `${header}\n\n${msg.text}`);
+    } else {
+      const head = await ctx.telegram.sendMessage(target, header);
+      const withCaption = 'photo' in msg || 'video' in msg || 'document' in msg || 'audio' in msg || 'voice' in msg || 'animation' in msg;
+      const caption = withCaption ? `${'caption' in msg && msg.caption ? `${msg.caption}\n\n` : ''}${mark(ctx.chat.id)}` : undefined;
+      const copied = await ctx.telegram.copyMessage(target, ctx.chat.id, msg.message_id, { ...(caption ? { caption } : {}), reply_parameters: { message_id: head.message_id } } as never);
+      state.replies[String(copied.message_id)] = ctx.chat.id;
+      const keys = Object.keys(state.replies);
+      for (const key of keys.slice(0, Math.max(0, keys.length - 2000))) delete state.replies[key];
+      try { saveState(); } catch { /* the #id mark is enough */ }
+    }
+    await ctx.reply('Спасибо! Сообщение передано в поддержку. Мы ответим вам здесь как можно скорее.');
   } catch (error) {
     console.error('Failed to forward support message', error);
     await ctx.reply(`Не удалось передать сообщение. Попробуйте ещё раз или напишите на почту: ${supportEmail}`);
@@ -148,9 +178,9 @@ async function main() {
   const news = `@${(process.env.NEWS_CHANNEL_URL || 'https://t.me/SaliVpnNews').replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '')}`;
   const main = `@${(process.env.MAIN_BOT_USERNAME || 'SaliVPNOfficialBot').replace(/^@/, '')}`;
   for (const [lang, description, short] of [
-    [undefined, `💬 Поддержка SALI VPN — поможем с подключением, оплатой и кодами.\n\nНапишите, что случилось, и пришлите ваш Sali ID (SL-XXXX-XXXX) из приложения — так ответим быстрее.\n\n🛡 Бот SALI VPN: ${main}\n📢 Новости и обновления: ${news}\n🌐 Сайт: ${site}`,
+    [undefined, `💬 Поддержка SALI VPN — поможем с подключением, оплатой и устройствами.\n\nНапишите, что случилось, и пришлите ваш Sali ID (SL-XXXX-XXXX) из приложения — так ответим быстрее.\n\n🛡 Бот SALI VPN: ${main}\n📢 Новости и обновления: ${news}\n🌐 Сайт: ${site}`,
       `Поддержка SALI VPN. Бот VPN: ${main} · Новости: ${news} · ${site}`],
-    ['en', `💬 SALI VPN support — help with connecting, payments and codes.\n\nTell us what happened and send your Sali ID (SL-XXXX-XXXX) from the app — we'll answer faster.\n\n🛡 SALI VPN bot: ${main}\n📢 News and updates: ${news}\n🌐 Website: ${site}`,
+    ['en', `💬 SALI VPN support — help with connecting, payments and devices.\n\nTell us what happened and send your Sali ID (SL-XXXX-XXXX) from the app — we'll answer faster.\n\n🛡 SALI VPN bot: ${main}\n📢 News and updates: ${news}\n🌐 Website: ${site}`,
       `SALI VPN support. VPN bot: ${main} · News: ${news} · ${site}`],
   ] as const) {
     await bot.telegram.setMyDescription(description, lang).catch((error) => console.warn('Failed to set support bot description', error));
@@ -168,7 +198,7 @@ async function main() {
     console.warn('Failed to delete support bot webhook; continuing with polling', error);
   });
   await bot.launch({ dropPendingUpdates: false });
-  console.log(`Sali support bot started; admin=@${adminUsername}`);
+  console.log(`Sali support bot started; admin=@${adminUsername}; admin chats=${adminIds().join(',') || 'none'}`);
 }
 
 main().catch((error) => {
