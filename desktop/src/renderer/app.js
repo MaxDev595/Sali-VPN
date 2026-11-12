@@ -20,7 +20,7 @@ const FLAGS = [[/nether|нидерл|amster|амстер/i, 'flag-nl'], [/german
 const flagFor = (location) => (FLAGS.find(([re]) => re.test(location || '')) || [null, 'globe-glyph'])[1];
 
 const FAQ = [
-  ['VPN не подключается', 'Проверьте, что тариф активен (карточка «Тариф»), выключите другие VPN и прокси, затем попробуйте снова. Windows может спросить разрешение для службы WireGuard — его нужно подтвердить.'],
+  ['VPN не подключается', 'Проверьте, что тариф активен (карточка «Тариф»), выключите другие VPN и прокси, затем попробуйте снова. Windows может спросить разрешение для службы WireGuard — его нужно подтвердить. Подписка есть, а VPN всё равно не подключается — напишите в поддержку (кнопка «Поддержка»), разберёмся.'],
   ['Подключился, но сайты не открываются', 'Отключитесь и подключитесь снова — Sali перенесёт вас на рабочий сервер. Если используете свой DNS или прокси в браузере, выключите их.'],
   ['Как начать?', 'Нажмите «Войти через Telegram», в Telegram — «Запустить». Компьютер подключится к вашему аккаунту, и сразу включатся 24 часа бесплатно.'],
   ['Где купить подписку?', 'В нашем Telegram-боте. После оплаты она сама появится здесь и на всех ваших устройствах — ничего вводить не нужно.'],
@@ -101,8 +101,8 @@ async function togglePower() {
   if (access().kind === 'none') { primaryAction(); return; }
   const result = await window.sali.connect();
   if (!result.ok) {
-    toast(result.error, 'err');
-    if (result.status === 403) primaryAction();
+    if (result.status === 403) { toast(result.error, 'err'); primaryAction(); }
+    else toast(`${result.error} — если повторяется, напишите в поддержку.`, 'err');
   }
   void loadHome({ quiet: true });
 }
@@ -193,14 +193,14 @@ el.paste.addEventListener('click', async () => { el.input.value = formatCode(awa
 el.form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const code = el.input.value.replace(/[^0-9A-Z]/gi, '');
-  if (code.length < 16) { el.error.textContent = 'Введите код полностью: SALI-XXXX-XXXX-XXXX'; el.error.hidden = false; return; }
+  if (code.length < 16) { el.error.textContent = 'Введите промокод полностью: SALI-XXXX-XXXX-XXXX'; el.error.hidden = false; return; }
   el.submit.disabled = true; el.submit.textContent = 'Проверяем…';
   const response = await window.sali.redeem(code);
   el.submit.disabled = false; el.submit.textContent = 'Активировать';
   if (!response.ok) { el.error.textContent = response.error; el.error.hidden = false; return; }
   closeSheet();
   const r = response.result;
-  toast(r.kind === 'FREE' ? 'Бесплатные 24 часа включены. Можно подключаться!' : `Подписка активирована${r.expiresAt ? ` до ${new Date(r.expiresAt).toLocaleDateString('ru-RU')}` : ''}.`, 'ok');
+  toast(r.kind === 'FREE' ? 'Бесплатные 24 часа включены. Можно подключаться!' : `Промокод применён${r.expiresAt ? ` — подписка до ${new Date(r.expiresAt).toLocaleDateString('ru-RU')}` : ''}.`, 'ok');
   await loadHome({ quiet: true });
 });
 

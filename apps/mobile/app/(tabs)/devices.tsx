@@ -63,7 +63,7 @@ export default function DevicesScreen() {
 
       <View style={styles.add}>
         <Text style={styles.addTitle}>Добавить устройство</Text>
-        <Text style={styles.addText}>Установите Sali VPN на телефон или ПК и привяжите его к тому же Telegram — подписка заработает на нём сама (до 3 устройств).</Text>
+        <Text style={styles.addText}>Установите Sali VPN на телефон или ПК и войдите через тот же Telegram — подписка заработает на нём сама (до 3 устройств).</Text>
         <Pressable onPress={() => (home && !home.user.telegramLinked ? void linkTelegram(home.user.publicId, refresh) : void Linking.openURL(telegramBotUrl()))} style={({ pressed }) => [styles.addButton, pressed && { opacity: .8 }]}><Text style={styles.addButtonText}>Открыть бота</Text></Pressable>
       </View>
     </ScrollView>

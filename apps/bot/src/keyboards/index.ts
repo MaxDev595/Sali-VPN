@@ -131,8 +131,8 @@ export function downloadKeyboard() {
 export const faqKeyboard = (supportUrl?: string) =>
   Markup.inlineKeyboard([
     [Markup.button.callback('Как это работает?', 'faq_how')],
-    [Markup.button.callback('Куда вводить код?', 'faq_code')],
-    [Markup.button.callback('Как привязать устройство?', 'faq_link')],
+    [Markup.button.callback('Нужен ли код?', 'faq_code')],
+    [Markup.button.callback('Как войти в приложение?', 'faq_link')],
     [Markup.button.callback('VPN не подключается', 'faq_not_connecting')],
     [Markup.button.callback('Проблемы с оплатой', 'faq_payment')],
     [Markup.button.callback('📖 Вся документация', 'menu_docs')],

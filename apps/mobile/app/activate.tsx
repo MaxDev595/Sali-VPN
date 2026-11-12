@@ -7,7 +7,8 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { SaliButton } from '../src/components/SaliButton';
 import { api, RedeemResult } from '../src/services/api/client';
-import { ensureSession, telegramBotUrl } from '../src/services/session';
+import { ensureSession, linkTelegram, telegramBotUrl } from '../src/services/session';
+import { openSupport } from '../src/services/links';
 import { useAccountStore } from '../src/store/accountStore';
 import { theme } from '../src/theme';
 
@@ -28,7 +29,10 @@ function describe(result: RedeemResult) {
   return { title: 'Подписка активирована', text: until ? `Доступ открыт до ${until}. Все серверы уже ваши.` : 'Все серверы уже ваши.' };
 }
 
-/** The store app's whole "payment" UI: type the code the Telegram bot sent. */
+/**
+ * «Подписка»: the plan comes to the account by itself (bought in the bot, gifted, bonus);
+ * a promo code is the only thing ever typed; if the VPN still won't connect — support.
+ */
 export default function ActivateScreen() {
   const params = useLocalSearchParams<{ code?: string }>();
   const [value, setValue] = useState(() => formatInput(params.code ?? ''));
@@ -50,18 +54,20 @@ export default function ActivateScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       void refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Не удалось активировать код');
+      setError(cause instanceof Error ? cause.message : 'Не удалось применить промокод');
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally { setBusy(false); }
   };
 
   const openBot = () => void Linking.openURL(telegramBotUrl());
+  const linked = Boolean(home?.user.telegramLinked);
+  const access = useAccountStore(state => state.access);
 
   return <SafeAreaView style={styles.safe}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.kicker}>АКТИВАЦИЯ</Text>
+          <Text style={styles.kicker}>ПОДПИСКА</Text>
           <Pressable accessibilityLabel="Закрыть" onPress={() => router.back()} style={styles.close}><Text style={styles.closeText}>×</Text></Pressable>
         </View>
 
@@ -72,8 +78,14 @@ export default function ActivateScreen() {
           <View style={{ height: 28 }} />
           <SaliButton title="Подключиться" onPress={() => router.replace('/')} />
         </Animated.View> : <>
-          <Text style={styles.title}>Введите код</Text>
-          <Text style={styles.subtitle}>Код из Telegram-бота Sali. Регистр и дефисы не важны — можно просто вставить.</Text>
+          <Text style={styles.title}>{access === 'premium' ? 'Подписка активна' : linked ? 'Нужна подписка' : 'Войдите через Telegram'}</Text>
+          <Text style={styles.subtitle}>{linked
+            ? 'Подписка покупается в Telegram-боте и сама появляется здесь и на всех ваших устройствах (до 3). Ничего вводить не нужно.'
+            : 'Один вход — и сразу 24 часа бесплатно. Подписка из бота будет работать на всех ваших устройствах (до 3).'}</Text>
+          {access !== 'premium' && <SaliButton title={linked ? 'Купить подписку в боте' : 'Войти через Telegram'} onPress={() => (linked ? openBot() : home && void linkTelegram(home.user.publicId, refresh))} />}
+
+          <Text style={styles.promoTitle}>Промокод</Text>
+          <Text style={styles.promoText}>Если у вас есть промокод — введите его здесь.</Text>
 
           <Pressable onPress={() => input.current?.focus()} style={[styles.field, error && styles.fieldError, isComplete(value) && !error && styles.fieldReady]}>
             <TextInput
@@ -84,7 +96,7 @@ export default function ActivateScreen() {
               placeholderTextColor={theme.colors.muted}
               autoCapitalize="characters"
               autoCorrect={false}
-              autoFocus={!params.code}
+              autoFocus={false}
               maxLength={19}
               returnKeyType="done"
               onSubmitEditing={() => void submit()}
@@ -93,13 +105,13 @@ export default function ActivateScreen() {
           </Pressable>
           {error ? <Animated.Text entering={FadeIn} style={[styles.error, { fontFamily: 'SaliSans-Medium' }]}>{error}</Animated.Text> : null}
 
-          <View style={{ height: 18 }} />
-          <SaliButton title="Активировать" loading={busy} disabled={!isComplete(value)} onPress={() => void submit()} />
+          <View style={{ height: 14 }} />
+          <SaliButton secondary title="Применить промокод" loading={busy} disabled={!isComplete(value)} onPress={() => void submit()} />
 
           <View style={styles.help}>
-            <Text style={styles.helpTitle}>Где взять код?</Text>
-            <Text style={styles.helpText}>Бесплатные 24 часа и подписка выдаются в нашем Telegram-боте. Ваш ID устройства: <Text style={styles.id}>{home?.user.publicId ?? '—'}</Text></Text>
-            <Pressable onPress={openBot} style={({ pressed }) => [styles.link, pressed && { opacity: .7 }]}><Text style={styles.linkText}>Открыть Telegram-бот</Text></Pressable>
+            <Text style={styles.helpTitle}>Подписка есть, а VPN не подключается?</Text>
+            <Text style={styles.helpText}>Напишите в поддержку — разберёмся. Ваш номер устройства: <Text style={styles.id}>{home?.user.publicId ?? '—'}</Text></Text>
+            <Pressable onPress={openSupport} style={({ pressed }) => [styles.link, pressed && { opacity: .7 }]}><Text style={styles.linkText}>Написать в поддержку</Text></Pressable>
           </View>
         </>}
       </ScrollView>
@@ -128,6 +140,8 @@ const styles = StyleSheet.create({
   link: { marginTop: 12, alignSelf: 'flex-start' },
   linkText: { color: theme.colors.accent, fontSize: 15, fontWeight: '800' },
   success: { alignItems: 'stretch', paddingTop: 30 },
+  promoTitle: { color: theme.colors.textPrimary, fontSize: 17, fontFamily: 'SaliSans-SemiBold', marginTop: 34 },
+  promoText: { color: theme.colors.textSecondary, fontSize: 14, marginTop: 4, marginBottom: 12 },
   check: { alignSelf: 'center', width: 96, height: 96, borderRadius: 48, backgroundColor: theme.colors.successGlow, borderWidth: 2, borderColor: theme.colors.success, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   checkText: { color: theme.colors.success, fontSize: 44, fontWeight: '800' },
 });

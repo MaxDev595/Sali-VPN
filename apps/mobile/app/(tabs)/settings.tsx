@@ -56,7 +56,7 @@ export default function ProfileScreen() {
         <View style={styles.passFoot}>
           <Icon name={access === 'premium' || access === 'trial' ? 'check' : 'info'} size={16} color={access === 'premium' ? theme.colors.success : access === 'trial' ? theme.colors.accent : theme.colors.textSecondary} />
           <Text style={styles.passTariff}>{tariff}</Text>
-          <Pressable onPress={() => router.push('/activate')} style={({ pressed }) => [styles.passButton, pressed && { opacity: .8 }]}><Text style={styles.passButtonText}>Ввести код</Text></Pressable>
+          <Pressable onPress={() => router.push('/activate')} style={({ pressed }) => [styles.passButton, pressed && { opacity: .8 }]}><Text style={styles.passButtonText}>Подписка</Text></Pressable>
         </View>
       </Animated.View>
 

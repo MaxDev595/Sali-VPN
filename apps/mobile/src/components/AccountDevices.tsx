@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { Text } from './Text';
 import { PlatformIcon } from './PlatformIcon';
 import { SectionLabel } from './List';
@@ -65,25 +64,26 @@ export function AccountDevices() {
     <SectionLabel icon="devices">УСТРОЙСТВА АККАУНТА</SectionLabel>
     {sub && <Text style={styles.note}>💎 {sub.plan} {untilText(sub.until)} · работает на <Text style={styles.noteStrong}>{sub.used} из {sub.max}</Text> устройств</Text>}
     {error && <Text style={styles.error}>{error}</Text>}
-    {devices.map((d, i) => {
+    {devices.map((d) => {
       const idle = !d.current && (d.idleDays === null || d.idleDays >= IDLE_DAYS);
-      return <Animated.View key={d.publicId} entering={FadeInDown.delay(i * 50).duration(320)} exiting={FadeOut.duration(160)} layout={LinearTransition} style={[styles.row, d.current && styles.rowCurrent]}>
+      return <View key={d.publicId} style={[styles.row, d.current && styles.rowCurrent]}>
         <View style={styles.icon}><PlatformIcon platform={platformOf(d.platform)} size={24} /></View>
         <View style={{ flex: 1 }}>
           <View style={styles.nameLine}>
             <Text style={styles.name}>{platformName(d.platform)}</Text>
             {d.current && <Text style={styles.badge}>ЭТО</Text>}
           </View>
-          <Text style={styles.meta}>{d.publicId}</Text>
-          <Text style={[styles.meta, idle && styles.idle]}>
+          <Text style={styles.meta} numberOfLines={1}>{d.publicId}</Text>
+          <Text style={[styles.meta, idle && styles.idle]} numberOfLines={2}>
             {d.covered ? 'в подписке' : sub ? 'не входит в подписку' : 'без тарифа'} · {idle && d.idleDays !== null ? `не используется ${d.idleDays} дн.` : `VPN: ${lastUsed(d)}`}
           </Text>
         </View>
         {!d.current && <Pressable accessibilityRole="button" accessibilityLabel={`Удалить ${d.publicId}`} onPress={() => setRemoving(d)} style={({ pressed }) => [styles.remove, idle && styles.removeIdle, pressed && { opacity: .8 }]}>
           <Text style={[styles.removeText, idle && styles.removeTextIdle]}>Удалить</Text>
         </Pressable>}
-      </Animated.View>;
+      </View>;
     })}
+    <View style={{ height: 8 }} />
     {devices.length > 1 && <Text style={styles.hint}>Удалите телефон, которым больше не пользуетесь, или старую установку приложения — место на подписке освободится.</Text>}
 
     <SaliModal visible={Boolean(removing)} title="Удалить устройство?" onClose={() => !busy && setRemoving(null)}>

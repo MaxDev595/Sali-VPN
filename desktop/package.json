@@ -1,7 +1,7 @@
 {
   "name": "sali-vpn-desktop",
   "productName": "Sali VPN",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Sali VPN for Windows",
   "author": "Sali VPN",
   "private": true,

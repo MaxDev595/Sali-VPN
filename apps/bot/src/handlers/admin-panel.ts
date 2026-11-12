@@ -64,7 +64,7 @@ export async function menu(ctx: Context) {
   if (!ctx.callbackQuery && !(await isAdmin(ctx))) return;
   drafts.delete(ctx.from!.id);
   await show(ctx, '🛠 <b>Админ-панель Sali VPN</b>\n\nЧто делаем?', Markup.inlineKeyboard([
-    [Markup.button.callback('🎁 Выдать подписку', 'adm:grant')],
+    [Markup.button.callback('🎁 Выдать подписку', 'adm:grant'), Markup.button.callback('🎟 Промокод', 'adm:code')],
     [Markup.button.callback('🩺 Почему не работает', 'adm:diag'), Markup.button.callback('⛔ Отозвать', 'adm:revoke')],
     [Markup.button.callback('👥 Пользователи', 'adm:pp:paid:0'), Markup.button.callback('📣 Рассылка', 'adm:an')],
     [Markup.button.callback('🔎 Найти пользователя', 'adm:find'), Markup.button.callback('📊 Статистика', 'adm:stats')],
@@ -138,14 +138,14 @@ function durationKeyboard(prefix: string) {
 /** Ready-to-forward text for the client: the code and three steps. */
 function forwardText(code: string, days: number) {
   return [
-    `🎁 Вам подписка Sali VPN — ${dur(days)}.`,
+    `🎁 Промокод Sali VPN — ${dur(days)} подписки.`,
     '',
-    `Ваш код: <code>${code}</code>`,
+    `Промокод: <code>${code}</code>`,
     '',
-    'Как включить:',
+    'Как применить:',
     '1. Скачайте приложение: salivpn.com/download (или в @SaliVpnNews)',
-    '2. Откройте его и нажмите «Код» на главном экране',
-    '3. Вставьте код → «Активировать» → «Подключить»',
+    '2. Нажмите «Войти через Telegram»',
+    '3. «Подписка» → «Промокод» → вставьте его → «Применить»',
   ].join('\n');
 }
 
@@ -153,8 +153,8 @@ function forwardText(code: string, days: number) {
 async function makeCode(ctx: Context, days: number) {
   try {
     const r = await api.adminCode(ctx.from!.id, days);
-    await show(ctx, `🎟 <b>Код готов</b> — ${r.plan}, ${dur(days)}\n\n<code>${r.code}</code>\n\nДействует для активации до ${new Date(r.expiresAt).toLocaleDateString('ru-RU')}. Ниже — готовый текст для клиента, просто перешлите его 👇`, Markup.inlineKeyboard([
-      [Markup.button.callback('🎟 Ещё код', 'adm:code')],
+    await show(ctx, `🎟 <b>Промокод готов</b> — ${r.plan}, ${dur(days)}\n\n<code>${r.code}</code>\n\nОдноразовый, действует до ${new Date(r.expiresAt).toLocaleDateString('ru-RU')}. Ниже — готовый текст, просто перешлите его 👇`, Markup.inlineKeyboard([
+      [Markup.button.callback('🎟 Ещё промокод', 'adm:code')],
       back,
     ]));
     await ctx.replyWithHTML(forwardText(r.code, days));
@@ -523,7 +523,7 @@ export async function callback(ctx: Context) {
       save(id, { days: Number(a), kind: draft(id)?.kind ?? 'gift' }); return confirm(ctx);
     case 'msg': return askMessage(ctx);
     case 'm': save(id, { message: undefined }); return confirm(ctx);
-    case 'code': save(id, { step: undefined }); return show(ctx, '🎟 <b>Код без получателя</b>\n\nСоздам код — перешлёте его кому угодно. Человек вставит его в приложении и подписка включится.\n\nНа какой срок?', durationKeyboard('adm:cd'));
+    case 'code': save(id, { step: undefined }); return show(ctx, '🎟 <b>Промокод</b>\n\nДля акций и розыгрышей: перешлёте его кому угодно. Человек введёт его в приложении («Подписка» → «Промокод»), и дни лягут на его аккаунт.\n\nНа какой срок?', durationKeyboard('adm:cd'));
     case 'cd':
       if (a === 'custom') { save(id, { step: 'code_days' }); return show(ctx, '✏️ Сколько дней? Пришлите число, например <b>45</b>.', Markup.inlineKeyboard([back])); }
       return makeCode(ctx, Number(a));

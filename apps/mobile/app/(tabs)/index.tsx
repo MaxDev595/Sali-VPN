@@ -1,3 +1,4 @@
+import { openSupport } from '../../src/services/links';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -99,6 +100,7 @@ export default function VpnScreen() {
               <Icon name="info" size={18} color={theme.colors.error} />
               <Text style={styles.errorText}>{error}</Text>
               <Pressable accessibilityRole="button" onPress={() => { clearError(); void toggle(); }} style={({ pressed }) => [styles.retry, pressed && { opacity: .8 }]}><Text style={styles.retryText}>Повторить</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={openSupport} style={({ pressed }) => [styles.retry, pressed && { opacity: .8 }]}><Text style={styles.retryText}>Поддержка</Text></Pressable>
             </Animated.View>
           : <Text style={styles.subtitle}>{active ? t.tapToDisconnect : status === 'connecting' || status === 'disconnecting' ? ' ' : t.tapToConnect}</Text>}
       </View>
@@ -133,7 +135,7 @@ export default function VpnScreen() {
         {linked
           ? <SaliButton title="Купить подписку" onPress={() => { clearError(); openBot(); }} />
           : <SaliButton title="Войти через Telegram" onPress={() => { clearError(); signIn(); }} />}
-        <SaliButton secondary title="У меня есть код" onPress={() => { clearError(); router.push('/activate'); }} />
+        <SaliButton secondary title="Не подключается? Поддержка" onPress={() => { clearError(); openSupport(); }} />
       </View>
     </SaliModal>
   </SafeAreaView>;
