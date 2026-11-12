@@ -32,7 +32,7 @@ function useReveal() {
 function PhoneMock() {
   return <div className="sv-phone" aria-hidden="true">
     <div className="sv-phone-screen">
-      <div className="sv-phone-top"><LogoBadge className="sv-phone-logo" /><div><b>Sali VPN</b><small>ID SL-7K4P-Q2M9</small></div><span className="sv-phone-code">Ввести код</span></div>
+      <div className="sv-phone-top"><LogoBadge className="sv-phone-logo" /><div><b>Sali VPN</b><small>ID SL-7K4P-Q2M9</small></div><span className="sv-phone-code">Войти</span></div>
       <p className="sv-phone-status">Ваше соединение защищено</p>
       <div className="sv-phone-button"><span className="sv-phone-halo" /><div className="sv-phone-ring"><div className="sv-phone-core"><LogoMarkStatic ink="#F3F6FC" className="sv-phone-core-logo" /><b>В сети</b><small>ЗАЩИЩЕНО</small></div></div></div>
       <div className="sv-phone-pill"><i />Подписка до <b>03.12.2026</b></div>

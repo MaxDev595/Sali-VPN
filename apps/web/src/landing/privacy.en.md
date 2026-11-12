@@ -32,7 +32,7 @@ Only what the service cannot work without.
 ### 3.1 Account
 
 - Sali ID — your account number (e.g. SL-7K4P-Q2M9);
-- Telegram ID, plus the name, username and language Telegram passes to the bot — so the bot can send codes and reminders;
+- Telegram ID, plus the name, username and language Telegram passes to the bot — this is your account: your plan is kept on it and the bot sends reminders through it;
 - an anonymised app-installation identifier (a hash, not a phone number or IMEI) — to link the app to your account;
 - settings: interface language, whether notifications are on.
 
