@@ -171,8 +171,12 @@ export class SubscriptionsService {
       : await this.prisma.subscription.create({
           data: { userId, planId, provider, status: SubscriptionStatus.ACTIVE, startedAt: now, expiresAt: new Date(now.getTime() + days * 86_400_000), autoRenew: false },
         });
-    await this.vpn.ensureAccountForUser(userId);
-    await this.vpn.enable(userId);
+    // A Telegram account is not a device: its devices get their VPN keys when they connect.
+    const holder = await this.prisma.user.findUnique({ where: { id: userId }, select: { appDeviceKey: true } });
+    if (holder?.appDeviceKey) {
+      await this.vpn.ensureAccountForUser(userId);
+      await this.vpn.enable(userId);
+    }
     return subscription;
   }
 

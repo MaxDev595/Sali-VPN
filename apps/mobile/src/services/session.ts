@@ -35,7 +35,7 @@ export async function linkTelegram(publicId: string, onTick: () => Promise<{ use
   const { setStringAsync } = await import('expo-clipboard');
   const { Linking, Platform, ToastAndroid } = await import('react-native');
   await setStringAsync(publicId).catch(() => undefined);
-  if (Platform.OS === 'android') ToastAndroid.show(`Номер ${publicId} скопирован. Если бот не ответил «Устройство привязано» — вставьте его в чат с ботом`, ToastAndroid.LONG);
+  if (Platform.OS === 'android') ToastAndroid.show(`В Telegram нажмите «Запустить» внизу. Если бот не ответил — вставьте ему номер ${publicId} (уже скопирован)`, ToastAndroid.LONG);
   await Linking.openURL(telegramLinkUrl(publicId));
   if (watching) clearInterval(watching);
   const started = Date.now();

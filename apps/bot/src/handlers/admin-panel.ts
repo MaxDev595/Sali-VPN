@@ -64,7 +64,7 @@ export async function menu(ctx: Context) {
   if (!ctx.callbackQuery && !(await isAdmin(ctx))) return;
   drafts.delete(ctx.from!.id);
   await show(ctx, '🛠 <b>Админ-панель Sali VPN</b>\n\nЧто делаем?', Markup.inlineKeyboard([
-    [Markup.button.callback('🎁 Выдать подписку', 'adm:grant'), Markup.button.callback('🎟 Создать код', 'adm:code')],
+    [Markup.button.callback('🎁 Выдать подписку', 'adm:grant')],
     [Markup.button.callback('🩺 Почему не работает', 'adm:diag'), Markup.button.callback('⛔ Отозвать', 'adm:revoke')],
     [Markup.button.callback('👥 Пользователи', 'adm:pp:paid:0'), Markup.button.callback('📣 Рассылка', 'adm:an')],
     [Markup.button.callback('🔎 Найти пользователя', 'adm:find'), Markup.button.callback('📊 Статистика', 'adm:stats')],
@@ -114,9 +114,7 @@ async function chooseDuration(ctx: Context, userId: string) {
     const c = await api.adminLookup(ctx.from!.id, userId);
     save(ctx.from!.id, { userId: c.id, title: c.title, step: undefined, days: undefined, kind: undefined, message: undefined });
     save(ctx.from!.id, { kind: 'gift' });
-    const where = c.kind === 'device'
-      ? `Включится <b>сразу</b> в приложении на <code>${c.publicId}</code> — клиенту ничего делать не надо.`
-      : `Клиенту придёт <b>код</b> в Telegram${c.devices.length ? ' с кнопкой «⚡ Активировать»' : ''} — он вставит его в приложении. Код увидите и вы.`;
+    const where = `Подписка ляжет <b>на аккаунт</b> и сразу заработает на всех его устройствах (до 3). Клиенту ничего вводить не надо — ему придёт сообщение.`;
     await show(ctx, `🎁 Подписка для <b>${esc(c.title)}</b>\n${where}\n\nНа какой срок?`, Markup.inlineKeyboard([
       [1, 3, 7].map((d) => Markup.button.callback(dur(d), `adm:d:${d}`)),
       [30, 90, 180].map((d) => Markup.button.callback(dur(d), `adm:d:${d}`)),
@@ -224,15 +222,14 @@ async function grant(ctx: Context) {
     const lines = [
       `✅ <b>Готово</b> — ${dur(d.days)} для <b>${esc(d.title ?? '')}</b>`,
       '',
-      r.mode === 'direct' ? `⚡ Уже включена в приложении на <b>${r.devices.join(', ')}</b> — клиенту достаточно нажать «Подключить».` : `🔑 Код: <code>${r.code}</code>`,
-      r.activationError ? `⚠️ Сразу включить не вышло (${esc(r.activationError)}) — клиент введёт код сам.` : null,
-      r.delivered ? '📨 Клиенту отправлено в Telegram.' : '⚠️ Написать клиенту в Telegram не удалось (он не запускал бота). Перешлите ему текст ниже 👇',
+      `💎 Действует: <b>${r.until ?? ''}</b>`,
+      r.devices.length ? `📱 Работает на: <b>${r.devices.join(', ')}</b>` : '📱 Устройств на аккаунте пока нет — заработает сразу, как клиент войдёт в приложении через Telegram.',
+      r.delivered ? '📨 Клиенту отправлено в Telegram.' : '⚠️ Написать клиенту в Telegram не удалось (он не запускал бота).',
     ].filter((l) => l !== null);
     await show(ctx, lines.join('\n'), Markup.inlineKeyboard([
       [Markup.button.callback('🩺 Проверить клиента', `adm:dg:${d.userId}`), Markup.button.callback('🎁 Ещё', 'adm:grant')],
       back,
     ]));
-    if (!r.delivered && r.mode === 'code') await ctx.replyWithHTML(forwardText(r.code, d.days));
   } catch (error) { await fail(ctx, error); }
 }
 

@@ -4,6 +4,7 @@ import { IsIn, IsInt, IsOptional, IsString, Length, MaxLength, ValidateNested } 
 import { PaymentStatus } from '@prisma/client';
 import { InternalServiceGuard } from '../../common/guards/internal-service.guard';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AccountsService } from '../accounts/accounts.service';
 import { UsersService } from '../users/users.service';
 import { CodesService } from '../codes/codes.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -60,6 +61,7 @@ export class BotApiController {
     private readonly trials: TrialsService,
     private readonly notifications: NotificationsService,
     private readonly referrals: ReferralsService,
+    private readonly accounts: AccountsService,
   ) {}
 
   private async buyer(profile: ProfileDto) {
@@ -97,12 +99,12 @@ export class BotApiController {
     let referred = false;
     const ref = dto.startParam?.match(/^ref_(\d{3,20})$/);
     if (ref && isNew) referred = Boolean(await this.referrals.recordReferralIfNew(user.id, BigInt(ref[1])));
-    let link: { status: string; publicId?: string; share?: Awaited<ReturnType<BotApiController['shareOf']>> } | null = null;
+    let link: { status: string; notes?: { replaced: string[]; freed: string | null; trialStarted: boolean }; publicId?: string; share?: Awaited<ReturnType<BotApiController['shareOf']>> } | null = null;
     const match = dto.startParam?.match(/^link_([0-9A-Za-z]{8})$/);
     if (match) {
-      const result = await this.users.linkAppToTelegram(match[1], BigInt(dto.profile.telegramId));
+      const result = await this.accounts.link(match[1], BigInt(dto.profile.telegramId));
       const app = 'app' in result ? result.app : undefined;
-      link = { status: result.status, publicId: app ? formatPublicId(app.publicId) : undefined, share: app && result.status !== 'linked_elsewhere' ? await this.shareOf(BigInt(dto.profile.telegramId), app.id) : null };
+      link = { status: result.status, notes: 'notes' in result ? result.notes : undefined, publicId: app ? formatPublicId(app.publicId) : undefined, share: app && result.status !== 'linked_elsewhere' ? await this.shareOf(BigInt(dto.profile.telegramId), app.id) : null };
     }
     const apps = await this.users.listLinkedApps(BigInt(dto.profile.telegramId));
     const freeUsed = Boolean(await this.prisma.activationCode.findFirst({ where: { ownerId: user.id, kind: 'FREE' } }));
@@ -119,10 +121,11 @@ export class BotApiController {
   @Post('link')
   async link(@Body() dto: LinkDto) {
     await this.requireUser(dto.telegramId);
-    const result = await this.users.linkAppToTelegram(dto.publicId, BigInt(dto.telegramId));
+    const result = await this.accounts.link(dto.publicId, BigInt(dto.telegramId));
     const app = 'app' in result ? result.app : undefined;
     return {
       status: result.status,
+      notes: 'notes' in result ? result.notes : undefined,
       publicId: app ? formatPublicId(app.publicId) : null,
       share: app && result.status !== 'linked_elsewhere' ? await this.shareOf(BigInt(dto.telegramId), app.id) : null,
     };
@@ -242,20 +245,21 @@ export class BotApiController {
     await this.payments.confirmSucceeded(payment.id, { silent: true });
     // Keep Telegram's charge id: it is what a Stars refund needs.
     await this.prisma.payment.update({ where: { id: payment.id }, data: { externalPaymentId: dto.chargeId } });
-    return { code: await this.payments.codeForPayment(payment.id) };
+    return { code: null, paid: { plan: (await this.prisma.plan.findUniqueOrThrow({ where: { id: payment.planId } })).name, ...(await this.payments.accountInfo(user.id)) } };
   }
 
   @Post('payment-status')
   async paymentStatus(@Body() dto: PaymentRefDto) {
     const user = await this.requireUser(dto.telegramId);
     const payment = await this.payments.getPayment(user.id, dto.paymentId);
-    return { status: payment.status, code: payment.status === 'SUCCEEDED' ? await this.payments.codeForPayment(payment.id) : null };
+    if (payment.status === 'SUCCEEDED') await this.payments.activateOnAccount(payment.id).catch(() => undefined);
+    return { status: payment.status, code: null, paid: payment.status === 'SUCCEEDED' ? { plan: (await this.prisma.payment.findUniqueOrThrow({ where: { id: payment.id }, include: { plan: true } })).plan.name, ...(await this.payments.accountInfo(user.id)) } : null };
   }
 
   @Post('free')
   async free(@Body() dto: TelegramDto) {
-    const user = await this.requireUser(dto.telegramId);
-    return this.codes.issueFree(user.id);
+    await this.requireUser(dto.telegramId);
+    return this.accounts.freeFromBot(BigInt(dto.telegramId));
   }
 
   @Post('codes')

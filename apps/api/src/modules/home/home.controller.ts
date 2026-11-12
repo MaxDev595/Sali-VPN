@@ -9,6 +9,7 @@ import { trialLimitSeconds, trialSecondsLeft, trialSecondsUsed } from '../trials
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { UsersService } from '../users/users.service';
 import { HomeStateDTO } from '@sali/types';
+import { AccountsService } from '../accounts/accounts.service';
 import { DevicesService } from '../devices/devices.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -22,10 +23,11 @@ export class HomeController {
     private readonly users: UsersService,
     private readonly devices: DevicesService,
     private readonly prisma: PrismaService,
+    private readonly accounts: AccountsService,
   ) {}
 
   @Get('home')
-  async getHome(@CurrentUser() authUser: AuthTokenPayload): Promise<HomeStateDTO> {
+  async getHome(@CurrentUser() authUser: AuthTokenPayload): Promise<HomeStateDTO & { account: Awaited<ReturnType<AccountsService['summary']>> }> {
     const user = await this.users.findById(authUser.sub);
     const [account, trial, subscription] = await Promise.all([
       this.vpn.getAccountWithServer(authUser.sub),
@@ -86,6 +88,8 @@ export class HomeController {
           }
         : null,
       hasEverHadAccess: Boolean(account),
+      // The Telegram account this device belongs to: its ID, subscription and devices (N of 3).
+      account: await this.accounts.summary(authUser.sub).catch(() => null),
     };
   }
 
@@ -105,6 +109,7 @@ export class HomeController {
     if (!deviceKey || deviceKey.length < 16 || deviceKey.length > 128) {
       throw new BadRequestException('Сначала зарегистрируйте это устройство');
     }
+    await this.accounts.replaceTwins(authUser.sub).catch(() => undefined);
     const access = await this.devices.assertCanConnect(authUser.sub, deviceKey);
     const serverId = typeof body?.serverId === 'string' && body.serverId.length <= 40 ? body.serverId : undefined;
     // Free tariff → free servers only; subscription → every location.
@@ -115,7 +120,14 @@ export class HomeController {
       // Store-app accounts get the free tariff only through a FREE code from the bot.
       const user = await this.users.findById(authUser.sub);
       if (!user.telegramId && !(await this.trials.getTrial(authUser.sub))) {
-        throw new ForbiddenException('Нет активного тарифа. Получите код в Telegram-боте и введите его в приложении');
+        // The free 24 hours come with the account: linked device → they start right here.
+        const owner = await this.accounts.accountFor(authUser.sub);
+        const started = owner ? await this.accounts.startFreeOn(owner.id, authUser.sub) : false;
+        if (!started) {
+          throw new ForbiddenException(owner
+            ? 'Нет активной подписки. Купите её в Telegram-боте — она сразу заработает здесь'
+            : 'Войдите через Telegram — получите 24 часа бесплатно, а подписка будет работать на всех ваших устройствах');
+        }
       }
       await this.trials.assertAvailable(authUser.sub);
     }

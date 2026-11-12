@@ -119,7 +119,7 @@ export class CodesService {
    * Applies a code to an account (normally the store app's account).
    * Paid codes stack on top of an active subscription; FREE unlocks the trial.
    */
-  async redeem(userId: string, rawCode: string) {
+  async redeem(userId: string, rawCode: string, opts: { silent?: boolean } = {}) {
     const code = normalizeCode(rawCode);
     if (code.length !== 12) throw new NotFoundException('Код не найден. Проверьте, что он введён полностью: SALI-XXXX-XXXX-XXXX');
 
@@ -151,7 +151,10 @@ export class CodesService {
         expiresAt = trial.expiresAt;
       } else {
         const plan = row.plan ?? await this.prisma.plan.findUniqueOrThrow({ where: { code: DEFAULT_PLAN_CODE } });
-        const subscription = await this.subscriptions.grantDays(userId, plan.id, row.durationDays, 'code');
+        // Days go to the account (the Telegram user) when this device is linked to one.
+        const me = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+        const account = !me.telegramId && me.linkedTelegramId ? await this.prisma.user.findUnique({ where: { telegramId: me.linkedTelegramId } }) : null;
+        const subscription = await this.subscriptions.grantDays(account?.id ?? userId, plan.id, row.durationDays, 'code');
         expiresAt = subscription.expiresAt;
       }
       // Invited friend: the first activated code brings +3 hours here and 10% to the inviter.
@@ -165,7 +168,7 @@ export class CodesService {
         const refreshed = row.kind === ActivationCodeKind.FREE ? await this.trials.getTrial(userId) : await this.subscriptions.getActiveForUser(userId);
         expiresAt = refreshed?.expiresAt ?? expiresAt;
       }
-      void this.notifyRedeemed(row.ownerId, userId, row.code, row.kind, expiresAt, row.note);
+      if (!opts.silent) void this.notifyRedeemed(row.ownerId, userId, row.code, row.kind, expiresAt, row.note);
       return {
         referralBonusHours: bonus?.friendBonusHours ?? 0,
         kind: row.kind,

@@ -16,7 +16,8 @@ import {
 import {
   codesListMessage,
   devicesMessage,
-  freeCodeMessage,
+  freeStartedMessage,
+  paidAccountMessage,
   genericError,
   howItWorks,
   linkResultMessage,
@@ -78,7 +79,7 @@ export function createBillingHandlers(config: BotConfig) {
           return;
         }
         if (result.link) {
-          await ctx.replyWithHTML(linkResultMessage(result.link.status, result.link.publicId, result.link.share), mainReplyKeyboard);
+          await ctx.replyWithHTML(linkResultMessage(result.link.status, result.link.publicId, result.link.share, result.link.notes), mainReplyKeyboard);
           if (result.link.share && !result.link.share.covered) {
             await ctx.reply('Какое устройство отвязать?', unlinkKeyboard(result.link.share.others));
             return;
@@ -203,11 +204,12 @@ export function createBillingHandlers(config: BotConfig) {
           return;
         }
         const result = await api.starsPaid(ctx.from.id, payment.invoice_payload, payment.total_amount, payment.currency, payment.telegram_payment_charge_id);
-        if (result.code) await ctx.replyWithHTML(paidCodeMessage(result.code), codeKeyboard(result.code));
-        else await ctx.reply('Оплата получена. Код появится в разделе «Мои коды» через минуту.');
+        if (result.paid) await ctx.replyWithHTML(paidAccountMessage(result.paid), result.paid.devices ? undefined : downloadKeyboard());
+        else if (result.code) await ctx.replyWithHTML(paidCodeMessage(result.code), codeKeyboard(result.code));
+        else await ctx.reply('Оплата получена ✅ Подписка включится на вашем аккаунте через минуту.');
       } catch (error) {
         console.error('Failed to confirm Stars payment', error);
-        await ctx.reply('Оплата получена ✅ Код появится в разделе «🔑 Мои коды». Если его нет через 5 минут — напишите в поддержку.');
+        await ctx.reply('Оплата получена ✅ Подписка включится на вашем аккаунте в течение пары минут. Если не появится — напишите в поддержку.');
       }
     },
 
@@ -217,9 +219,10 @@ export function createBillingHandlers(config: BotConfig) {
       if (!ctx.from) return;
       try {
         const result = await api.paymentStatus(ctx.from.id, paymentId);
-        if (result.status === 'SUCCEEDED' && result.code) {
+        if (result.status === 'SUCCEEDED' && (result.paid || result.code)) {
           await ctx.answerCbQuery('Оплата найдена ✅').catch(() => undefined);
-          await ctx.replyWithHTML(paidCodeMessage(result.code), codeKeyboard(result.code));
+          if (result.paid) await ctx.replyWithHTML(paidAccountMessage(result.paid), result.paid.devices ? undefined : downloadKeyboard());
+          else await ctx.replyWithHTML(paidCodeMessage(result.code!), codeKeyboard(result.code!));
         } else if (result.status === 'FAILED') {
           await ctx.answerCbQuery('Счёт истёк или платёж не прошёл', { show_alert: true }).catch(() => undefined);
         } else {
@@ -234,8 +237,8 @@ export function createBillingHandlers(config: BotConfig) {
     free: async (ctx: Context): Promise<void> => {
       if (!ctx.from) return;
       try {
-        const code = await api.freeCode(ctx.from.id);
-        await ctx.replyWithHTML(freeCodeMessage(code, code.alreadyIssued), codeKeyboard(code));
+        const started = await api.freeCode(ctx.from.id);
+        await ctx.replyWithHTML(freeStartedMessage(started));
       } catch (error) {
         if (error instanceof ApiRejection && error.status === 404) {
           await api.start(profile(ctx)!).catch(() => undefined);
@@ -279,7 +282,7 @@ export function createBillingHandlers(config: BotConfig) {
       try {
         const result = await api.link(ctx.from.id, raw);
         await ctx.editMessageReplyMarkup(undefined).catch(() => undefined);
-        await ctx.replyWithHTML(linkResultMessage(result.status, result.publicId, result.share), result.share && !result.share.covered ? unlinkKeyboard(result.share.others) : undefined);
+        await ctx.replyWithHTML(linkResultMessage(result.status, result.publicId, result.share, result.notes), result.share && !result.share.covered ? unlinkKeyboard(result.share.others) : undefined);
       } catch (error) {
         await fail(ctx, error, 'devices');
       }
@@ -354,7 +357,7 @@ export function createBillingHandlers(config: BotConfig) {
       if (id && /\d/.test(text) && /^\s*SL/i.test(text)) {
         try {
           const result = await api.link(ctx.from.id, `${id[1]}${id[2]}`);
-          await ctx.replyWithHTML(linkResultMessage(result.status, result.publicId, result.share), result.share && !result.share.covered ? unlinkKeyboard(result.share.others) : undefined);
+          await ctx.replyWithHTML(linkResultMessage(result.status, result.publicId, result.share, result.notes), result.share && !result.share.covered ? unlinkKeyboard(result.share.others) : undefined);
         } catch (error) {
           await fail(ctx, error, 'link');
         }

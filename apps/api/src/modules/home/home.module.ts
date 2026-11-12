@@ -6,9 +6,10 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { DevicesModule } from '../devices/devices.module';
+import { AccountsModule } from '../accounts/accounts.module';
 
 @Module({
-  imports: [VpnModule, TrialsModule, SubscriptionsModule, UsersModule, AuthModule, DevicesModule],
+  imports: [VpnModule, TrialsModule, SubscriptionsModule, UsersModule, AuthModule, DevicesModule, AccountsModule],
   controllers: [HomeController],
 })
 export class HomeModule {}

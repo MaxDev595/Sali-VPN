@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { secureStorage } from '../secureStorage';
 import { vpnEngine } from '../vpn/VpnEngine';
 import type { HomeState, VPNServer } from '../../types';
@@ -101,6 +102,13 @@ export interface RedeemResult { kind: 'PAID' | 'FREE' | 'GIFT' | 'PROMO'; durati
  * The store app never sells anything: no prices, no checkout, no billing SDK.
  * Access arrives only as activation codes issued by the Telegram bot.
  */
+/** «Samsung SM-A515F»: tells one phone from another in the account (one device = one Sali ID). */
+function deviceName() {
+  const c = (Platform.constants ?? {}) as { Manufacturer?: string; Brand?: string; Model?: string };
+  const name = [c.Manufacturer ?? c.Brand, c.Model].filter(Boolean).join(' ').trim();
+  return (name || 'Android').slice(0, 40);
+}
+
 export const api = {
   appLogin: (deviceKey: string) => request<{ token: string; publicId: string }>('/auth/app', { method: 'POST', body: JSON.stringify({ deviceKey }) }),
   home: () => request<HomeState>('/home'),
@@ -113,5 +121,5 @@ export const api = {
   /** Every installation under this Telegram account (they share one subscription). */
   accountDevices: () => request<AccountDevices>('/devices/account'),
   unlinkDevice: (publicId: string) => request<{ ok: boolean }>('/devices/account/unlink', { method: 'POST', body: JSON.stringify({ publicId }) }),
-  registerCurrentDevice: (deviceKey: string) => request('/devices/current', { method: 'POST', body: JSON.stringify({ deviceKey, name: 'Android', platform: 'ANDROID' }) }),
+  registerCurrentDevice: (deviceKey: string) => request('/devices/current', { method: 'POST', body: JSON.stringify({ deviceKey, name: deviceName(), platform: 'ANDROID' }) }),
 };

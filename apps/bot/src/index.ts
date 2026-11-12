@@ -70,7 +70,7 @@ async function main() {
 
   bot.hears(menuLabels.buy, billing.buy);
   bot.hears([menuLabels.free, '🎁 Бесплатный день', '🎁 Бесплатный тариф'], billing.free);
-  bot.hears(menuLabels.codes, billing.codes);
+  bot.hears([menuLabels.codes, '🔑 Мои коды'], billing.devices);
   bot.hears(menuLabels.devices, billing.devices);
   bot.hears(menuLabels.download, billing.download);
   bot.hears(menuLabels.invite, handlers.invite);
@@ -88,7 +88,7 @@ async function main() {
 
   bot.action('menu_buy', action(billing.buy));
   bot.action('menu_free', action(billing.free));
-  bot.action('menu_codes', action(billing.codes));
+  bot.action('menu_codes', action(billing.devices));
   bot.action('menu_devices', action(billing.devices));
   bot.action('menu_download', action(billing.download));
   bot.action('menu_vpn', action(handlers.vpn));

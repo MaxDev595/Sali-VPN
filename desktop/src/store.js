@@ -29,11 +29,20 @@ function decrypt(box) {
 }
 
 module.exports = {
-  /** Stable random key for this installation (the API's device key, like the phone app). */
+  /** This PC's key: derived from Windows' MachineGuid, so reinstalling keeps the same Sali ID. */
+  machineKey() {
+    try {
+      const out = require('node:child_process').execSync('reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid', { encoding: 'utf8', windowsHide: true, timeout: 3000 });
+      const guid = (out.match(/MachineGuid\s+REG_SZ\s+([0-9a-fA-F-]{36})/) || [])[1];
+      if (guid) return 'win-' + crypto.createHash('sha256').update('app.sali.vpn:' + guid.toLowerCase()).digest('hex').slice(0, 48);
+    } catch { /* no registry access: fall back to a random key */ }
+    return null;
+  },
+  /** The API's device key: the machine key, or (older installs / no registry) a stored random one. */
   deviceKey() {
     const state = read();
     if (state.deviceKey) return state.deviceKey;
-    const key = 'win-' + crypto.randomBytes(24).toString('hex');
+    const key = module.exports.machineKey() || 'win-' + crypto.randomBytes(24).toString('hex');
     update({ deviceKey: key });
     return key;
   },

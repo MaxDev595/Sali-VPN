@@ -144,42 +144,24 @@ export class AdminBotService {
       ? `🎁 <b>Вам подарок!</b>\n\nВам подарили подписку <b>${plan.name}</b> — ${durationText(days)}.${text}`
       : `🛡 <b>Подписка от администрации Sali VPN</b>\n\nВам выдана подписка <b>${plan.name}</b> — ${durationText(days)}.${text}`;
 
-    const isDevice = Boolean(user.appDeviceKey);
+    // The account gets it — every device on it (up to 3) works right away. A device that is
+    // not linked to Telegram yet holds it until it is linked (then it moves to the account).
     const tg = user.telegramId ?? user.linkedTelegramId;
-    const owner = user.telegramId ? user : tg ? (await this.prisma.user.findUnique({ where: { telegramId: tg } })) ?? user : user;
-    const code = await this.codes.issueAdmin(owner.id, plan.id, days, note);
-
-    // Picked by Sali ID: switch it on right there — nothing for the client to do.
-    let activatedOn: string | null = null;
-    let activationError: string | null = null;
-    if (isDevice) {
-      try {
-        await this.codes.redeem(user.id, code.code);
-        activatedOn = formatPublicId(user.publicId);
-      } catch (error) { activationError = (error as Error).message; }
-    }
-
-    const devices = tg ? await this.prisma.user.findMany({ where: { linkedTelegramId: tg, appDeviceKey: { not: null } }, orderBy: { linkedAt: 'desc' }, take: 4 }) : [];
-    const how = activatedOn
-      ? `✅ Уже включена в приложении на устройстве <b>${activatedOn}</b>. Откройте Sali VPN и нажмите «Подключить».`
-      : [
-          `🔑 Ваш код: <code>${code.display}</code> <i>(нажмите, чтобы скопировать)</i>`,
-          '',
-          'Как включить:',
-          '1. Откройте приложение Sali VPN',
-          '2. Нажмите «Код» на главном экране',
-          '3. Вставьте код и нажмите «Активировать»',
-          devices.length ? '\nИли просто нажмите кнопку ниже 👇' : '',
-        ].join('\n');
-    const keyboard = activatedOn ? undefined : {
-      inline_keyboard: [
-        ...devices.map((d) => [{ text: `⚡ Активировать на ${formatPublicId(d.publicId)}`, callback_data: `at_${code.code}_${formatPublicId(d.publicId)}` }]),
-        [{ text: '📲 Скачать приложение', callback_data: 'menu_download' }],
-      ],
-    };
-    const delivered = await this.notifications.sendHtml(owner.id, `${head}\n\n${how}`, keyboard).catch(() => false);
-    void this.nodes.notifyAdmins(`Админ ${adminId} выдал подписку «${plan.name}» (${durationText(days)}) → ${this.title(user)}: код ${code.display}${activatedOn ? `, активирован на ${activatedOn}` : ''}.`);
-    return { mode: activatedOn ? 'direct' as const : 'code' as const, code: code.display, delivered, devices: activatedOn ? [activatedOn] : [], activationError };
+    const account = user.telegramId ? user : tg ? (await this.prisma.user.findUnique({ where: { telegramId: tg } })) ?? user : user;
+    const receipt = await this.codes.issueAdmin(account.id, plan.id, days, note); // internal record, never shown
+    await this.codes.redeem(account.id, receipt.code, { silent: true });
+    const devices = account.telegramId
+      ? await this.prisma.user.findMany({ where: { linkedTelegramId: account.telegramId, appDeviceKey: { not: null } }, select: { publicId: true } })
+      : account.appDeviceKey ? [{ publicId: account.publicId }] : [];
+    const sub = await this.subscriptions.getOwnActive(account.id);
+    const until = !sub?.expiresAt || sub.expiresAt.getFullYear() > new Date().getFullYear() + 50 ? 'бессрочно' : `до ${date(sub.expiresAt)}`;
+    const how = devices.length
+      ? `✅ Уже работает на всех устройствах вашего аккаунта (до ${sub?.plan.maxDevices ?? 3}). Откройте Sali VPN и нажмите «Подключить».`
+      : '📲 Осталось подключить приложение: скачайте Sali VPN и нажмите в нём «Войти через Telegram» — подписка подхватится сама.';
+    const keyboard = devices.length ? undefined : { inline_keyboard: [[{ text: '📲 Скачать приложение', callback_data: 'menu_download' }]] };
+    const delivered = await this.notifications.sendHtml(account.id, `${head}\nДействует: <b>${until}</b>.\n\n${how}`, keyboard).catch(() => false);
+    void this.nodes.notifyAdmins(`Админ ${adminId} выдал подписку «${plan.name}» (${durationText(days)}) → ${this.title(account)}.`);
+    return { mode: 'direct' as const, code: '', delivered, devices: devices.map((d) => formatPublicId(d.publicId)), activationError: null, until };
   }
 
   /** «🎟 Создать код»: a gift code with no recipient — the admin sends it to anyone. */
@@ -208,7 +190,7 @@ export class AdminBotService {
     const problems: string[] = [];
     const lines: string[] = [];
     if (user.isBlocked) problems.push('🚫 Аккаунт заблокирован — разблокируйте в карточке.');
-    if (!installs.length) problems.push('📱 Ни одно приложение не привязано к этому Telegram. Клиент должен открыть приложение → «Привязать Telegram», или пришлите ему код — он введёт его в приложении.');
+    if (!installs.length) problems.push('📱 К аккаунту не подключено ни одно приложение. Клиент должен открыть Sali VPN и нажать «Войти через Telegram» (в Telegram — кнопку «Запустить»). Если бот не ответил — пусть пришлёт боту номер SL-… из приложения.');
 
     for (const app of installs) {
       const [sub, trial, account, device] = await Promise.all([
@@ -223,7 +205,7 @@ export class AdminBotService {
       const server = account ? `${account.server.countryCode} ${account.server.name}${!account.server.isActive ? ' (выключен)' : !account.server.online ? ' (не отвечает)' : ''}` : 'ещё не подключался';
       const used = device?.lastActiveAt ? `VPN был ${date(device.lastActiveAt)}` : 'VPN ещё ни разу не включал';
       lines.push(`${device?.platform === 'WINDOWS' ? '💻' : '📱'} <b>${id}</b> · ${access}\n    сервер: ${server} · ${used}`);
-      if (!sub && !trialLeft) problems.push(`❌ На <b>${id}</b> нет тарифа — VPN не включится. Выдайте подписку на <code>${id}</code> (включится сразу) или пришлите код.`);
+      if (!sub && !trialLeft) problems.push(`❌ На <b>${id}</b> нет тарифа — VPN не включится. Выдайте подписку на аккаунт — включится сразу.`);
       if (account && !account.server.isActive) problems.push(`🛑 Сервер ${account.server.name} выключен в админке — клиенту надо выбрать другую страну.`);
       else if (account && !account.server.online) problems.push(`🔌 Сервер ${account.server.name} не отвечает — проверьте «🖥 Серверы» или пусть клиент выберет другую страну.`);
       if (account && account.status !== 'ACTIVE' && (sub || trialLeft)) problems.push(`⚠️ На <b>${id}</b> VPN-ключ в статусе ${account.status} — исправится сам при следующем «Подключить».`);
@@ -233,7 +215,7 @@ export class AdminBotService {
       where: { ownerId: { in: [user.id, ...(tg ? (await this.prisma.user.findMany({ where: { telegramId: tg }, select: { id: true } })).map((u) => u.id) : [])] }, status: ActivationCodeStatus.ISSUED, expiresAt: { gt: now } },
       orderBy: { createdAt: 'desc' }, take: 3,
     });
-    for (const c of codes) problems.push(`🔑 Код <code>${formatCode(c.code)}</code> выдан, но не введён. Попросите клиента вставить его в приложении («Код» на главном экране).`);
+    for (const c of codes) problems.push(`🔑 Код <code>${formatCode(c.code)}</code> выдан, но не введён. Он применится сам, когда клиент войдёт в приложении через Telegram.`);
 
     if (!problems.length) problems.push('✅ С нашей стороны всё в порядке: тариф есть, сервер работает.\nЕсли не подключается — пусть клиент: 1) обновит приложение до последней версии, 2) выберет другую страну, 3) выключит другие VPN/«Частный DNS» в настройках Android.');
     return { title: this.title(user), lines, problems };

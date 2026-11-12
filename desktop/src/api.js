@@ -59,13 +59,24 @@ async function request(path, { method = 'GET', body, headers = {}, auth = true }
 
 let signingIn = null;
 /** Silent sign-in: this PC's installation key becomes an app account with its own Sali ID. */
+async function moveToMachineKey() {
+  const machine = store.machineKey();
+  if (!machine || machine === store.deviceKey()) return;
+  const moved = await request('/auth/app/rebind', { method: 'POST', body: { deviceKey: machine } }).catch(() => null);
+  if (moved && moved.ok) store.set('deviceKey', machine);
+}
+
 async function ensureSession() {
-  if (store.getToken()) return;
+  if (store.getToken()) { if (!store.get('machineKeyChecked')) { store.set('machineKeyChecked', true); void moveToMachineKey(); } return; }
   signingIn ??= (async () => {
     const deviceKey = store.deviceKey();
     const auth = await request('/auth/app', { method: 'POST', body: { deviceKey }, auth: false });
     store.setToken(auth.token);
-    await request('/devices/current', { method: 'POST', body: { deviceKey, name: os.hostname().slice(0, 40) || 'Windows', platform: 'WINDOWS' } }).catch(() => undefined);
+    // Older installs used a random key: move this account to the machine key once, so a
+    // reinstall (which wipes the random one) still finds the same Sali ID.
+    await moveToMachineKey();
+    store.set('machineKeyChecked', true);
+    await request('/devices/current', { method: 'POST', body: { deviceKey: store.deviceKey(), name: os.hostname().slice(0, 40) || 'Windows', platform: 'WINDOWS' } }).catch(() => undefined);
   })().finally(() => { signingIn = null; });
   return signingIn;
 }

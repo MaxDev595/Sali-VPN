@@ -187,15 +187,35 @@ export class PaymentsService {
     return this.codes.issueForPayment(paymentId);
   }
 
+  /** Puts a bot purchase onto the buyer's account (idempotent). */
+  async activateOnAccount(paymentId: string) {
+    const code = await this.codes.issueForPayment(paymentId);
+    const row = await this.prisma.activationCode.findUnique({ where: { code: code.code } });
+    if (row?.status !== 'ISSUED') return;
+    const payment = await this.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    await this.codes.redeem(payment.userId, code.code, { silent: true });
+  }
+
+  /** Plan, until and linked devices of a Telegram account — for «оплачено» messages. */
+  async accountInfo(accountId: string) {
+    const account = await this.prisma.user.findUniqueOrThrow({ where: { id: accountId } });
+    const sub = await this.subscriptions.getOwnActive(accountId);
+    const devices = account.telegramId ? await this.prisma.user.count({ where: { linkedTelegramId: account.telegramId, appDeviceKey: { not: null } } }) : 0;
+    return { until: sub?.expiresAt?.toISOString() ?? null, maxDevices: sub?.plan.maxDevices ?? 3, devices };
+  }
+
   async confirmSucceeded(paymentId: string, options: { silent?: boolean } = {}) {
     const current = await this.prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, include: { plan: true } });
     if (current.status === PaymentStatus.SUCCEEDED) return current;
     const payment = await this.prisma.payment.update({ where: { id: paymentId }, data: { status: PaymentStatus.SUCCEEDED }, include: { plan: true } });
 
     if (payment.deliverAsCode) {
-      const code = await this.codes.issueForPayment(payment.id);
+      // No code for the customer to type: the purchase goes straight onto their account
+      // (the code stays as the internal receipt).
+      await this.activateOnAccount(payment.id);
       if (!options.silent) {
-        await this.notifications.sendHtml(payment.userId, activationCodeMessage(code), activationCodeKeyboard(code)).catch(() => false);
+        const info = await this.accountInfo(payment.userId);
+        await this.notifications.sendHtml(payment.userId, paidMessage(payment.plan.name, info), paidKeyboard(info)).catch(() => false);
       }
     } else if (payment.subscriptionId) {
       await this.subscriptions.activate(payment.subscriptionId, payment.plan.durationDays);
@@ -328,6 +348,21 @@ export class PaymentsService {
 }
 
 /** Message the buyer receives in Telegram after any successful bot payment. */
+export type AccountInfo = { until: string | null; maxDevices: number; devices: number };
+const untilText = (iso: string | null) => (!iso ? '' : new Date(iso).getFullYear() > new Date().getFullYear() + 50 ? 'бессрочно' : `до ${new Date(iso).toLocaleDateString('ru-RU', { timeZone: 'UTC' })}`);
+
+/** «Оплачено»: the subscription is already on the account — nothing to type. */
+export function paidMessage(planName: string, info: AccountInfo) {
+  const head = `✅ <b>Оплата прошла!</b>\n\nПодписка <b>${planName}</b> активна ${untilText(info.until)}.\nОна на вашем аккаунте и работает на всех ваших устройствах — до ${info.maxDevices}.`;
+  return info.devices
+    ? `${head}\n\nОткройте приложение Sali VPN и нажмите «Подключить».`
+    : `${head}\n\n📲 Осталось подключить приложение: скачайте Sali VPN и нажмите в нём «Войти через Telegram».`;
+}
+
+export function paidKeyboard(info: AccountInfo) {
+  return { inline_keyboard: [info.devices ? [{ text: '📱 Мои устройства', callback_data: 'menu_devices' }] : [{ text: '📲 Скачать приложение', callback_data: 'menu_download' }]] };
+}
+
 export function activationCodeMessage(code: IssuedCode) {
   const period = code.durationDays >= 360 ? '1 год' : code.durationDays >= 28 ? `${Math.round(code.durationDays / 30)} мес.` : `${code.durationDays} дн.`;
   return [

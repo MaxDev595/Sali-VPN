@@ -46,12 +46,11 @@ export function period(days: number) {
 export const howItWorks = [
   '<b>Как это работает</b>',
   '',
-  '1️⃣ Установите приложение Sali VPN',
-  '2️⃣ В приложении нажмите «Привязать Telegram» — мы запомним ваше устройство',
-  '3️⃣ Здесь, в боте, получите 24 часа бесплатно или оплатите месяц / год',
-  '4️⃣ Бот пришлёт код <code>SALI-XXXX-XXXX-XXXX</code> — введите его в приложении',
+  '1️⃣ Скачайте приложение Sali VPN',
+  '2️⃣ Нажмите в нём «Войти через Telegram» — сразу 24 часа бесплатно',
+  '3️⃣ Подписку покупаете здесь, в боте — она сама появится в приложении',
   '',
-  'Если устройство привязано, код можно активировать одной кнопкой прямо из бота.',
+  'Подписка — на ваш аккаунт: работает на всех ваших устройствах (до 3) и не пропадает при переустановке. Никаких кодов.',
 ].join('\n');
 
 export function paidCodeMessage(code: IssuedCode) {
@@ -121,18 +120,32 @@ export function devicesMessage({ devices, subscription }: DevicesOverview) {
   return ['<b>Мои устройства</b>', '', ...head, ...lines, '', 'Старое или удалённое устройство можно отвязать кнопкой ниже — освободится место.', 'Чтобы добавить новое, откройте в приложении «Привязать Telegram» или пришлите сюда его Sali ID.'].join('\n');
 }
 
-export function linkResultMessage(status: string, publicId?: string | null, share?: LinkShare | null) {
+export type LinkNotes = { replaced: string[]; freed: string | null; trialStarted: boolean };
+
+/** After linking: what the account did by itself (free 24h, replaced old install, made room). */
+export function linkNotesText(notes?: LinkNotes | null) {
+  if (!notes) return '';
+  const lines = [
+    notes.trialStarted ? '🎁 <b>24 часа бесплатно уже включены</b> — нажмите «Подключить» в приложении.' : null,
+    notes.replaced.length ? `♻️ Старая установка ${notes.replaced.join(', ')} на этом же устройстве убрана — одно устройство, один номер.` : null,
+    notes.freed ? `📱 На аккаунте было 3 устройства — отключили ${notes.freed}, им дольше всех не пользовались. Вернуть можно в «Мои устройства».` : null,
+  ].filter(Boolean);
+  return lines.length ? `\n\n${lines.join('\n')}` : '';
+}
+
+export function linkResultMessage(status: string, publicId?: string | null, share?: LinkShare | null, notes?: LinkNotes | null) {
   const base = (() => {
     switch (status) {
-      case 'linked': return `🔗 <b>Устройство ${publicId} привязано</b>\n\nТеперь коды, напоминания об окончании подписки и ответы поддержки будут приходить сюда.`;
+      case 'linked': return `🔗 <b>Устройство ${publicId} подключено к вашему аккаунту</b>\n\nНапоминания и ответы поддержки будут приходить сюда.`;
       case 'already': return `Устройство ${publicId} уже привязано к этому Telegram 👌`;
       case 'linked_elsewhere': return 'Это устройство уже привязано к другому Telegram-аккаунту. Если это ошибка — напишите в поддержку.';
       default: return 'Не нашли устройство с таким Sali ID. Проверьте номер в приложении: Аккаунт → Sali ID.';
     }
   })();
-  if (!share || (status !== 'linked' && status !== 'already')) return base;
+  const extra = linkNotesText(notes);
+  if (!share || (status !== 'linked' && status !== 'already')) return base + extra;
   if (share.covered) {
-    return `${base}\n\n✅ <b>Ваша подписка уже работает на нём</b> — ${share.plan} ${untilText(share.until)}.\nУстройств на подписке: ${share.used} из ${share.max}. Откройте приложение и нажмите «Подключить».`;
+    return `${base}\n\n✅ <b>Ваша подписка уже работает на нём</b> — ${share.plan} ${untilText(share.until)}.\nУстройств на подписке: ${share.used} из ${share.max}. Откройте приложение и нажмите «Подключить».${extra}`;
   }
   return `${base}\n\n⚠️ <b>На подписке уже ${share.max} устройства из ${share.max}.</b>\nЕсли вы переустановили приложение или сменили телефон — отвяжите старое устройство, и подписка сразу заработает здесь 👇`;
 }
@@ -159,10 +172,10 @@ export function plansMessage(plans: BotPlan[]) {
     '',
     '• все серверы и максимальная скорость',
     '• без рекламы и логов',
-    '• один код — одно устройство',
+    '• до 3 устройств: телефон, ПК и ещё одно',
     ...(discount ? ['', `🎁 У вас есть реферальная скидка <b>${discount}%</b> — она уже учтена в цене.`] : []),
     '',
-    'После оплаты вы получите код — введите его в приложении. Если подписка уже есть, дни добавятся к текущим.',
+    'После оплаты подписка сразу включится на вашем аккаунте — во всех ваших приложениях. Если подписка уже есть, дни добавятся к текущим.',
   ].join('\n');
 }
 
@@ -170,7 +183,7 @@ export function referralMessage(stats: ReferralStats) {
   return [
     '<b>Приглашайте друзей в Sali VPN</b>',
     '',
-    `• Друг получает <b>+${stats.friendBonusHours} часа</b> VPN бесплатно — сразу после активации первого кода.`,
+    `• Друг получает <b>+${stats.friendBonusHours} часа</b> VPN бесплатно — сразу после входа в приложение.`,
     `• Вы получаете <b>скидку ${stats.discountPercent}%</b> на следующую оплату за каждого друга.`,
     '',
     `Приглашено: <b>${stats.totalInvited}</b> · бонусов получено: <b>${stats.totalRewarded}</b>`,
@@ -181,5 +194,19 @@ export function referralMessage(stats: ReferralStats) {
 }
 
 export function referredWelcome(hours: number) {
-  return `🎁 <b>Вы пришли по приглашению друга</b>\n\nПосле активации первого кода вы получите <b>+${hours} часа</b> VPN бесплатно.`;
+  return `🎁 <b>Вы пришли по приглашению друга</b>\n\nПосле входа в приложение вы получите <b>+${hours} часа</b> VPN бесплатно.`;
+}
+
+/** Bot purchase finished: it is already on the account. */
+export function paidAccountMessage(paid: { plan: string; until: string | null; maxDevices: number; devices: number }) {
+  const until = !paid.until ? '' : new Date(paid.until).getFullYear() > new Date().getFullYear() + 50 ? 'бессрочно' : `до ${date(paid.until)}`;
+  const head = `✅ <b>Оплата прошла!</b>\n\nПодписка <b>${paid.plan}</b> активна ${until}.\nОна на вашем аккаунте и работает на всех ваших устройствах — до ${paid.maxDevices}.`;
+  return paid.devices
+    ? `${head}\n\nОткройте приложение Sali VPN и нажмите «Подключить».`
+    : `${head}\n\n📲 Осталось подключить приложение: скачайте Sali VPN и нажмите в нём «Войти через Telegram».`;
+}
+
+/** «🎁 24 часа бесплатно» from the bot. */
+export function freeStartedMessage(r: { device: string; expiresAt: string }) {
+  return `🎁 <b>24 часа бесплатно включены</b> на устройстве <b>${r.device}</b> — до ${new Date(r.expiresAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.\n\nОткройте приложение и нажмите «Подключить».`;
 }

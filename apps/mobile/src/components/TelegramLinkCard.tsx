@@ -16,8 +16,8 @@ export function TelegramLinkCard() {
   return <Pressable accessibilityRole="button" onPress={() => void linkTelegram(home.user.publicId, refresh)} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
     <View style={styles.icon}><Icon name="telegram" size={20} color="#fff" /></View>
     <View style={styles.copy}>
-      <Text style={styles.title}>Привязать Telegram <Text style={styles.optional}>· по желанию</Text></Text>
-      <Text style={styles.text}>Подписка сохранится при переустановке. Ваш номер: <Text style={styles.id}>{home.user.publicId}</Text> — если бот не ответил, просто отправьте ему этот номер.</Text>
+      <Text style={styles.title}>Войти через Telegram</Text>
+      <Text style={styles.text}>Сразу 24 часа бесплатно. Подписка — на аккаунт, работает на всех ваших устройствах (до 3) и не пропадёт при переустановке.</Text>
     </View>
     <Icon name="chevron" size={18} color={theme.colors.textSecondary} />
   </Pressable>;

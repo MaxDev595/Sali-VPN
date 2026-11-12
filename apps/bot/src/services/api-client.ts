@@ -82,6 +82,9 @@ export interface OwnedCode extends IssuedCode {
 }
 
 /** The account's subscription as seen by a freshly linked installation (shared by up to `max`). */
+export type LinkNotes = { replaced: string[]; freed: string | null; trialStarted: boolean };
+export type PaidInfo = { plan: string; until: string | null; maxDevices: number; devices: number };
+
 export interface LinkShare {
   plan: string;
   until: string | null;
@@ -180,10 +183,10 @@ export const api = {
 
   // --- Bot billing & activation codes -------------------------------------
   start: (profile: TelegramProfile, startParam?: string) =>
-    call<{ publicId: string; link: { status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId?: string; share?: LinkShare | null } | null; linkedApps: number; freeUsed: boolean; isBlocked: boolean; referred?: boolean; friendBonusHours?: number }>('/bot/start', { profile, startParam }),
+    call<{ publicId: string; link: { status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId?: string; share?: LinkShare | null; notes?: LinkNotes } | null; linkedApps: number; freeUsed: boolean; isBlocked: boolean; referred?: boolean; friendBonusHours?: number }>('/bot/start', { profile, startParam }),
   referrals: (telegramId: number) => call<ReferralStats>('/bot/referrals', { telegramId }),
   link: (telegramId: number, publicId: string) =>
-    call<{ status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId: string | null; share: LinkShare | null }>('/bot/link', { telegramId, publicId }),
+    call<{ status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId: string | null; share: LinkShare | null; notes?: LinkNotes }>('/bot/link', { telegramId, publicId }),
   unlink: (telegramId: number, publicId: string) => call<{ ok: boolean; publicId: string }>('/bot/unlink', { telegramId, publicId }, 0),
   devices: (telegramId: number) => call<DevicesOverview>('/bot/devices', { telegramId }),
   plans: (telegramId?: number) => call<BotPlan[]>('/bot/plans', telegramId ? { telegramId } : {}),
@@ -192,10 +195,10 @@ export const api = {
   precheck: (telegramId: number, paymentId: string, amount: number, currency: string) =>
     call<{ ok: boolean; error?: string }>('/bot/precheck', { telegramId, paymentId, amount, currency }, 0),
   starsPaid: (telegramId: number, paymentId: string, amount: number, currency: string, chargeId: string) =>
-    call<{ code: IssuedCode | null }>('/bot/stars-paid', { telegramId, paymentId, amount, currency, chargeId }),
+    call<{ code: IssuedCode | null; paid?: PaidInfo | null }>('/bot/stars-paid', { telegramId, paymentId, amount, currency, chargeId }),
   paymentStatus: (telegramId: number, paymentId: string) =>
-    call<{ status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; code: IssuedCode | null }>('/bot/payment-status', { telegramId, paymentId }),
-  freeCode: (telegramId: number) => call<IssuedCode & { alreadyIssued: boolean }>('/bot/free', { telegramId }, 0),
+    call<{ status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; code: IssuedCode | null; paid?: PaidInfo | null }>('/bot/payment-status', { telegramId, paymentId }),
+  freeCode: (telegramId: number) => call<{ device: string; expiresAt: string }>('/bot/free', { telegramId }, 0),
   codes: (telegramId: number) => call<OwnedCode[]>('/bot/codes', { telegramId }),
   apply: (telegramId: number, code: string, publicId?: string) =>
     call<{ chooseDevice?: string[]; referralBonusHours?: number; kind?: string; durationDays?: number; planName?: string | null; expiresAt?: string | null; publicId?: string }>('/bot/apply', { telegramId, code, publicId }, 0),
@@ -214,7 +217,7 @@ export const api = {
   isAdmin: (telegramId: number) => call<{ admin: boolean }>('/bot/nodes/is-admin', { telegramId }, 1),
   adminLookup: (telegramId: number, query: string) => call<AdminCard>('/bot/admin/lookup', { telegramId, query }, 0),
   adminGrant: (telegramId: number, userId: string, days: number, kind: 'admin' | 'gift', message?: string) =>
-    call<{ mode: 'code' | 'direct'; code: string; delivered: boolean; devices: string[]; activationError: string | null }>('/bot/admin/grant', { telegramId, userId, days, kind, message }, 0),
+    call<{ mode: 'code' | 'direct'; code: string; delivered: boolean; devices: string[]; activationError: string | null; until?: string }>('/bot/admin/grant', { telegramId, userId, days, kind, message }, 0),
   adminCode: (telegramId: number, days: number) => call<{ code: string; plan: string; days: number; expiresAt: string }>('/bot/admin/code', { telegramId, days }, 0),
   adminDiagnose: (telegramId: number, userId: string) => call<{ title: string; lines: string[]; problems: string[] }>('/bot/admin/diagnose', { telegramId, userId }, 0),
   adminRevoke: (telegramId: number, userId: string) => call<{ subscriptions: number; codes: number }>('/bot/admin/revoke', { telegramId, userId }, 0),

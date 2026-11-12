@@ -5,7 +5,7 @@ import { DOC_TOPICS, helpUrl } from '../docs';
 export const menuLabels = {
   buy: '💎 Купить подписку',
   free: '🎁 24 часа бесплатно',
-  codes: '🔑 Мои коды',
+  codes: '💎 Моя подписка',
   devices: '📱 Мои устройства',
   download: '📲 Скачать приложение',
   invite: '👥 Пригласить друга',
