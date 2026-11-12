@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { SaliButton } from '../src/components/SaliButton';
 import { api, RedeemResult } from '../src/services/api/client';
-import { ensureSession, telegramBotUrl, telegramLinkUrl } from '../src/services/session';
+import { ensureSession, telegramBotUrl } from '../src/services/session';
 import { useAccountStore } from '../src/store/accountStore';
 import { theme } from '../src/theme';
 
@@ -55,7 +55,7 @@ export default function ActivateScreen() {
     } finally { setBusy(false); }
   };
 
-  const openBot = () => void Linking.openURL(home && !home.user.telegramLinked ? telegramLinkUrl(home.user.publicId) : telegramBotUrl());
+  const openBot = () => void Linking.openURL(telegramBotUrl());
 
   return <SafeAreaView style={styles.safe}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

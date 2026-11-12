@@ -269,7 +269,7 @@ export class BotApiController {
   async apply(@Body() dto: ApplyDto) {
     const apps = await this.users.listLinkedApps(BigInt(dto.telegramId));
     const target = dto.publicId ? apps.find((app) => formatPublicId(app.publicId) === dto.publicId || app.publicId === dto.publicId) : apps.length === 1 ? apps[0] : undefined;
-    if (!apps.length) throw new ConflictException('К этому Telegram не привязано ни одно устройство. Откройте приложение → «Привязать Telegram» или введите код в приложении вручную');
+    if (!apps.length) throw new ConflictException('Вставьте этот код в приложении Sali VPN:\n1. Откройте приложение\n2. Нажмите «Код» на главном экране\n3. Вставьте код → «Активировать» → «Подключить»\n\nПриложения ещё нет? Нажмите «📲 Скачать приложение».');
     if (!target) return { chooseDevice: apps.map((app) => formatPublicId(app.publicId)) };
     const result = await this.codes.redeem(target.id, dto.code);
     return { ...result, publicId: formatPublicId(target.publicId) };

@@ -12,7 +12,7 @@ import { Icon } from '../../src/components/Icon';
 import { useI18n } from '../../src/i18n';
 import { Language, usePreferencesStore } from '../../src/store/preferencesStore';
 import { useAccountStore } from '../../src/store/accountStore';
-import { telegramBotUrl, telegramLinkUrl } from '../../src/services/session';
+import { linkTelegram, telegramBotUrl } from '../../src/services/session';
 import { openHelp, openSite } from '../../src/services/links';
 import { theme } from '../../src/theme';
 
@@ -23,6 +23,7 @@ export default function ProfileScreen() {
   const { t } = useI18n();
   const home = useAccountStore(state => state.home);
   const access = useAccountStore(state => state.access);
+  const refresh = useAccountStore(state => state.refresh);
   const [languageOpen, setLanguageOpen] = useState(false);
   useEffect(() => { if (!prefs.hydrated) void prefs.hydrate(); }, [prefs]);
 
@@ -63,7 +64,7 @@ export default function ProfileScreen() {
 
       <SectionLabel icon="user">{t.account}</SectionLabel>
       <Group>
-        <Row title="Telegram" hint={home?.user.telegramLinked ? 'Коды и напоминания приходят в бот' : 'Привяжите, чтобы активировать коды одной кнопкой'} value={home?.user.telegramLinked ? 'Привязан' : 'Привязать'} onPress={() => void Linking.openURL(home && !home.user.telegramLinked ? telegramLinkUrl(home.user.publicId) : telegramBotUrl())} />
+        <Row title="Telegram" hint={home?.user.telegramLinked ? 'Коды и напоминания приходят в бот' : 'Привяжите, чтобы активировать коды одной кнопкой'} value={home?.user.telegramLinked ? 'Привязан' : 'Привязать'} onPress={() => (home && !home.user.telegramLinked ? void linkTelegram(home.user.publicId, refresh) : void Linking.openURL(telegramBotUrl()))} />
         <Row title="Оплата и коды" kind="external" onPress={() => openHelp('payments')} last />
       </Group>
 

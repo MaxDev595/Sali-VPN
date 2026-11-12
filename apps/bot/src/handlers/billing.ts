@@ -271,6 +271,20 @@ export function createBillingHandlers(config: BotConfig) {
       }
     },
 
+    /** «🔗 Да, это моё устройство» under «код активирован»: links that app in one tap. */
+    linkDevice: async (ctx: Context) => {
+      const raw = callbackData(ctx).replace(/^lnk_/, '');
+      await ctx.answerCbQuery().catch(() => undefined);
+      if (!ctx.from || !/^[0-9A-Za-z]{8}$/.test(raw)) return;
+      try {
+        const result = await api.link(ctx.from.id, raw);
+        await ctx.editMessageReplyMarkup(undefined).catch(() => undefined);
+        await ctx.replyWithHTML(linkResultMessage(result.status, result.publicId, result.share), result.share && !result.share.covered ? unlinkKeyboard(result.share.others) : undefined);
+      } catch (error) {
+        await fail(ctx, error, 'devices');
+      }
+    },
+
     /** «Отвязать SL-…»: asks first; then frees the place on the subscription. */
     unlink: async (ctx: Context) => {
       const data = callbackData(ctx);

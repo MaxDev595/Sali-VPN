@@ -7,7 +7,6 @@ import { Text } from '../../src/components/Text';
 import { BrandMark } from '../../src/components/BrandMark';
 import { Icon } from '../../src/components/Icon';
 import { VPNControl } from '../../src/components/VPNControl';
-import { TelegramLinkCard } from '../../src/components/TelegramLinkCard';
 import { NewsCard } from '../../src/components/NewsCard';
 import { SaliModal } from '../../src/components/SaliModal';
 import { SaliButton } from '../../src/components/SaliButton';
@@ -15,7 +14,7 @@ import { useI18n } from '../../src/i18n';
 import { useVpnStore } from '../../src/store/vpnStore';
 import { useAccountStore } from '../../src/store/accountStore';
 import { usePreferencesStore } from '../../src/store/preferencesStore';
-import { telegramBotUrl, telegramLinkUrl } from '../../src/services/session';
+import { telegramBotUrl } from '../../src/services/session';
 import { FLAGS } from '../../src/data/fallbackServers';
 import { theme } from '../../src/theme';
 
@@ -57,7 +56,7 @@ export default function VpnScreen() {
     if (prefs.autoConnect && (access === 'premium' || access === 'trial') && status === 'disconnected') void toggle();
   }, [access, home, prefs.autoConnect, prefs.hydrated, status, toggle]);
 
-  const openBot = () => void Linking.openURL(home && !home.user.telegramLinked ? telegramLinkUrl(home.user.publicId) : telegramBotUrl());
+  const openBot = () => void Linking.openURL(telegramBotUrl());
   const active = status === 'connected';
   const title = status === 'connecting' ? t.stateConnecting : status === 'disconnecting' ? t.disconnecting : active ? t.stateOn : status === 'error' ? t.stateError : t.stateOff;
   const label = active ? t.disconnect : t.connect;
@@ -74,7 +73,6 @@ export default function VpnScreen() {
         </Pressable>
       </View>
 
-      <Animated.View entering={FadeInDown.duration(380)}><TelegramLinkCard compact /></Animated.View>
       <NewsCard />
 
       <View style={styles.hero}>

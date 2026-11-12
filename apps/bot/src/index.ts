@@ -105,6 +105,7 @@ async function main() {
   bot.action(/^chk_/, billing.checkPayment);
   bot.action(/^(apply|at)_/, billing.apply);
   bot.action(/^unly?_/, billing.unlink);
+  bot.action(/^lnk_/, billing.linkDevice);
   bot.action(/^faq_/, handlers.faq);
   bot.action(/^language_(ru|en)$/, action((ctx) => billing.start(ctx)));
 

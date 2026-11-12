@@ -165,7 +165,7 @@ export class CodesService {
         const refreshed = row.kind === ActivationCodeKind.FREE ? await this.trials.getTrial(userId) : await this.subscriptions.getActiveForUser(userId);
         expiresAt = refreshed?.expiresAt ?? expiresAt;
       }
-      void this.notifyRedeemed(row.ownerId, userId, row.code, row.kind, expiresAt);
+      void this.notifyRedeemed(row.ownerId, userId, row.code, row.kind, expiresAt, row.note);
       return {
         referralBonusHours: bonus?.friendBonusHours ?? 0,
         kind: row.kind,
@@ -180,14 +180,27 @@ export class CodesService {
     }
   }
 
-  private async notifyRedeemed(ownerId: string, redeemerId: string, code: string, kind: ActivationCodeKind, expiresAt: Date | null) {
+  /**
+   * Tells the code's owner in Telegram that it worked. If the app that redeemed it is not
+   * linked to any Telegram yet, offers one tap to link it — no deep links, nothing to lose.
+   */
+  private async notifyRedeemed(ownerId: string, redeemerId: string, code: string, kind: ActivationCodeKind, expiresAt: Date | null, note?: string | null) {
     try {
-      const redeemer = await this.prisma.user.findUniqueOrThrow({ where: { id: redeemerId } });
-      const until = expiresAt ? `\nДоступ до: <b>${expiresAt.toLocaleDateString('ru-RU', { timeZone: 'UTC' })}</b>` : '';
+      const [redeemer, owner] = await Promise.all([
+        this.prisma.user.findUniqueOrThrow({ where: { id: redeemerId } }),
+        this.prisma.user.findUniqueOrThrow({ where: { id: ownerId } }),
+      ]);
+      const forever = expiresAt && expiresAt.getFullYear() > new Date().getFullYear() + 50;
+      const until = expiresAt ? `\nДоступ: <b>${forever ? 'бессрочно' : `до ${expiresAt.toLocaleDateString('ru-RU', { timeZone: 'UTC' })}`}</b>` : '';
       const what = kind === ActivationCodeKind.FREE ? 'Бесплатный тариф включён' : 'Подписка активирована';
+      const device = formatPublicId(redeemer.publicId);
+      // Offer linking only to the person the code was meant for (not to an admin's «код без получателя»).
+      const offerLink = Boolean(owner.telegramId && redeemer.appDeviceKey && !redeemer.linkedTelegramId && !note?.includes('без получателя'));
       await this.notifications.sendHtml(
         ownerId,
-        `✅ <b>${what}</b>\n\nКод <code>${formatCode(code)}</code> активирован на устройстве <b>${formatPublicId(redeemer.publicId)}</b>.${until}\n\nЕсли это были не вы — сразу напишите в поддержку.`,
+        `✅ <b>${what}</b>\n\nКод <code>${formatCode(code)}</code> активирован на устройстве <b>${device}</b>.${until}\n\nМожно подключаться: откройте приложение и нажмите «Подключить».` +
+          (offerLink ? `\n\nЭто ваш телефон или ПК? Нажмите кнопку ниже — подписка сохранится, даже если переустановите приложение.` : '\n\nЕсли это были не вы — сразу напишите в поддержку.'),
+        offerLink ? { inline_keyboard: [[{ text: '🔗 Да, это моё устройство', callback_data: `lnk_${redeemer.publicId}` }]] } : undefined,
       );
     } catch (error) {
       this.logger.warn(`Failed to notify code owner=${ownerId}`, error as Error);

@@ -7,7 +7,7 @@ import { Icon } from '../../src/components/Icon';
 import { SectionLabel } from '../../src/components/List';
 import { AccountDevices } from '../../src/components/AccountDevices';
 import { useAccountStore } from '../../src/store/accountStore';
-import { telegramBotUrl, telegramLinkUrl } from '../../src/services/session';
+import { linkTelegram, telegramBotUrl } from '../../src/services/session';
 import { openHelp } from '../../src/services/links';
 import { useI18n } from '../../src/i18n';
 import { theme } from '../../src/theme';
@@ -20,6 +20,7 @@ export default function DevicesScreen() {
   const { t } = useI18n();
   const home = useAccountStore(state => state.home);
   const access = useAccountStore(state => state.access);
+  const refresh = useAccountStore(state => state.refresh);
   const status = access === 'premium' ? 'Подписка активна' : access === 'trial' ? 'Бесплатный тариф' : 'Нет тарифа';
   const platforms = [
     { id: 'android' as const, name: 'Android', detail: 'Телефоны и планшеты · Android 7+' },
@@ -63,7 +64,7 @@ export default function DevicesScreen() {
       <View style={styles.add}>
         <Text style={styles.addTitle}>Добавить устройство</Text>
         <Text style={styles.addText}>Установите Sali VPN на телефон или ПК и привяжите его к тому же Telegram — подписка заработает на нём сама (до 3 устройств).</Text>
-        <Pressable onPress={() => void Linking.openURL(home && !home.user.telegramLinked ? telegramLinkUrl(home.user.publicId) : telegramBotUrl())} style={({ pressed }) => [styles.addButton, pressed && { opacity: .8 }]}><Text style={styles.addButtonText}>Открыть бота</Text></Pressable>
+        <Pressable onPress={() => (home && !home.user.telegramLinked ? void linkTelegram(home.user.publicId, refresh) : void Linking.openURL(telegramBotUrl()))} style={({ pressed }) => [styles.addButton, pressed && { opacity: .8 }]}><Text style={styles.addButtonText}>Открыть бота</Text></Pressable>
       </View>
     </ScrollView>
   </SafeAreaView>;
