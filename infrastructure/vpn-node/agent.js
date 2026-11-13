@@ -5,6 +5,7 @@
  * Runs as root on every VPN server and manages two tunnels with the SAME peers:
  *   awg0 — AmneziaWG (WireGuard with traffic obfuscation; works where plain WireGuard is blocked)
  *   wg0  — plain WireGuard (for app versions that don't speak AmneziaWG yet)
+ * and, when installed, Xray VLESS + Reality on TCP 443 for Happ and other Xray clients.
  *
  * The Sali API talks to it over HTTPS with a bearer key. The certificate is self-signed
  * and its fingerprint is pinned by the API at enrollment, so no domain is needed.
@@ -24,7 +25,7 @@ const { execFileSync } = require('node:child_process');
 const DIR = process.env.SALI_NODE_DIR || '/etc/sali-node';
 const cfg = JSON.parse(fs.readFileSync(path.join(DIR, 'node.json'), 'utf8'));
 const STATE = path.join(DIR, 'peers.json');
-const VERSION = '2.1.0';
+const VERSION = '2.2.0';
 
 // node.json: { apiKey, port, wg: { iface, port, prefix }, awg: { iface, port, prefix, params } }
 const TUNNELS = [
@@ -86,6 +87,58 @@ function tunnelsUp() { return TUNNELS.every((t) => publicKeyOf(t)); }
 // points clients' DNS at it instead of a public resolver.
 function dnsUp() { try { run('systemctl', ['is-active', '--quiet', 'unbound']); return true; } catch { return false; } }
 
+// ---------- xray (VLESS + Reality, for Happ and other Xray clients) ----------
+// Optional: only nodes installed with Xray have cfg.xray. Clients are one UUID per Sali
+// account, kept in xray.json and written into Xray's config; Xray logs nothing.
+const XRAY = cfg.xray && cfg.xray.port ? cfg.xray : null;
+const XSTATE = path.join(DIR, 'xray.json');
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+let xusers = {};
+try { xusers = JSON.parse(fs.readFileSync(XSTATE, 'utf8')); } catch { xusers = {}; }
+function saveX() { const tmp = `${XSTATE}.tmp`; fs.writeFileSync(tmp, JSON.stringify(xusers)); fs.renameSync(tmp, XSTATE); }
+function xrayConfig() {
+  const clients = Object.entries(xusers).filter(([, u]) => u.enabled).map(([id, u]) => ({ id: u.uuid, flow: 'xtls-rprx-vision', email: id }));
+  return {
+    log: { loglevel: 'none', access: 'none', error: 'none' },
+    dns: { servers: [XRAY.dns || '10.67.0.1', 'localhost'], queryStrategy: 'UseIPv4' },
+    inbounds: [{
+      tag: 'reality', listen: '0.0.0.0', port: XRAY.port, protocol: 'vless',
+      settings: { clients, decryption: 'none' },
+      streamSettings: {
+        network: 'tcp', security: 'reality',
+        realitySettings: { show: false, dest: `${XRAY.sni}:443`, xver: 0, serverNames: [XRAY.sni], privateKey: fs.readFileSync(path.join(DIR, 'xray.key'), 'utf8').trim(), shortIds: [XRAY.shortId] },
+      },
+      sniffing: { enabled: true, destOverride: ['http', 'tls', 'quic'], routeOnly: true },
+    }],
+    outbounds: [{ tag: 'direct', protocol: 'freedom', settings: { domainStrategy: 'UseIPv4' } }, { tag: 'block', protocol: 'blackhole' }],
+    routing: {
+      domainStrategy: 'IPIfNonMatch',
+      // Same privacy rules as the tunnels: no access to the hoster's private networks or metadata.
+      rules: [{ type: 'field', ip: ['geoip:private'], outboundTag: 'block' }, { type: 'field', protocol: ['bittorrent'], outboundTag: 'block' }],
+    },
+  };
+}
+let xrayTimer = null;
+// Xray has no live reload: rewrite the config and restart, batching bursts of changes.
+function applyXray() {
+  if (!XRAY) return;
+  clearTimeout(xrayTimer);
+  xrayTimer = setTimeout(() => {
+    try {
+      const file = XRAY.config || '/usr/local/etc/xray/config.json';
+      const text = JSON.stringify(xrayConfig(), null, 1);
+      let current = '';
+      try { current = fs.readFileSync(file, 'utf8'); } catch { /* first run */ }
+      if (current === text && xrayUp()) return; // nothing changed: keep live connections
+      fs.writeFileSync(`${file}.tmp`, text);
+      run('xray', ['run', '-test', '-c', `${file}.tmp`]);
+      fs.renameSync(`${file}.tmp`, file);
+      run('systemctl', ['restart', 'xray']);
+    } catch (error) { console.error(`[agent] xray: ${error.stderr?.toString().trim() || error.message}`); }
+  }, 1500);
+}
+function xrayUp() { if (!XRAY) return false; try { run('systemctl', ['is-active', '--quiet', 'xray']); return true; } catch { return false; } }
+
 // ---------- http ----------
 const KEY_RE = /^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw480]=$/;
 function send(res, code, body) { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); }
@@ -114,6 +167,7 @@ function info() {
     active,
     load: os().load,
     tunnels: Object.fromEntries(TUNNELS.map((t) => [t.kind, { publicKey: publicKeyOf(t), port: t.port, ...(t.params ? { params: t.params } : {}) }])),
+    ...(XRAY ? { xray: { up: xrayUp(), port: XRAY.port, publicKey: XRAY.publicKey, shortId: XRAY.shortId, sni: XRAY.sni, users: Object.values(xusers).filter((u) => u.enabled).length } } : {}),
   };
 }
 function os() { const [l1] = require('node:os').loadavg(); return { load: Math.round(l1 * 100) / 100 }; }
@@ -128,6 +182,23 @@ async function handle(req, res) {
   try {
     if (req.method === 'GET' && url.pathname === '/info') return send(res, 200, info());
     if (req.method === 'POST' && url.pathname === '/resync') { resyncAll(); return send(res, 200, { ok: true }); }
+    const x = url.pathname.match(/^\/xray\/([A-Za-z0-9_-]{1,80})$/);
+    if (x) {
+      if (!XRAY) return send(res, 404, { message: 'Xray is not installed on this node' });
+      const xid = x[1];
+      if (req.method === 'GET') return xusers[xid] ? send(res, 200, { id: xid, enabled: xusers[xid].enabled }) : send(res, 404, { message: 'User not found' });
+      if (req.method === 'PUT') {
+        // Create or update (idempotent). Body: { uuid, enabled? }
+        const body = await readJson(req);
+        if (!UUID_RE.test(body.uuid || '')) return send(res, 400, { message: 'uuid must be a lowercase UUID' });
+        const next = { uuid: body.uuid, enabled: body.enabled ?? true };
+        const old = xusers[xid];
+        if (!old || old.uuid !== next.uuid || old.enabled !== next.enabled) { xusers[xid] = next; saveX(); applyXray(); }
+        return send(res, 200, { id: xid, enabled: next.enabled });
+      }
+      if (req.method === 'DELETE') { if (xusers[xid]) { delete xusers[xid]; saveX(); applyXray(); } return send(res, 200, { ok: true }); }
+      return send(res, 405, { message: 'Method not allowed' });
+    }
     if (!m) return send(res, 404, { message: 'Not found' });
     const id = m[1];
     const action = m[3];
@@ -162,6 +233,7 @@ async function handle(req, res) {
 }
 
 resyncAll();
+applyXray(); // the config on disk always matches xray.json after a start
 // A tunnel restart (awg-quick down/up) wipes its peers: each tunnel's PostUp restarts this
 // agent, and this watchdog also re-applies peers if an interface lost them.
 setInterval(() => {
@@ -179,5 +251,5 @@ https.createServer({
   cert: fs.readFileSync(path.join(DIR, 'tls.crt')),
   minVersion: 'TLSv1.2',
 }, (req, res) => { handle(req, res); }).listen(cfg.port || 8443, '0.0.0.0', () => {
-  console.log(`[agent] Sali node agent ${VERSION} on :${cfg.port || 8443} (${TUNNELS.map((t) => `${t.iface}/${t.port}`).join(', ')})`);
+  console.log(`[agent] Sali node agent ${VERSION} on :${cfg.port || 8443} (${TUNNELS.map((t) => `${t.iface}/${t.port}`).join(', ')}${XRAY ? `, xray/${XRAY.port}` : ''})`);
 });

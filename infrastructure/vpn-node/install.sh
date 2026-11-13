@@ -5,8 +5,10 @@
 #
 # The one-time token comes from the Sali bot (/addserver, admins only).
 # Installs AmneziaWG (obfuscated WireGuard, works where WireGuard is blocked) and plain
-# WireGuard side by side, tunes the network, starts the node agent and registers the
-# server in Sali. Safe to re-run: keys and peers are kept.
+# WireGuard side by side, plus Xray (VLESS + Reality on TCP 443) for Happ and other Xray
+# clients, tunes the network, starts the node agent and registers the server in Sali.
+# Safe to re-run: keys and peers are kept. SALI_XRAY=0 skips Xray; XRAY_SNI picks the
+# site Reality imitates (default www.microsoft.com).
 set -euo pipefail
 
 TOKEN="${1:-}"
@@ -15,6 +17,8 @@ DIR=/etc/sali-node
 APP=/opt/sali-node
 AGENT_PORT=8443
 WG_PORT=51820
+XRAY_PORT=443
+XRAY_SNI="${XRAY_SNI:-www.microsoft.com}"
 
 say() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 die() { printf '\n\033[1;31mОшибка: %s\033[0m\n' "$*" >&2; exit 1; }
@@ -177,11 +181,37 @@ EOF
 rm -rf /var/log/journal
 systemctl restart systemd-journald
 
+say "Xray (VLESS + Reality) для Happ"
+# Looks like an ordinary HTTPS connection to $XRAY_SNI; only clients with a Sali UUID get through.
+# Never fatal: without Xray the node still serves the app over AmneziaWG/WireGuard.
+XRAY_JSON=""
+if [ "${SALI_XRAY:-1}" = 1 ]; then
+  if ! command -v xray >/dev/null; then
+    curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh -o /tmp/xray-install.sh \
+      && bash /tmp/xray-install.sh install >/dev/null 2>&1 || true
+    rm -f /tmp/xray-install.sh
+  fi
+  if command -v xray >/dev/null; then
+    xkeys() { awk -F': *' 'tolower($1) ~ /^private ?key$/ {print "PRIV="$2} tolower($1) ~ /^(public ?key|password)$/ {print "PUB="$2}'; }
+    if [ ! -f "$DIR/xray.key" ]; then
+      eval "$(xray x25519 | xkeys)"; printf '%s\n' "$PRIV" >"$DIR/xray.key"; chmod 600 "$DIR/xray.key"
+    fi
+    eval "$(xray x25519 -i "$(cat "$DIR/xray.key")" | xkeys)"
+    [ -f "$DIR/xray.sid" ] || openssl rand -hex 8 >"$DIR/xray.sid"
+    if [ -n "${PUB:-}" ]; then
+      XRAY_JSON=",
+  \"xray\": { \"port\": $XRAY_PORT, \"sni\": \"$XRAY_SNI\", \"publicKey\": \"$PUB\", \"shortId\": \"$(cat "$DIR/xray.sid")\", \"dns\": \"10.67.0.1\", \"config\": \"/usr/local/etc/xray/config.json\" }"
+      systemctl enable -q xray
+    fi
+  fi
+  [ -n "$XRAY_JSON" ] || printf '\n\033[1;33m!! Xray не установился — Happ на этом сервере работать не будет (VPN в приложении работает)\033[0m\n'
+fi
+
 cat >"$DIR/node.json" <<EOF
 { "apiKey": "$(cat "$DIR/agent.key")", "port": $AGENT_PORT,
   "awg": { "iface": "awg0", "port": $AWG_PORT, "prefix": "10.67",
            "params": { "Jc": $JC, "Jmin": $JMIN, "Jmax": $JMAX, "S1": $S1, "S2": $S2, "H1": $H1, "H2": $H2, "H3": $H3, "H4": $H4 } },
-  "wg":  { "iface": "wg0", "port": $WG_PORT, "prefix": "10.66" } }
+  "wg":  { "iface": "wg0", "port": $WG_PORT, "prefix": "10.66" }$XRAY_JSON }
 EOF
 chmod 600 "$DIR/node.json"
 
@@ -212,6 +242,7 @@ systemctl is-active -q sali-node-agent || die "агент не запустил�
 # Let the API reach the agent and clients reach the tunnels if a firewall is on.
 if command -v ufw >/dev/null && ufw status | grep -q active; then
   ufw allow "$AGENT_PORT"/tcp >/dev/null; ufw allow "$AWG_PORT"/udp >/dev/null; ufw allow "$WG_PORT"/udp >/dev/null
+  [ -z "$XRAY_JSON" ] || ufw allow "$XRAY_PORT"/tcp >/dev/null
   for i in awg0 wg0; do ufw allow in on "$i" to any port 53 >/dev/null; done
 fi
 

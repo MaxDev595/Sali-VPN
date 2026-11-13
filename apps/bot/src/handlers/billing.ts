@@ -1,6 +1,7 @@
 import { Context, Markup } from 'telegraf';
 import { BotConfig } from '../config';
 import { api, ApiRejection, TelegramProfile } from '../services/api-client';
+import { happEnabled, happRow } from './happ';
 import {
   checkPaymentKeyboard,
   chooseDeviceKeyboard,
@@ -268,6 +269,7 @@ export function createBillingHandlers(config: BotConfig) {
         await ctx.replyWithHTML(devicesMessage(overview), Markup.inlineKeyboard([
           ...overview.devices.map((d) => [Markup.button.callback(`🔓 Отвязать ${d.publicId}`, `unl_${rawId(d.publicId)}`)]),
           [Markup.button.callback('📲 Скачать приложение', 'menu_download')],
+          ...await happRow(),
         ]));
       } catch (error) {
         await fail(ctx, error, 'devices');
@@ -317,11 +319,12 @@ export function createBillingHandlers(config: BotConfig) {
         [
           '<b>Приложение Sali VPN</b>',
           '',
-          'Есть для телефона (Android) и компьютера (Windows). Один код активирует одно устройство.',
+          'Есть для телефона (Android) и компьютера (Windows). Одна подписка — до 3 устройств.',
           '',
-          'После установки откройте приложение и нажмите «Привязать Telegram» — устройство появится в «📱 Мои устройства», а коды можно будет активировать одной кнопкой.',
+          'После установки откройте приложение и нажмите «Войти через Telegram» — подписка появится сама, устройство — в «📱 Мои устройства».',
+          ...((await happEnabled()) ? ['', 'На iPhone и Mac — через приложение Happ: кнопка «📲 Подключить в Happ».'] : []),
         ].join('\n'),
-        downloadKeyboard(),
+        (await happEnabled()) ? Markup.inlineKeyboard([...downloadKeyboard().reply_markup.inline_keyboard, ...await happRow()]) : downloadKeyboard(),
       );
     },
 

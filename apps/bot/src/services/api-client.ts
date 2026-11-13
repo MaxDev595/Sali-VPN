@@ -35,6 +35,14 @@ export interface BotUserState {
   referralStats: { link: string };
 }
 
+export interface HappLink {
+  url: string;
+  openUrl: string;
+  enabled: boolean;
+  expiresAt: string | null;
+  servers: number;
+}
+
 export interface TelegramProfile {
   telegramId: number;
   username?: string;
@@ -207,13 +215,16 @@ export const api = {
   nodeToken: (telegramId: number, countryCode: string, city?: string) =>
     call<{ name: string; command: string }>('/bot/nodes/token', { telegramId, countryCode, city }, 0),
   nodes: (telegramId: number) =>
-    call<Array<{ name: string; host: string; country: string; active: boolean; premiumOnly?: boolean; online: boolean; users: number | null; connectedNow: number | null; load: number | null }>>('/bot/nodes/list', { telegramId }, 0),
+    call<Array<{ name: string; host: string; country: string; active: boolean; premiumOnly?: boolean; online: boolean; users: number | null; connectedNow: number | null; load: number | null; happ?: number | null }>>('/bot/nodes/list', { telegramId }, 0),
   nodeActive: (telegramId: number, name: string, isActive: boolean) =>
     call<{ updated: number }>('/bot/nodes/active', { telegramId, name, isActive }, 0),
   nodePremium: (telegramId: number, name: string, premiumOnly: boolean) =>
     call<{ updated: number }>('/bot/nodes/premium', { telegramId, name, premiumOnly }, 0),
 
   // --- Admin panel (/admin) -------------------------------------------------
+  happEnabled: () => call<{ enabled: boolean }>('/bot/happ/enabled', {}, 0),
+  happLink: (telegramId: number) => call<HappLink>('/bot/happ/link', { telegramId }, 0),
+  happRotate: (telegramId: number) => call<HappLink>('/bot/happ/rotate', { telegramId }, 0),
   isAdmin: (telegramId: number) => call<{ admin: boolean }>('/bot/nodes/is-admin', { telegramId }, 1),
   adminLookup: (telegramId: number, query: string) => call<AdminCard>('/bot/admin/lookup', { telegramId, query }, 0),
   adminGrant: (telegramId: number, userId: string, days: number, kind: 'admin' | 'gift', message?: string) =>

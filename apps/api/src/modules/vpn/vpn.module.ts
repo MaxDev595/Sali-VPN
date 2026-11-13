@@ -28,6 +28,6 @@ import { ServersController } from './servers.controller';
     NodesService,
   ],
   controllers: [ServersController, NodesController, NodesBotController],
-  exports: [VpnService, NodesService],
+  exports: [VpnService, NodesService, NodesProvider],
 })
 export class VpnModule {}

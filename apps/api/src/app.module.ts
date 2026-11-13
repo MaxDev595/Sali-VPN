@@ -10,6 +10,7 @@ import { RateLimitModule } from './config/rate-limit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { VpnModule } from './modules/vpn/vpn.module';
+import { HappModule } from './modules/happ/happ.module';
 import { TrialsModule } from './modules/trials/trials.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { PaymentsModule } from './modules/payments/payments.module';
@@ -52,6 +53,7 @@ import { AnnouncementsModule } from './modules/announcements/announcements.modul
     BotApiModule,
     AdminBotModule,
     AnnouncementsModule,
+    HappModule,
     HealthModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

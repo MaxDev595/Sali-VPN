@@ -31,7 +31,7 @@ export async function nodes(ctx: Context) {
   try {
     const list = await api.nodes(ctx.from!.id);
     if (!list.length) { await ctx.reply('Серверов пока нет. Добавьте первый: /addserver DE'); return; }
-    const lines = list.map((n) => `${n.online ? '🟢' : '🔴'} <b>${esc(n.name)}</b> ${n.country} · ${n.host} · ${n.premiumOnly ? '💎 по подписке' : '🎁 бесплатный'}${n.active ? '' : ' · выключен'}\n     пользователей: ${n.users ?? '—'}, сейчас онлайн: ${n.connectedNow ?? '—'}, нагрузка: ${n.load ?? '—'}`);
+    const lines = list.map((n) => `${n.online ? '🟢' : '🔴'} <b>${esc(n.name)}</b> ${n.country} · ${n.host} · ${n.premiumOnly ? '💎 по подписке' : '🎁 бесплатный'}${n.active ? '' : ' · выключен'}\n     пользователей: ${n.users ?? '—'}, сейчас онлайн: ${n.connectedNow ?? '—'}, нагрузка: ${n.load ?? '—'}${n.happ === undefined || n.happ === null ? '' : n.happ < 0 ? '\n     Happ: ⚠️ Xray не работает' : `\n     Happ: ${n.happ} ссылок`}`);
     await ctx.replyWithHTML(`<b>VPN-серверы</b>\n\n${lines.join('\n')}\n\nВыключить/включить: /node_off Sali DE-1 · /node_on Sali DE-1\nДоступ: /node_free Sali DE-1 (всем) · /node_paid Sali DE-1 (только подписка)`);
   } catch (error) { await fail(ctx, error); }
 }

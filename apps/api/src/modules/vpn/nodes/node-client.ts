@@ -77,6 +77,16 @@ export interface NodeInfo {
     awg?: { publicKey: string | null; port: number; params?: Record<string, number> };
     wg?: { publicKey: string | null; port: number };
   };
+  /** agent >= 2.2 on nodes installed with Xray: VLESS + Reality for Happ. */
+  xray?: { up: boolean; port: number; publicKey: string; shortId: string; sni: string; users: number };
+}
+
+/** VpnServer columns that describe the node's Xray inbound (all null without Xray). */
+export function xrayColumns(info: NodeInfo) {
+  const x = info.xray;
+  return x?.publicKey
+    ? { xrayPort: x.port, xrayPublicKey: x.publicKey, xrayShortId: x.shortId, xraySni: x.sni }
+    : { xrayPort: null, xrayPublicKey: null, xrayShortId: null, xraySni: null };
 }
 
 export interface NodePeer {

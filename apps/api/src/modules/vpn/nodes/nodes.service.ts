@@ -6,7 +6,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { encryptSecret } from '../crypto.util';
 import { NodesProvider } from '../providers/nodes.provider';
-import { callNode, NodeInfo } from './node-client';
+import { callNode, NodeInfo, xrayColumns } from './node-client';
 
 const COUNTRIES: Record<string, [string, string]> = {
   DE: ['Germany', 'Falkenstein'], FI: ['Finland', 'Helsinki'], NL: ['Netherlands', 'Amsterdam'],
@@ -47,8 +47,10 @@ export class NodesService {
     }).catch((error) => this.logger.warn(`admin alert to ${chatId} failed: ${(error as Error).message}`))));
   }
 
-  private apiUrl() {
-    return (this.config.get<string>('PUBLIC_API_URL') ?? 'https://api.salivpn.com').replace(/\/$/, '');
+  /** Public address of THIS API (the test environment gives its own, so test nodes join the test API). */
+  apiUrl() {
+    const staging = this.config.get<string>('SALI_ENV') === 'staging' ? this.config.get<string>('RENDER_EXTERNAL_URL') : undefined;
+    return (this.config.get<string>('PUBLIC_API_URL') || staging || 'https://api.salivpn.com').replace(/\/$/, '');
   }
 
   /** One-time install command for a new VPS (valid 24 h). */
@@ -64,7 +66,10 @@ export class NodesService {
     await this.prisma.nodeEnrollToken.create({
       data: { tokenHash: hash(token), name, location, countryCode: cc, city: city?.trim() || defaultCity, createdBy: String(telegramId), expiresAt: new Date(Date.now() + 86_400_000) },
     });
-    return { name, command: `curl -fsSL ${this.apiUrl()}/api/v1/nodes/install.sh | bash -s -- ${token}` };
+    const api = this.apiUrl();
+    // install.sh talks to production by default; a test API passes its own address along.
+    const env = api === 'https://api.salivpn.com' ? '' : `SALI_API=${api} `;
+    return { name, command: `curl -fsSL ${api}/api/v1/nodes/install.sh | ${env}bash -s -- ${token}` };
   }
 
   /** Called by install.sh on the new server. Verifies the agent before registering it. */
@@ -89,7 +94,7 @@ export class NodesService {
       agentUrl, agentKeyEnc: encryptSecret(input.agentKey, secret), agentCertPem: input.certPem,
       wgPublicKey: info.tunnels.wg.publicKey, awgPublicKey: info.tunnels.awg.publicKey, awgPort: info.tunnels.awg.port,
       awgParams: (info.tunnels.awg.params ?? {}) as Prisma.InputJsonValue, privateDns: info.dns === true,
-      online: true, lastSeenAt: new Date(),
+      ...xrayColumns(info), online: true, lastSeenAt: new Date(),
     };
     const existing = await this.prisma.vpnServer.findFirst({ where: { publicHost: input.host } });
     // A re-install keeps the admin's settings (on/off, free/paid, capacity); only a new server gets defaults.
@@ -114,7 +119,7 @@ export class NodesService {
     const servers = await this.prisma.vpnServer.findMany({ where: { agentUrl: { not: null } }, orderBy: { name: 'asc' } });
     return Promise.all(servers.map(async (s) => {
       const info = await this.nodes.info(s.id).catch(() => null);
-      return { name: s.name, host: s.publicHost, country: s.countryCode, active: s.isActive, premiumOnly: s.premiumOnly, online: !!info?.up, users: info?.enabled ?? null, connectedNow: info?.active ?? null, load: info?.load ?? null };
+      return { name: s.name, host: s.publicHost, country: s.countryCode, active: s.isActive, premiumOnly: s.premiumOnly, online: !!info?.up, users: info?.enabled ?? null, connectedNow: info?.active ?? null, load: info?.load ?? null, happ: info?.xray ? (info.xray.up ? info.xray.users : -1) : null };
     }));
   }
 
@@ -134,13 +139,14 @@ export class NodesService {
   /** Every 15 min (with the other sweeps, so Neon can sleep in between): refresh node health. */
   @Cron('20 */15 * * * *')
   async sweep() {
-    if (this.config.get<string>('VPN_PROVIDER') !== 'nodes') return;
+    // Not only in nodes mode: the test environment runs the app on the mock provider
+    // while a real test node serves Happ. Without enrolled nodes this finds nothing.
     const servers = await this.prisma.vpnServer.findMany({ where: { agentUrl: { not: null } } });
     for (const s of servers) {
       const info = await this.nodes.info(s.id).catch(() => null);
       await this.prisma.vpnServer.update({
         where: { id: s.id },
-        data: info ? { online: info.up, lastSeenAt: new Date(), currentLoad: info.enabled, privateDns: info.dns === true } : { online: false },
+        data: info ? { online: info.up, lastSeenAt: new Date(), currentLoad: info.enabled, privateDns: info.dns === true, ...xrayColumns(info) } : { online: false },
       });
       if (!info) this.logger.warn(`node ${s.name} (${s.publicHost}) is not answering`);
     }

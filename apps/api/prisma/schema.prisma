@@ -102,6 +102,11 @@ model VpnServer {
   awgPort      Int?
   awgParams    Json?
   privateDns   Boolean  @default(false) // node runs its own no-log resolver (unbound)
+  // Xray VLESS + Reality (Happ and other Xray clients). Null on nodes without Xray.
+  xrayPort      Int?
+  xrayPublicKey String?
+  xrayShortId   String?
+  xraySni       String?
   online       Boolean  @default(false)
   lastSeenAt   DateTime?
 
@@ -149,6 +154,24 @@ model VpnAccount {
   devices       Device[]
 
   @@index([userId])
+}
+
+/// Happ (and other Xray clients): one subscription link per Telegram account.
+/// The link token works like a password: only its hash is used for lookups, the token
+/// itself is kept encrypted so the bot can show the link again.
+model HappAccess {
+  id          String    @id @default(uuid())
+  telegramId  BigInt    @unique
+  tokenHash   String    @unique
+  tokenEnc    String
+  /// VLESS client id on every node.
+  uuid        String    @unique
+  /// What the nodes were last told (follows the account's access).
+  enabled     Boolean   @default(false)
+  syncedAt    DateTime?
+  lastFetchAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // ---------------------------------------------------------------------------

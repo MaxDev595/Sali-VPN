@@ -181,3 +181,6 @@ services:
         value: "50"
       - key: VPN_PROVIDER
         value: mock
+      # Happ (VLESS + Reality via Xray) — tested here before production gets it.
+      - key: HAPP_ENABLED
+        value: "true"

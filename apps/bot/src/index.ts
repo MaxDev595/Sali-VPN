@@ -5,6 +5,7 @@ import { loadConfig } from './config';
 import { createHandlers } from './handlers';
 import * as admin from './handlers/admin';
 import * as adminPanel from './handlers/admin-panel';
+import * as happ from './handlers/happ';
 import { createBillingHandlers } from './handlers/billing';
 import { genericError } from './messages';
 import { menuLabels } from './keyboards';
@@ -63,6 +64,7 @@ async function main() {
   bot.command('node_on', admin.nodeOn);
   bot.command('node_free', admin.nodeFree);
   bot.command('node_paid', admin.nodePaid);
+  bot.command('happ', happ.show);
   bot.command('admin', adminPanel.menu);
   bot.action(/^adm:/, adminPanel.callback);
   // Admin panel steps (waiting for a name, a number of days, a message) come before the normal text handler.
@@ -99,6 +101,8 @@ async function main() {
   bot.action('menu_support', action(handlers.help));
   bot.action('menu_settings', action(handlers.account));
   bot.action('menu_docs', action(handlers.docs));
+  bot.action('menu_happ', action(happ.show));
+  bot.action(/^happ_rotate/, happ.rotate);
   bot.action(/^doc_/, handlers.doc);
   bot.action(/^buy_/, billing.choosePlan);
   bot.action(/^pay_/, billing.payCallback);
