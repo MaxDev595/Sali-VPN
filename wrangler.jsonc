@@ -2,6 +2,8 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "sali-vpn",
   "compatibility_date": "2026-08-12",
+  // The site, plus /api/* forwarded to the API (a second route for the apps).
+  "main": "./worker.js",
   "routes": [
     {
       "pattern": "salivpn.com",
@@ -14,6 +16,8 @@
   ],
   "assets": {
     "directory": "./apps/web/dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
   }
 }

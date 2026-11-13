@@ -3,7 +3,7 @@
     "name": "Sali VPN",
     "slug": "sali-vpn",
     "scheme": "sali",
-    "version": "0.5.6",
+    "version": "0.5.7",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "icon": "./assets/sali-logo.png",

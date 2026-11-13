@@ -1,5 +1,5 @@
 // Sali API client for the desktop app. Same endpoints as the Android app:
-// the app never sells anything — access arrives only as codes from the Telegram bot.
+// the plan lives on the Telegram account and arrives by itself.
 const os = require('node:os');
 const store = require('./store');
 
@@ -7,6 +7,8 @@ const DISCOVERY_URL = 'https://salivpn.com/config.json';
 const baked = (() => { try { return require('./build-config.json').apiUrl; } catch { return null; } })();
 const BUILT_IN_API = (process.env.SALI_API_URL || baked || 'https://api.salivpn.com').replace(/\/$/, '');
 let apiBase = null;
+const FALLBACK_API = 'https://salivpn.com/api/v1';
+let preferred = 0;
 
 class ApiError extends Error {
   constructor(message, status, code) { super(message); this.status = status; this.code = code; }
@@ -32,21 +34,30 @@ async function base() {
 
 async function request(path, { method = 'GET', body, headers = {}, auth = true } = {}) {
   const token = auth ? store.getToken() : null;
-  let response;
-  try {
-    response = await withTimeout((await base()) + path, {
-      method,
-      headers: {
-        ...(body ? { 'Content-Type': 'application/json' } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        'User-Agent': `SaliVPN-Desktop/${require('../package.json').version} (Windows)`,
-        ...headers,
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch {
+  const init = {
+    method,
+    headers: {
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'User-Agent': `SaliVPN-Desktop/${require('../package.json').version} (Windows)`,
+      ...headers,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  };
+  // Every way to reach the API: discovered/built-in address, then salivpn.com/api (Cloudflare
+  // forwards it) for networks that cut api.salivpn.com now and then. Two rounds.
+  const list = [...new Set([await base(), BUILT_IN_API + '/api/v1', FALLBACK_API])];
+  let response = null;
+  for (let round = 0; round < 2 && !response; round++) {
+    if (round) await new Promise((r) => setTimeout(r, 1500));
+    for (let k = 0; k < list.length && !response; k++) {
+      const i = (preferred + k) % list.length;
+      try { response = await withTimeout(list[i] + path, init, round ? 15000 : 9000); preferred = i; } catch { /* next address */ }
+    }
+  }
+  if (!response) {
     apiBase = null;
-    throw new ApiError('Нет связи с Sali. Проверьте интернет и попробуйте снова.', 0, 'NETWORK');
+    throw new ApiError('Нет связи с сервером Sali. Проверьте интернет — мы попробуем ещё раз.', 0, 'NETWORK');
   }
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));

@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { ApiError, api, toServer } from '../services/api/client';
 import { vpnEngine } from '../services/vpn/VpnEngine';
 import { ensureSession } from '../services/session';
+import { secureStorage } from '../services/secureStorage';
 import { useAccountStore } from './accountStore';
 import type { VPNConnection, VPNServer, VPNStatus } from '../types';
 import { fallbackServers } from '../data/fallbackServers';
@@ -35,10 +36,21 @@ async function askNotifications() {
 /** Asks the API for a config (it may move us to the chosen server) and starts/swaps the tunnel. */
 async function bringUp(server: VPNServer | null) {
   const deviceKey = await vpnEngine.deviceKey();
-  const result = await api.connect(deviceKey, server?.remote ? server.id : undefined);
+  let result;
+  try {
+    result = await api.connect(deviceKey, server?.remote ? server.id : undefined);
+  } catch (error) {
+    // Our server did not answer: the key from the last connection still works on the VPN
+    // server, so reconnect with it (same location) instead of leaving the customer offline.
+    const last = error instanceof ApiError && error.code === 'NETWORK' ? await secureStorage.getLastTunnel() : null;
+    if (!last || (server?.remote && last.serverId !== server.id)) throw error;
+    await vpnEngine.connect(last.configText, last.label, last.serverId);
+    return server;
+  }
   // The real server the tunnel goes to — not the placeholder picked while the list was offline.
   const actual = result.server ? toServer(result.server) : server;
   await vpnEngine.connect(result.config.configText, label(actual), actual?.id ?? '');
+  void secureStorage.setLastTunnel({ configText: result.config.configText, label: label(actual), serverId: actual?.id ?? '', savedAt: Date.now() });
   return actual;
 }
 
@@ -77,11 +89,11 @@ export const useVpnStore = create<VpnState>((set, get) => ({
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } else {
         set({ status: 'connecting', error: null, needsCode: false });
-        await ensureSession();
+        await ensureSession().catch(() => undefined); // offline: a saved session/config may still do
         await vpnEngine.prepare();
         await askNotifications();
         const deviceKey = await vpnEngine.deviceKey();
-        await api.registerCurrentDevice(deviceKey);
+        await api.registerCurrentDevice(deviceKey).catch((error) => { if (!(error instanceof ApiError && error.code === 'NETWORK')) throw error; });
         const actual = await bringUp(get().server);
         const session = await vpnEngine.session().catch(() => null);
         set({ status: 'connected', connectedAt: session?.connectedAt || Date.now(), ...(actual ? { server: actual } : {}) });

@@ -99,8 +99,17 @@ async function disconnect() {
   return { ok: true };
 }
 
+// A network hiccup must not look like «нет тарифа»: the last answer is kept and shown instead.
 ipcMain.handle('home', async () => {
-  try { return { ok: true, home: await api.home() }; } catch (error) { return { ok: false, error: errorMessage(error) }; }
+  try {
+    const home = await api.home();
+    store.set('lastHome', home);
+    return { ok: true, home };
+  } catch (error) {
+    const cached = error && error.code === 'NETWORK' ? store.get('lastHome') : null;
+    if (cached) return { ok: true, home: cached, stale: true, error: errorMessage(error) };
+    return { ok: false, error: errorMessage(error) };
+  }
 });
 ipcMain.handle('redeem', async (_event, code) => {
   try { return { ok: true, result: await api.redeem(String(code)) }; } catch (error) { return { ok: false, error: errorMessage(error) }; }

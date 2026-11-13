@@ -58,13 +58,24 @@ async function relogin() {
   await secureStorage.setToken(auth.token);
 }
 
-async function request<T>(path: string, init: RequestInit = {}, retried = false): Promise<T> {
-  const token = await secureStorage.getToken();
+/**
+ * Every way to reach the API, best first: the discovered address, the built-in one, and
+ * salivpn.com/api (Cloudflare forwards it) for networks that cut api.salivpn.com now and then.
+ */
+const FALLBACK_API = 'https://salivpn.com/api/v1';
+let preferred = 0;
+async function bases() {
+  const list = [await resolveBaseUrl(), builtInApi + '/api/v1', FALLBACK_API];
+  return list.filter((base, i) => list.indexOf(base) === i);
+}
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** One try against one address; network trouble comes back as null. */
+async function attempt(base: string, path: string, init: RequestInit, token: string | null, timeoutMs: number) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12_000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const baseUrl = await resolveBaseUrl();
-    const response = await fetch(baseUrl + path, {
+    return await fetch(base + path, {
       ...init,
       signal: controller.signal,
       headers: {
@@ -73,22 +84,38 @@ async function request<T>(path: string, init: RequestInit = {}, retried = false)
         ...init.headers,
       },
     });
-    if (response.status === 401 && !retried && path !== '/auth/app') {
-      clearTimeout(timeout);
-      await relogin();
-      return request<T>(path, init, true);
-    }
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({})) as { message?: string | string[]; code?: string };
-      const message = Array.isArray(body.message) ? body.message[0] : body.message;
-      throw new ApiError(message ?? 'Не удалось выполнить запрос', body.code ?? 'UNKNOWN', response.status);
-    }
-    return response.status === 204 ? undefined as T : response.json() as Promise<T>;
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    apiBase = null; // re-discover the API address on the next request
-    throw new ApiError('Нет связи с Sali. Проверьте интернет и попробуйте снова.', 'NETWORK', 0);
+  } catch {
+    return null;
   } finally { clearTimeout(timeout); }
+}
+
+async function request<T>(path: string, init: RequestInit = {}, retried = false): Promise<T> {
+  const token = await secureStorage.getToken();
+  const list = await bases();
+  let response: Response | null = null;
+  // Up to two rounds over every address (the second one a bit later and more patient).
+  for (let round = 0; round < 2 && !response; round++) {
+    if (round) await sleep(1500);
+    for (let k = 0; k < list.length && !response; k++) {
+      const i = (preferred + k) % list.length;
+      response = await attempt(list[i]!, path, init, token, round ? 15_000 : 9_000);
+      if (response) preferred = i; // keep using the address that answered
+    }
+  }
+  if (!response) {
+    apiBase = null; // re-discover the API address next time
+    throw new ApiError('Нет связи с сервером Sali. Проверьте интернет — мы попробуем ещё раз.', 'NETWORK', 0);
+  }
+  if (response.status === 401 && !retried && path !== '/auth/app') {
+    await relogin();
+    return request<T>(path, init, true);
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({})) as { message?: string | string[]; code?: string };
+    const message = Array.isArray(body.message) ? body.message[0] : body.message;
+    throw new ApiError(message ?? 'Не удалось выполнить запрос', body.code ?? 'UNKNOWN', response.status);
+  }
+  return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }
 
 export interface Announcement { id: string; kind: 'UPDATE' | 'NEWS'; platform: string | null; version: string | null; title: string; body: string; createdAt: string }
