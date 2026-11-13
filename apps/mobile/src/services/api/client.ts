@@ -7,7 +7,7 @@ import { COUNTRY_NAMES } from '../../data/fallbackServers';
 export interface ApiServer { id: string; name: string; location: string; countryCode: string | null; city: string | null; premiumOnly: boolean; pingMs: number | null; currentLoad: number; capacity: number | null; recommended: boolean }
 
 const builtInApi = String(process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
-const DISCOVERY_URL = 'https://salivpn.com/config.json';
+const DISCOVERY_URL = process.env.EXPO_PUBLIC_DISCOVERY_URL ?? 'https://salivpn.com/config.json';
 let apiBase: Promise<string> | null = null;
 
 /**
@@ -16,6 +16,7 @@ let apiBase: Promise<string> | null = null;
  */
 function resolveBaseUrl() {
   apiBase ??= (async () => {
+    if (!DISCOVERY_URL) return builtInApi + '/api/v1'; // the test app talks only to its own backend
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 4000);
@@ -62,10 +63,10 @@ async function relogin() {
  * Every way to reach the API, best first: the discovered address, the built-in one, and
  * salivpn.com/api (Cloudflare forwards it) for networks that cut api.salivpn.com now and then.
  */
-const FALLBACK_API = 'https://salivpn.com/api/v1';
+const FALLBACK_API = process.env.EXPO_PUBLIC_FALLBACK_API ?? 'https://salivpn.com/api/v1';
 let preferred = 0;
 async function bases() {
-  const list = [await resolveBaseUrl(), builtInApi + '/api/v1', FALLBACK_API];
+  const list = [await resolveBaseUrl(), builtInApi + '/api/v1', ...(FALLBACK_API ? [FALLBACK_API] : [])];
   return list.filter((base, i) => list.indexOf(base) === i);
 }
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

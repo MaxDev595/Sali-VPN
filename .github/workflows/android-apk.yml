@@ -7,7 +7,7 @@ name: Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, staging]
     paths:
       - 'apps/mobile/**'
       - 'packages/types/**'
@@ -17,8 +17,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: android-apk
+  group: android-apk-${{ github.ref_name }}
   cancel-in-progress: true
+
+# main → the real app (apk-latest). staging → «Sali VPN Test» (apk-staging), a separate app
+# that talks only to the test backend (repository variable STAGING_API_URL).
+env:
+  STAGING: ${{ github.ref_name == 'staging' }}
 
 jobs:
   apk:
@@ -47,11 +52,22 @@ jobs:
 
       - name: App config
         run: |
-          {
-            echo "EXPO_PUBLIC_API_URL=${{ vars.EXPO_PUBLIC_API_URL || 'https://api.salivpn.com' }}"
-            echo "EXPO_PUBLIC_LANDING_URL=https://salivpn.com"
-            echo "EXPO_PUBLIC_BOT_USERNAME=${{ vars.EXPO_PUBLIC_BOT_USERNAME || 'SaliVPNOfficialBot' }}"
-          } > apps/mobile/.env
+          if [ "$STAGING" = "true" ]; then
+            if [ -z "${{ vars.STAGING_API_URL }}" ]; then echo "::error::Set the repository variable STAGING_API_URL (docs/staging.md)"; exit 1; fi
+            {
+              echo "EXPO_PUBLIC_API_URL=${{ vars.STAGING_API_URL }}"
+              echo "EXPO_PUBLIC_LANDING_URL=https://salivpn.com"
+              echo "EXPO_PUBLIC_BOT_USERNAME=${{ vars.STAGING_BOT_USERNAME || 'SaliVPNTestBot' }}"
+              echo "EXPO_PUBLIC_DISCOVERY_URL="
+              echo "EXPO_PUBLIC_FALLBACK_API="
+            } > apps/mobile/.env
+          else
+            {
+              echo "EXPO_PUBLIC_API_URL=${{ vars.EXPO_PUBLIC_API_URL || 'https://api.salivpn.com' }}"
+              echo "EXPO_PUBLIC_LANDING_URL=https://salivpn.com"
+              echo "EXPO_PUBLIC_BOT_USERNAME=${{ vars.EXPO_PUBLIC_BOT_USERNAME || 'SaliVPNOfficialBot' }}"
+            } > apps/mobile/.env
+          fi
 
       # Expo CLI is hoisted to the root node_modules but expo itself lives in
       # apps/mobile/node_modules, so Gradle's bundle task can't resolve it.
@@ -97,7 +113,7 @@ jobs:
         run: |
           chmod +x gradlew
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon \
+          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a -PsaliStaging=$STAGING --no-daemon \
             -I "$GITHUB_WORKSPACE/scripts/use-prebuilt-mobile-bundle.gradle"
           ls -la app/build/outputs/apk/release/
           APK=app/build/outputs/apk/release/app-arm64-v8a-release.apk
@@ -116,7 +132,23 @@ jobs:
           name: sali-vpn-apk
           path: sali-vpn.apk
 
+      - name: Name the test APK
+        if: env.STAGING == 'true'
+        run: cp sali-vpn.apk sali-vpn-test.apk
+
+      - name: Publish test APK
+        if: env.STAGING == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-staging
+          name: Sali VPN Test — тестовая сборка
+          body: |
+            ТЕСТОВОЕ приложение из ветки staging (${{ github.sha }}). Ставится рядом с настоящим и работает только с тестовым сервером. Не для клиентов.
+          prerelease: true
+          files: sali-vpn-test.apk
+
       - name: Publish download link
+        if: env.STAGING != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-latest

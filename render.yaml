@@ -93,3 +93,91 @@ services:
       # VPN_PROVIDER=wireguard plus WIREGUARD_API_URL / WIREGUARD_API_KEY / WIREGUARD_SERVER_PUBLIC_HOST.
       - key: VPN_PROVIDER
         value: mock
+
+  # ---------------------------------------------------------------------------
+  # TEST environment («staging»): a copy of the backend for trying features
+  # (e.g. Happ / VLESS) without touching real customers. Deploys from the
+  # `staging` branch; own Neon branch database, own test bot, own test VPN node.
+  # Guide: docs/staging.md
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: sali-api-staging
+    runtime: node
+    plan: starter            # a sleeping free instance would stop the test bot
+    region: frankfurt
+    branch: staging
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - apps/api/**
+        - apps/bot/**
+        - apps/support-bot/**
+        - packages/types/**
+        - scripts/render-start.js
+        - render.yaml
+        - package-lock.json
+    buildCommand: >-
+      npm ci --include=dev --no-audit --no-fund
+      --workspace=packages/types --workspace=apps/api --workspace=apps/bot --workspace=apps/support-bot
+      && npm run build --workspace=packages/types
+      && npm run prisma:generate --workspace=apps/api
+      && npm run build --workspace=apps/api --workspace=apps/bot --workspace=apps/support-bot
+    startCommand: node scripts/render-start.js
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: UTC
+      - key: SALI_ENV
+        value: staging
+      # Neon → Branches → create "staging" from main → its DIRECT connection string.
+      # Never the production database.
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: INTERNAL_API_KEY
+        generateValue: true
+      # Its own key. If the Neon branch was copied from production, the copied VPN keys
+      # simply won't decrypt here — test nodes issue new ones.
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      # A separate TEST bot from @BotFather (e.g. @SaliVPNTestBot) — never the real one.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      # Optional: leave empty and the test support bot is skipped.
+      - key: SUPPORT_BOT_TOKEN
+        sync: false
+      - key: SUPPORT_ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_TELEGRAM_IDS
+        sync: false
+      - key: SITE_URL
+        value: https://salivpn.com
+      - key: SUPPORT_URL
+        value: https://t.me/SaliVPNHelpBot
+      - key: DOWNLOAD_PAGE_URL
+        value: https://salivpn.com/download
+      - key: APK_DOWNLOAD_URL
+        value: https://github.com/MaxDev595/Sali-VPN/releases/download/apk-staging/sali-vpn-test.apk
+      - key: WINDOWS_DOWNLOAD_URL
+        value: https://github.com/MaxDev595/Sali-VPN/releases/download/desktop-latest/SaliVPN-Setup.exe
+      - key: NEWS_CHANNEL_URL
+        value: https://t.me/SaliVpnNews
+      - key: CORS_ORIGINS
+        value: https://salivpn.com
+      - key: TRIAL_DURATION_HOURS
+        value: "24"
+      - key: BOT_PAYMENT_METHODS
+        value: stars
+      - key: STARS_PER_USD
+        value: "50"
+      - key: VPN_PROVIDER
+        value: mock
