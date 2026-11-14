@@ -15,10 +15,11 @@ export const copy: Record<LandingLanguage, {
   plansEyebrow: string; plansTitle: string; plansText: string; free: string; freeText: string; freeCta: string;
   month: string; year: string; perMonth: string; best: string; buyCta: string; benefits: string[]; payMethods: string;
   featuresEyebrow: string; featuresTitle: string; features: [string, string, string][];
+  securityEyebrow: string; securityTitle: string; securityText: string; security: [string, string, string][]; securityMore: string;
   faqTitle: string; faqs: [string, string][]; ctaTitle: string; ctaText: string; footer: string; privacy: string; terms: string; support: string;
 }> = {
   ru: {
-    nav: [['how', 'Как это работает'], ['plans', 'Тарифы'], ['features', 'Возможности'], ['faq', 'Вопросы']], help: 'Справка',
+    nav: [['how', 'Как это работает'], ['plans', 'Тарифы'], ['features', 'Возможности'], ['security', 'Безопасность'], ['faq', 'Вопросы']], help: 'Справка',
     openBot: 'Открыть бота', download: 'Скачать приложение', downloadNav: 'Скачать', dayWord: 'часа',
     heroBadge: 'Android и Windows · без логов · WireGuard',
     heroTitle: ['Интернет без границ.', 'В одно касание.'],
@@ -43,6 +44,16 @@ export const copy: Record<LandingLanguage, {
       ['gift', 'Без кодов', 'Купили, получили подарок или бонус — всё само ложится на ваш аккаунт. Ничего копировать и вводить.'],
       ['chat', 'Поддержка в Telegram', 'Пишете в бота — отвечает живой человек.'],
     ],
+    securityEyebrow: 'Безопасность', securityTitle: 'Защищено на каждом уровне', securityText: 'От вашего устройства до наших серверов. Детали защиты мы намеренно не публикуем — так атаковать сложнее.',
+    security: [
+      ['lock', 'Шифрование', 'Весь трафик шифруется современными протоколами — тем же классом защиты, что у банков и мессенджеров.'],
+      ['key', 'Ключи под замком', 'У каждого свои ключи доступа. Они хранятся зашифрованными, отдельным ключом.'],
+      ['shield', 'Изоляция', 'Пользователи отделены друг от друга: с сервера нельзя добраться до чужого устройства.'],
+      ['check', 'Закрытые серверы', 'Вход — только по ключам команды, пароли отключены, подбор блокируется автоматически.'],
+      ['clock', 'Ничего на дисках', 'Служебные журналы живут только в памяти и стираются. Украсть историю нельзя — её нет.'],
+      ['telegram', 'Аккаунт без пароля', 'Аккаунт — ваш Telegram. Данные карты к нам не попадают, о новых устройствах бот сообщает сразу.'],
+    ],
+    securityMore: 'Подробнее о безопасности',
     faqTitle: 'Частые вопросы',
     faqs: [
       ['Насколько Sali защищён от взлома?', 'Трафик шифруется современными протоколами, ключи хранятся зашифрованными, пользователи изолированы друг от друга, вход на серверы — только по ключам команды, журналы не пишутся на диск. Детали мы намеренно не раскрываем. Подробнее — в справке, раздел «Безопасность» (salivpn.com/help/security).'],
@@ -57,7 +68,7 @@ export const copy: Record<LandingLanguage, {
     footer: 'Простой и приватный VPN.', privacy: 'Конфиденциальность', terms: 'Условия', support: 'Поддержка',
   },
   en: {
-    nav: [['how', 'How it works'], ['plans', 'Pricing'], ['features', 'Features'], ['faq', 'FAQ']], help: 'Help',
+    nav: [['how', 'How it works'], ['plans', 'Pricing'], ['features', 'Features'], ['security', 'Security'], ['faq', 'FAQ']], help: 'Help',
     openBot: 'Open the bot', download: 'Get the app', downloadNav: 'Download', dayWord: 'hours',
     heroBadge: 'Android & Windows · no logs · WireGuard',
     heroTitle: ['Internet without borders.', 'In one tap.'],
@@ -82,6 +93,16 @@ export const copy: Record<LandingLanguage, {
       ['gift', 'No codes', 'Bought a plan, got a gift or a bonus — it lands on your account by itself. Nothing to copy or type.'],
       ['chat', 'Support in Telegram', 'Message the bot — a real person answers.'],
     ],
+    securityEyebrow: 'Security', securityTitle: 'Protected at every level', securityText: 'From your device to our servers. We deliberately keep the details private — it makes attacks harder.',
+    security: [
+      ['lock', 'Encryption', 'All traffic is encrypted with modern protocols — the same class of protection banks and messengers use.'],
+      ['key', 'Keys under lock', 'Everyone has their own access keys. They are stored encrypted, with a separate key.'],
+      ['shield', 'Isolation', 'Users are separated from each other: nobody on a server can reach your device.'],
+      ['check', 'Locked-down servers', 'Logins only with the team’s keys, passwords off, guessing blocked automatically.'],
+      ['clock', 'Nothing on disk', 'Service logs live only in memory and are wiped. There is no history to steal.'],
+      ['telegram', 'No password to leak', 'Your account is your Telegram. Card details never reach us; the bot tells you about every new device.'],
+    ],
+    securityMore: 'More about security',
     faqTitle: 'FAQ',
     faqs: [
       ['How well is Sali protected from hackers?', 'Traffic is encrypted with modern protocols, keys are stored encrypted, users are isolated from each other, servers accept only the team’s keys, and logs are never written to disk. We deliberately keep the details private. More in the Help centre, "Security" (salivpn.com/help/security).'],

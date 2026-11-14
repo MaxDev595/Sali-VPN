@@ -85,7 +85,7 @@ export function LandingPage() {
     <section className="sv-section" id="how">
       <div className="sv-wrap">
         <div className="sv-head sv-reveal"><p className="sv-eyebrow">{c.howEyebrow}</p><h2>{c.howTitle}</h2><p>{c.howText}</p></div>
-        <ol className="sv-steps">{c.steps.map(([title, body], index) => <li className="sv-reveal" style={{ transitionDelay: `${index * 80}ms` }} key={title}><b>{index + 1}</b><h3>{title}</h3><p>{body}</p>{index === 2 && <code className="sv-code">SALI-7K4P-Q2M9-XR3D</code>}</li>)}</ol>
+        <ol className="sv-steps">{c.steps.map(([title, body], index) => <li className="sv-reveal" style={{ transitionDelay: `${index * 80}ms` }} key={title}><b>{index + 1}</b><h3>{title}</h3><p>{body}</p></li>)}</ol>
       </div>
     </section>
 
@@ -108,7 +108,15 @@ export function LandingPage() {
       </div>
     </section>
 
-    <section className="sv-section sv-section-soft" id="faq">
+    <section className="sv-section sv-section-soft" id="security">
+      <div className="sv-wrap">
+        <div className="sv-head sv-reveal"><p className="sv-eyebrow">{c.securityEyebrow}</p><h2>{c.securityTitle}</h2><p>{c.securityText}</p></div>
+        <div className="sv-features">{c.security.map(([icon, title, body], index) => <article className="sv-reveal" style={{ transitionDelay: `${(index % 3) * 70}ms` }} key={title}><span><Icon name={icon} /></span><h3>{title}</h3><p>{body}</p></article>)}</div>
+        <div className="sv-actions sv-actions-center sv-reveal"><Link className="sv-btn sv-btn-ghost-dark" to="/help/security"><Icon name="lock-glyph" />{c.securityMore}</Link></div>
+      </div>
+    </section>
+
+    <section className="sv-section" id="faq">
       <div className="sv-wrap sv-faq">
         <div className="sv-head sv-reveal"><p className="sv-eyebrow">FAQ</p><h2>{c.faqTitle}</h2></div>
         <div>{c.faqs.map(([q, a], index) => <article key={q} className={openFaq === index ? 'open' : ''}><button aria-expanded={openFaq === index} onClick={() => setOpenFaq(openFaq === index ? null : index)}><span>{q}</span><b>+</b></button><div><p>{a}</p></div></article>)}</div>
