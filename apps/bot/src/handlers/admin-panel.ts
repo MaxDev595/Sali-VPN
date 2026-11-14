@@ -14,7 +14,7 @@ import { nodes as showNodes } from './admin';
  *   👥 Пользователи → 💎 платные · 🛡 от админа · 🎁 пробные · ⌛ истёкшие (по 10, листание, тап — карточка)
  *   📣 Рассылка → 🆕 обновление (платформа, версия) или 📢 новость (заголовок) → ваш текст
  *                → предпросмотр (кому, показать ли в приложении) → отправка всем, кто в боте; статус доставки
- *   📊 Статистика · 📜 Выданные · 🖥 Серверы
+ *   📊 Статистика · 📉 Воронка (/funnel) · 📜 Выданные · 🖥 Серверы
  *
  * Доступ проверяет API (ADMIN_TELEGRAM_IDS) на каждом действии.
  */
@@ -68,7 +68,8 @@ export async function menu(ctx: Context) {
     [Markup.button.callback('🩺 Почему не работает', 'adm:diag'), Markup.button.callback('⛔ Отозвать', 'adm:revoke')],
     [Markup.button.callback('👥 Пользователи', 'adm:pp:paid:0'), Markup.button.callback('📣 Рассылка', 'adm:an')],
     [Markup.button.callback('🔎 Найти пользователя', 'adm:find'), Markup.button.callback('📊 Статистика', 'adm:stats')],
-    [Markup.button.callback('📜 Выданные', 'adm:issued'), Markup.button.callback('🖥 Серверы', 'adm:nodes')],
+    [Markup.button.callback('📉 Воронка', 'adm:funnel:7'), Markup.button.callback('📜 Выданные', 'adm:issued')],
+    [Markup.button.callback('🖥 Серверы', 'adm:nodes')],
   ]));
 }
 
@@ -228,6 +229,41 @@ async function grant(ctx: Context) {
     ].filter((l) => l !== null);
     await show(ctx, lines.join('\n'), Markup.inlineKeyboard([
       [Markup.button.callback('🩺 Проверить клиента', `adm:dg:${d.userId}`), Markup.button.callback('🎁 Ещё', 'adm:grant')],
+      back,
+    ]));
+  } catch (error) { await fail(ctx, error); }
+}
+
+/** /funnel and «📉 Воронка»: where new people drop off, overall and by ad source. */
+export async function funnel(ctx: Context, days = 7) {
+  if (!ctx.callbackQuery && !(await isAdmin(ctx))) return;
+  try {
+    const f = await api.adminFunnel(ctx.from!.id, days);
+    const t = f.total;
+    const pct = (part: number, of: number) => (of ? `${Math.round((part / of) * 100)}%` : '—');
+    const step = (icon: string, label: string, n: number, prev: number) => `${icon} ${label}: <b>${n}</b>${prev ? ` <i>(${pct(n, prev)} от прошлого шага)</i>` : ''}`;
+    const sources = f.sources.length
+      ? f.sources.map((s) => `• <b>${esc(s.source)}</b>: ${s.start} → 🎁 ${s.free} → ⚡ ${s.connected} → 💎 ${s.paid}`).join('\n')
+      : '—';
+    await show(ctx, [
+      `📉 <b>Воронка за ${days} дн.</b>`,
+      '<i>Новые люди в боте и как далеко они дошли</i>',
+      '',
+      step('👋', 'Нажали /start', t.start, 0),
+      step('🎁', 'Взяли 24 часа бесплатно', t.free, t.start),
+      step('📲', 'Начали подключение', t.started, t.free || t.start),
+      step('⚡', 'Подключились (VPN работал)', t.connected, t.started),
+      step('💎', 'Оплатили', t.paid, t.connected),
+      '',
+      `Приложение Sali: привязали ${f.ways.appLinked}, включали VPN ${f.ways.appUsed}`,
+      `Happ: открыли страницу ${f.ways.happOpened}, добавили серверы ${f.ways.happAdded}`,
+      '',
+      '<b>По источникам</b> <i>(/start → бесплатно → подключились → оплатили)</i>',
+      sources,
+      '',
+      '<i>Источник — ссылка t.me/бот?start=ad_название. Для каждой рекламы своя ссылка, например ad_tiktok1. ref — по приглашению, app — из приложения, site — с сайта, direct — без метки.</i>',
+    ].join('\n'), Markup.inlineKeyboard([
+      [7, 30, 90].map((d) => Markup.button.callback(`${d === days ? '• ' : ''}${d} дн.`, `adm:funnel:${d}`)),
       back,
     ]));
   } catch (error) { await fail(ctx, error); }
@@ -547,6 +583,7 @@ export async function callback(ctx: Context) {
       try { await api.adminBlock(id, b!, a === '1'); return openCard(ctx, b!); } catch (error) { return fail(ctx, error); }
     case 'pp': return people(ctx, (['paid', 'granted', 'trial', 'expired'].includes(a!) ? a : 'paid') as PeopleSegment, Math.max(0, Number(b) || 0));
     case 'an': return announceCallback(ctx, a, b);
+    case 'funnel': return funnel(ctx, Number(a) || 7);
     case 'stats': return stats(ctx);
     case 'issued': return issued(ctx);
     case 'nodes': return showNodes(ctx);

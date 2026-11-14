@@ -6,6 +6,7 @@ import { createHandlers } from './handlers';
 import * as admin from './handlers/admin';
 import * as adminPanel from './handlers/admin-panel';
 import * as happ from './handlers/happ';
+import { connect } from './handlers/connect';
 import { createBillingHandlers } from './handlers/billing';
 import { genericError } from './messages';
 import { menuLabels } from './keyboards';
@@ -65,11 +66,14 @@ async function main() {
   bot.command('node_free', admin.nodeFree);
   bot.command('node_paid', admin.nodePaid);
   bot.command('happ', happ.show);
+  bot.command('connect', connect);
   bot.command('admin', adminPanel.menu);
+  bot.command('funnel', (ctx) => adminPanel.funnel(ctx));
   bot.action(/^adm:/, adminPanel.callback);
   // Admin panel steps (waiting for a name, a number of days, a message) come before the normal text handler.
   bot.on('text', adminPanel.text);
 
+  bot.hears(menuLabels.connect, connect);
   bot.hears(menuLabels.buy, billing.buy);
   bot.hears([menuLabels.free, '🎁 Бесплатный день', '🎁 Бесплатный тариф'], billing.free);
   bot.hears([menuLabels.codes, '🔑 Мои коды'], billing.devices);
@@ -102,6 +106,7 @@ async function main() {
   bot.action('menu_settings', action(handlers.account));
   bot.action('menu_docs', action(handlers.docs));
   bot.action('menu_happ', action(happ.show));
+  bot.action('menu_connect', action(connect));
   bot.action(/^happ_rotate/, happ.rotate);
   bot.action(/^doc_/, handlers.doc);
   bot.action(/^buy_/, billing.choosePlan);
@@ -138,6 +143,7 @@ async function main() {
 
   await bot.telegram.setMyCommands([
     { command: 'start', description: 'Открыть Sali VPN' },
+    { command: 'connect', description: '⚡ Подключиться' },
     { command: 'buy', description: 'Купить подписку' },
     { command: 'free', description: '24 часа бесплатно' },
     { command: 'codes', description: 'Мои коды' },
@@ -157,6 +163,7 @@ async function main() {
       { command: 'buy', description: 'Купить подписку' },
       { command: 'devices', description: 'Мои устройства' },
       { command: 'nodes', description: 'VPN-серверы' },
+      { command: 'funnel', description: '📉 Воронка' },
       { command: 'help', description: 'Помощь и поддержка' },
     ], { scope: { type: 'chat', chat_id: Number(id) } }).catch(() => undefined);
   }

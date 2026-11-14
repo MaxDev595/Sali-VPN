@@ -15,6 +15,7 @@ class CodeDto extends AdminDto { @IsInt() days!: number; }
 class RevokeSubDto extends AdminDto { @IsString() @MaxLength(40) subscriptionId!: string; @IsOptional() @IsBoolean() notify?: boolean; }
 class RevokeCodeDto extends AdminDto { @IsString() @MaxLength(40) codeId!: string; }
 class BlockDto extends UserDto { @IsBoolean() isBlocked!: boolean; }
+class FunnelDto extends AdminDto { @IsOptional() @IsInt() @Min(1) @Max(365) days?: number; }
 class PeopleDto extends AdminDto {
   @IsIn(['paid', 'granted', 'trial', 'expired']) segment!: PeopleSegment;
   @IsOptional() @IsInt() @Min(0) @Max(10_000) page?: number;
@@ -36,6 +37,7 @@ export class AdminBotController {
   @Post('revoke-code') revokeCode(@Body() b: RevokeCodeDto) { return this.admin.revokeCode(b.telegramId, b.codeId); }
   @Post('block') block(@Body() b: BlockDto) { return this.admin.setBlocked(b.telegramId, b.userId, b.isBlocked); }
   @Post('issued') issued(@Body() b: AdminDto) { return this.admin.issued(b.telegramId); }
+  @Post('funnel') funnel(@Body() b: FunnelDto) { return this.admin.funnel(b.telegramId, b.days ?? 7); }
   @Post('stats') stats(@Body() b: AdminDto) { return this.admin.stats(b.telegramId); }
   @Post('people') people(@Body() b: PeopleDto) { return this.admin.people(b.telegramId, b.segment, b.page ?? 0); }
 }

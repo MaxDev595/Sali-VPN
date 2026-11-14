@@ -45,6 +45,7 @@ export const copy: Record<LandingLanguage, {
     ],
     faqTitle: 'Частые вопросы',
     faqs: [
+      ['Насколько Sali защищён от взлома?', 'Трафик шифруется современными протоколами, ключи хранятся зашифрованными, пользователи изолированы друг от друга, вход на серверы — только по ключам команды, журналы не пишутся на диск. Детали мы намеренно не раскрываем. Подробнее — в справке, раздел «Безопасность» (salivpn.com/help/security).'],
       ['Почему оплата в Telegram, а не в приложении?', 'Так быстрее и дешевле для вас: доступны Telegram Stars и USDT. После оплаты подписка сразу появляется во всех ваших приложениях.'],
       ['Как войти в приложение?', 'Нажмите «Войти через Telegram», в Telegram — «Запустить». Если бот не ответил, отправьте ему номер устройства SL-XXXX-XXXX — приложение уже скопировало его.'],
       ['Есть приложение для компьютера?', 'Да, для Windows. Скачайте установщик на странице «Скачать» — там же пошаговая инструкция.'],
@@ -83,6 +84,7 @@ export const copy: Record<LandingLanguage, {
     ],
     faqTitle: 'FAQ',
     faqs: [
+      ['How well is Sali protected from hackers?', 'Traffic is encrypted with modern protocols, keys are stored encrypted, users are isolated from each other, servers accept only the team’s keys, and logs are never written to disk. We deliberately keep the details private. More in the Help centre, "Security" (salivpn.com/help/security).'],
       ['Why pay in Telegram instead of the app?', 'It is faster and cheaper for you: Stars and USDT are available. After paying, the plan appears in all your apps at once.'],
       ['How do I sign in?', 'Tap "Sign in with Telegram", then "Start" in Telegram. If the bot stays silent, send it your device number SL-XXXX-XXXX — the app has already copied it.'],
       ['Is there a desktop app?', 'Yes, for Windows. Get the installer on the Download page — step-by-step guide included.'],

@@ -3,6 +3,7 @@ import type { BotPlan, IssuedCode } from '../services/api-client';
 import { DOC_TOPICS, helpUrl } from '../docs';
 
 export const menuLabels = {
+  connect: '⚡ Подключиться',
   buy: '💎 Купить подписку',
   free: '🎁 24 часа бесплатно',
   codes: '💎 Моя подписка',
@@ -23,9 +24,9 @@ export const menuLabels = {
 } as const;
 
 export const mainReplyKeyboard = Markup.keyboard([
-  [menuLabels.buy],
-  [menuLabels.free, menuLabels.codes],
-  [menuLabels.devices, menuLabels.download],
+  [menuLabels.connect],
+  [menuLabels.free, menuLabels.buy],
+  [menuLabels.codes, menuLabels.devices],
   [menuLabels.invite, menuLabels.docs],
   [menuLabels.settings, menuLabels.support],
 ])
@@ -33,9 +34,9 @@ export const mainReplyKeyboard = Markup.keyboard([
   .persistent();
 
 export const mainInlineKeyboard = Markup.inlineKeyboard([
-  [Markup.button.callback(menuLabels.buy, 'menu_buy')],
-  [Markup.button.callback(menuLabels.free, 'menu_free'), Markup.button.callback(menuLabels.codes, 'menu_codes')],
-  [Markup.button.callback(menuLabels.devices, 'menu_devices'), Markup.button.callback(menuLabels.download, 'menu_download')],
+  [Markup.button.callback(menuLabels.connect, 'menu_connect')],
+  [Markup.button.callback(menuLabels.free, 'menu_free'), Markup.button.callback(menuLabels.buy, 'menu_buy')],
+  [Markup.button.callback(menuLabels.codes, 'menu_codes'), Markup.button.callback(menuLabels.devices, 'menu_devices')],
   [Markup.button.callback(menuLabels.invite, 'menu_invite'), Markup.button.callback(menuLabels.docs, 'menu_docs')],
   [Markup.button.callback(menuLabels.settings, 'menu_settings'), Markup.button.callback(menuLabels.support, 'menu_support')],
 ]);
@@ -45,13 +46,17 @@ export const languageKeyboard = Markup.inlineKeyboard([[
   Markup.button.callback('🇬🇧 English', 'language_en'),
 ]]);
 
+/** First screen: two taps to a working VPN — «Получить бесплатно» → «Подключиться». */
 export function welcomeKeyboard(freeUsed: boolean) {
   return Markup.inlineKeyboard([
     ...(freeUsed ? [] : [[Markup.button.callback('🎁 Получить 24 часа бесплатно', 'menu_free')]]),
-    [Markup.button.callback('💎 Купить подписку', 'menu_buy')],
-    [Markup.button.callback('📲 Скачать приложение', 'menu_download')],
+    [Markup.button.callback(menuLabels.connect, 'menu_connect')],
+    [Markup.button.callback('💎 Купить подписку', 'menu_buy'), Markup.button.callback('🔒 Безопасность', 'doc_security')],
   ]);
 }
+
+/** After the free 24 hours were switched on: the one button left. */
+export const afterFreeKeyboard = Markup.inlineKeyboard([[Markup.button.callback(menuLabels.connect, 'menu_connect')]]);
 
 function period(days: number) {
   return days >= 360 ? '1 год' : days >= 28 ? `${Math.round(days / 30)} мес.` : `${days} дн.`;
@@ -117,9 +122,15 @@ export function chooseDeviceKeyboard(code: string, devices: string[]) {
 
 const RELEASES = 'https://github.com/MaxDev595/Sali-VPN/releases/download';
 
+export function appDownloadUrls() {
+  return {
+    apk: process.env.APK_DOWNLOAD_URL || `${RELEASES}/apk-latest/sali-vpn.apk`,
+    windows: process.env.WINDOWS_DOWNLOAD_URL || `${RELEASES}/desktop-latest/SaliVPN-Setup.exe`,
+  };
+}
+
 export function downloadKeyboard() {
-  const apk = process.env.APK_DOWNLOAD_URL || `${RELEASES}/apk-latest/sali-vpn.apk`;
-  const windows = process.env.WINDOWS_DOWNLOAD_URL || `${RELEASES}/desktop-latest/SaliVPN-Setup.exe`;
+  const { apk, windows } = appDownloadUrls();
   return Markup.inlineKeyboard([
     [Markup.button.url('📱 Android (APK)', apk), Markup.button.url('💻 Windows', windows)],
     // Every release is also posted as a file in the news channel — a mirror if GitHub is slow.

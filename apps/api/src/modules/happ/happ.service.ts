@@ -62,32 +62,48 @@ export class HappService {
     return { url, openUrl: `${url}?open=1` };
   }
 
-  /** Paid access of the Telegram account (Happ is for subscribers). */
-  private async access(telegramId: bigint) {
+  /**
+   * Access of the Telegram account: a subscription (all servers), or the free 24 hours —
+   * started in the bot or in a linked app — on the free servers only.
+   */
+  private async access(telegramId: bigint): Promise<{ ok: boolean; paid: boolean; sub: { expiresAt: Date | null } | null }> {
     const family = await this.subscriptions.sharing(telegramId);
     const owner = await this.prisma.user.findUnique({ where: { telegramId }, select: { isBlocked: true } });
-    if (!family.sub || owner?.isBlocked) return { ok: false as const, sub: null };
-    return { ok: true as const, sub: family.sub };
+    if (owner?.isBlocked) return { ok: false, paid: false, sub: null };
+    if (family.sub) return { ok: true, paid: true, sub: family.sub };
+    const trial = await this.prisma.trial.findFirst({
+      where: { status: 'ACTIVE', expiresAt: { gt: new Date() }, user: { OR: [{ telegramId }, { linkedTelegramId: telegramId }] } },
+      orderBy: { expiresAt: 'desc' },
+    });
+    return trial ? { ok: true, paid: false, sub: { expiresAt: trial.expiresAt } } : { ok: false, paid: false, sub: null };
   }
 
-  /** Servers the link lists: active, healthy nodes with Xray. */
-  private servers() {
+  /** Servers the link lists: active, healthy nodes with Xray (free servers only on the free 24 hours). */
+  private servers(paid = true) {
     return this.prisma.vpnServer.findMany({
-      where: { isActive: true, online: true, agentUrl: { not: null }, xrayPublicKey: { not: null } },
+      where: { isActive: true, online: true, agentUrl: { not: null }, xrayPublicKey: { not: null }, ...(paid ? {} : { premiumOnly: false }) },
       orderBy: [{ countryCode: 'asc' }, { name: 'asc' }],
     });
   }
 
-  /** Puts the account's UUID on (or switches it off on) every node with Xray. Best effort. */
-  private async push(row: HappAccess, enabled: boolean, servers?: VpnServer[]) {
-    const list = servers ?? await this.prisma.vpnServer.findMany({ where: { agentUrl: { not: null }, xrayPublicKey: { not: null } } });
+  /**
+   * Puts the account's UUID on (or switches it off on) every node with Xray. On the free
+   * 24 hours it is switched on only on the free servers. Best effort.
+   */
+  private async push(row: HappAccess, enabled: boolean, paid = true) {
+    const list = await this.prisma.vpnServer.findMany({ where: { agentUrl: { not: null }, xrayPublicKey: { not: null } } });
     const id = `happ_${row.id.replace(/-/g, '')}`;
     const results = await Promise.allSettled(list.map((s) =>
-      callNode(this.nodes.target(s), 'PUT', `/xray/${id}`, { uuid: row.uuid, enabled }, 6000)));
+      callNode(this.nodes.target(s), 'PUT', `/xray/${id}`, { uuid: row.uuid, enabled: enabled && (paid || !s.premiumOnly) }, 6000)));
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed) this.logger.warn(`happ ${row.id}: ${failed}/${list.length} node(s) did not take the change`);
-    await this.prisma.happAccess.update({ where: { id: row.id }, data: { enabled, syncedAt: failed ? null : new Date() } });
+    await this.prisma.happAccess.update({ where: { id: row.id }, data: { enabled, paid, syncedAt: failed ? null : new Date() } });
     return failed === 0;
+  }
+
+  /** The nodes were told something else than the account's access now allows. */
+  private outOfSync(row: HappAccess, access: { ok: boolean; paid: boolean }) {
+    return row.enabled !== access.ok || (access.ok && (row.paid !== access.paid || !row.syncedAt));
   }
 
   /** Removes the account's UUID from every node (after the link was reset). */
@@ -107,7 +123,7 @@ export class HappService {
     this.assertEnabled();
     const tg = BigInt(telegramId);
     const access = await this.access(tg);
-    if (!access.ok) throw new ForbiddenException('Happ доступен с подпиской. Оформите её в «💎 Купить подписку» — ссылка появится здесь.');
+    if (!access.ok) throw new ForbiddenException('Сейчас нет активного доступа. Возьмите 24 часа бесплатно или оформите подписку — ссылка для Happ появится здесь.');
     let row = await this.prisma.happAccess.findUnique({ where: { telegramId: tg } });
     if (!row) {
       const token = randomBytes(24).toString('base64url');
@@ -115,10 +131,31 @@ export class HappService {
         data: { telegramId: tg, tokenHash: hash(token), tokenEnc: encryptSecret(token, this.secret()), uuid: randomUUID() },
       });
     }
-    const servers = await this.servers();
-    if (!row.enabled || !row.syncedAt) await this.push(row, true);
+    const servers = await this.servers(access.paid);
+    if (this.outOfSync(row, access)) await this.push(row, true, access.paid);
     row = await this.prisma.happAccess.findUniqueOrThrow({ where: { id: row.id } });
     return this.view(row, access.sub, servers.length);
+  }
+
+  /**
+   * Bot «⚡ Подключиться»: what the account may use right now and how — the Sali app
+   * (how many are linked) and, when Happ is on, the personal Happ link.
+   * Works with Happ switched off too (then `happ` is null).
+   */
+  async connectInfo(telegramId: number) {
+    const tg = BigInt(telegramId);
+    const access = await this.access(tg);
+    const apps = await this.prisma.user.count({ where: { linkedTelegramId: tg, appDeviceKey: { not: null } } });
+    const happ = this.enabled && access.ok ? await this.link(telegramId).catch((error) => {
+      this.logger.warn(`happ link for connect failed: ${(error as Error).message}`);
+      return null;
+    }) : null;
+    return {
+      access: access.ok ? (access.paid ? 'paid' as const : 'free' as const) : 'none' as const,
+      until: access.sub?.expiresAt?.toISOString() ?? null,
+      apps,
+      happ,
+    };
   }
 
   /** Bot «🔄 Сбросить ссылку»: new link and UUID; the old link stops working at once. */
@@ -136,7 +173,10 @@ export class HappService {
   async assertLink(token: string) {
     this.assertEnabled();
     if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) throw new NotFoundException();
-    if (!await this.prisma.happAccess.findUnique({ where: { tokenHash: hash(token) }, select: { id: true } })) throw new NotFoundException();
+    const row = await this.prisma.happAccess.findUnique({ where: { tokenHash: hash(token) }, select: { id: true, openedAt: true } });
+    if (!row) throw new NotFoundException();
+    // Funnel report: the customer reached the «Открыть в Happ» page.
+    if (!row.openedAt) void this.prisma.happAccess.update({ where: { id: row.id }, data: { openedAt: new Date() } }).catch(() => undefined);
   }
 
   /**
@@ -150,9 +190,9 @@ export class HappService {
     const row = await this.prisma.happAccess.findUnique({ where: { tokenHash: hash(token) } });
     if (!row) throw new NotFoundException();
     const access = await this.access(row.telegramId);
-    const servers = access.ok ? await this.servers() : [];
+    const servers = access.ok ? await this.servers(access.paid) : [];
     const stale = !row.syncedAt || Date.now() - row.syncedAt.getTime() > RESYNC_MS;
-    if (row.enabled !== access.ok || (access.ok && stale)) await this.push(row, access.ok);
+    if (this.outOfSync(row, access) || (access.ok && stale)) await this.push(row, access.ok, access.paid);
     void this.prisma.happAccess.update({ where: { id: row.id }, data: { lastFetchAt: new Date() } }).catch(() => undefined);
 
     const lines = servers.map((s) => this.vless(row.uuid, s));
@@ -170,7 +210,7 @@ export class HappService {
         'support-url': this.config.get<string>('SUPPORT_URL') || 'https://t.me/SaliVPNHelpBot',
         'profile-web-page-url': site,
         // Happ: shown under the profile name.
-        announce: `base64:${Buffer.from(access.ok ? 'Sali VPN — приватно и без журналов' : 'Подписка закончилась — продлите в боте Sali VPN').toString('base64')}`,
+        announce: `base64:${Buffer.from(access.ok ? (access.paid ? 'Sali VPN — приватно и без журналов' : 'Бесплатные 24 часа · подписка — в боте Sali VPN') : 'Доступ закончился — продлите в боте Sali VPN').toString('base64')}`,
       },
     };
   }
@@ -221,7 +261,7 @@ a.b,button{display:block;width:100%;box-sizing:border-box;text-align:center;padd
     for (const row of rows) {
       const access = await this.access(row.telegramId).catch(() => null);
       if (!access) continue;
-      if (row.enabled !== access.ok || (access.ok && !row.syncedAt)) await this.push(row, access.ok).catch(() => undefined);
+      if (this.outOfSync(row, access)) await this.push(row, access.ok, access.paid).catch(() => undefined);
     }
   }
 }

@@ -35,6 +35,21 @@ export interface BotUserState {
   referralStats: { link: string };
 }
 
+export interface ConnectInfo {
+  access: 'paid' | 'free' | 'none';
+  until: string | null;
+  apps: number;
+  happ: HappLink | null;
+}
+
+export interface FunnelCounts { start: number; free: number; started: number; connected: number; paid: number }
+export interface AdminFunnel {
+  days: number;
+  total: FunnelCounts;
+  ways: { appLinked: number; appUsed: number; happOpened: number; happAdded: number };
+  sources: Array<FunnelCounts & { source: string }>;
+}
+
 export interface HappLink {
   url: string;
   openUrl: string;
@@ -206,7 +221,7 @@ export const api = {
     call<{ code: IssuedCode | null; paid?: PaidInfo | null }>('/bot/stars-paid', { telegramId, paymentId, amount, currency, chargeId }),
   paymentStatus: (telegramId: number, paymentId: string) =>
     call<{ status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; code: IssuedCode | null; paid?: PaidInfo | null }>('/bot/payment-status', { telegramId, paymentId }),
-  freeCode: (telegramId: number) => call<{ device: string; expiresAt: string }>('/bot/free', { telegramId }, 0),
+  freeCode: (telegramId: number) => call<{ device: string | null; expiresAt: string }>('/bot/free', { telegramId }, 0),
   codes: (telegramId: number) => call<OwnedCode[]>('/bot/codes', { telegramId }),
   apply: (telegramId: number, code: string, publicId?: string) =>
     call<{ chooseDevice?: string[]; referralBonusHours?: number; kind?: string; durationDays?: number; planName?: string | null; expiresAt?: string | null; publicId?: string }>('/bot/apply', { telegramId, code, publicId }, 0),
@@ -222,6 +237,7 @@ export const api = {
     call<{ updated: number }>('/bot/nodes/premium', { telegramId, name, premiumOnly }, 0),
 
   // --- Admin panel (/admin) -------------------------------------------------
+  connectInfo: (telegramId: number) => call<ConnectInfo>('/bot/happ/connect', { telegramId }, 0),
   happEnabled: () => call<{ enabled: boolean }>('/bot/happ/enabled', {}, 0),
   happLink: (telegramId: number) => call<HappLink>('/bot/happ/link', { telegramId }, 0),
   happRotate: (telegramId: number) => call<HappLink>('/bot/happ/rotate', { telegramId }, 0),
@@ -237,6 +253,7 @@ export const api = {
   adminRevokeCode: (telegramId: number, codeId: string) => call<{ userId: string }>('/bot/admin/revoke-code', { telegramId, codeId }, 0),
   adminBlock: (telegramId: number, userId: string, isBlocked: boolean) => call<{ isBlocked: boolean }>('/bot/admin/block', { telegramId, userId, isBlocked }, 0),
   adminIssued: (telegramId: number) => call<AdminGrantRow[]>('/bot/admin/issued', { telegramId }, 0),
+  adminFunnel: (telegramId: number, days: number) => call<AdminFunnel>('/bot/admin/funnel', { telegramId, days }, 0),
   adminStats: (telegramId: number) => call<AdminStats>('/bot/admin/stats', { telegramId }, 0),
   adminPeople: (telegramId: number, segment: PeopleSegment, page: number) => call<AdminPeople>('/bot/admin/people', { telegramId, segment, page }, 0),
   announcePreview: (telegramId: number, draft: AnnouncementDraft) => call<{ html: string; recipients: number }>('/bot/admin/announce/preview', { telegramId, ...draft }, 0),

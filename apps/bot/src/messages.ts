@@ -46,11 +46,11 @@ export function period(days: number) {
 export const howItWorks = [
   '<b>Как это работает</b>',
   '',
-  '1️⃣ Скачайте приложение Sali VPN',
-  '2️⃣ Нажмите в нём «Войти через Telegram» — сразу 24 часа бесплатно',
-  '3️⃣ Подписку покупаете здесь, в боте — она сама появится в приложении',
+  '1️⃣ Нажмите «🎁 Получить 24 часа бесплатно» — без карты и оплаты',
+  '2️⃣ Нажмите «⚡ Подключиться» и выберите приложение: Sali (Android, Windows) или Happ (iPhone, Mac)',
+  '3️⃣ Понравилось — подписку покупаете здесь, в боте, она сама появится в приложении',
   '',
-  'Подписка — на ваш аккаунт: работает на всех ваших устройствах (до 3) и не пропадает при переустановке. Никаких кодов.',
+  'Подписка — на ваш аккаунт: до 3 устройств, не пропадает при переустановке. Никаких кодов.',
 ].join('\n');
 
 export function paidCodeMessage(code: IssuedCode) {
@@ -207,6 +207,9 @@ export function paidAccountMessage(paid: { plan: string; until: string | null; m
 }
 
 /** «🎁 24 часа бесплатно» from the bot. */
-export function freeStartedMessage(r: { device: string; expiresAt: string }) {
-  return `🎁 <b>24 часа бесплатно включены</b> на устройстве <b>${r.device}</b> — до ${new Date(r.expiresAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.\n\nОткройте приложение и нажмите «Подключить».`;
+export function freeStartedMessage(r: { device: string | null; expiresAt: string }) {
+  const until = new Date(r.expiresAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow' });
+  return r.device
+    ? `🎁 <b>24 часа бесплатно включены</b> на устройстве <b>${r.device}</b> — до ${until} (МСК).\n\nОткройте приложение и нажмите «Подключить» — или подключите ещё одно устройство кнопкой ниже.`
+    : `🎁 <b>24 часа бесплатно включены</b> — до ${until} (МСК).\n\nОсталась одна кнопка 👇`;
 }

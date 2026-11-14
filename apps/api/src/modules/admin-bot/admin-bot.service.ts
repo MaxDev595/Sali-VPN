@@ -383,6 +383,66 @@ export class AdminBotService {
   }
 
   /** «📊 Статистика»: audience, access, money, conversion, codes, referrals, servers. Counts only. */
+  /**
+   * «📉 Воронка»: Telegram accounts that pressed /start in the last `days` days, and how far
+   * each got — free 24 hours → started connecting (app linked / Happ page opened) →
+   * actually connected (VPN used in the app / Happ downloaded the servers) → paid.
+   * Built from the data the service keeps anyway; nothing extra is tracked about people.
+   */
+  async funnel(adminId: number, days: number) {
+    this.guard(adminId);
+    const since = new Date(Date.now() - days * 86_400_000);
+    const cohort = await this.prisma.user.findMany({
+      where: { telegramId: { not: null }, createdAt: { gte: since } },
+      select: { id: true, telegramId: true, source: true },
+      take: 50_000,
+    });
+    const ids = cohort.map((u) => u.id);
+    const tgs = cohort.map((u) => u.telegramId!);
+    const tgOf = new Map(cohort.map((u) => [u.id, String(u.telegramId)]));
+    const [free, apps, happ] = await Promise.all([
+      this.prisma.activationCode.findMany({ where: { ownerId: { in: ids }, kind: ActivationCodeKind.FREE, status: ActivationCodeStatus.REDEEMED }, select: { ownerId: true } }),
+      this.prisma.user.findMany({ where: { linkedTelegramId: { in: tgs }, appDeviceKey: { not: null } }, select: { id: true, linkedTelegramId: true, devices: { where: { lastActiveAt: { not: null } }, select: { id: true }, take: 1 } } }),
+      this.prisma.happAccess.findMany({ where: { telegramId: { in: tgs } }, select: { telegramId: true, openedAt: true, lastFetchAt: true } }),
+    ]);
+    for (const a of apps) tgOf.set(a.id, String(a.linkedTelegramId));
+    const payments = await this.prisma.payment.findMany({ where: { status: PaymentStatus.SUCCEEDED, userId: { in: [...tgOf.keys()] } }, select: { userId: true } });
+
+    const set = (values: Array<string | undefined>) => new Set(values.filter((v): v is string => Boolean(v)));
+    const s = {
+      free: set(free.map((c) => tgOf.get(c.ownerId))),
+      appLinked: set(apps.map((a) => String(a.linkedTelegramId))),
+      appUsed: set(apps.filter((a) => a.devices.length).map((a) => String(a.linkedTelegramId))),
+      happOpened: set(happ.filter((h) => h.openedAt || h.lastFetchAt).map((h) => String(h.telegramId))),
+      happAdded: set(happ.filter((h) => h.lastFetchAt).map((h) => String(h.telegramId))),
+      paid: set(payments.map((p) => tgOf.get(p.userId))),
+    };
+    const started = new Set([...s.appLinked, ...s.happOpened]);
+    const connected = new Set([...s.appUsed, ...s.happAdded]);
+    const count = (who: string[]) => ({
+      start: who.length,
+      free: who.filter((t) => s.free.has(t)).length,
+      started: who.filter((t) => started.has(t)).length,
+      connected: who.filter((t) => connected.has(t)).length,
+      paid: who.filter((t) => s.paid.has(t)).length,
+    });
+    const all = cohort.map((u) => String(u.telegramId));
+    const bySource = new Map<string, string[]>();
+    for (const u of cohort) {
+      const key = u.source ?? 'direct';
+      bySource.set(key, [...(bySource.get(key) ?? []), String(u.telegramId)]);
+    }
+    return {
+      days,
+      total: count(all),
+      ways: {
+        appLinked: s.appLinked.size, appUsed: s.appUsed.size,
+        happOpened: s.happOpened.size, happAdded: s.happAdded.size,
+      },
+      sources: [...bySource.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([source, who]) => ({ source, ...count(who) })),
+    };
+  }
+
   async stats(adminId: number) {
     this.guard(adminId);
     const now = new Date();

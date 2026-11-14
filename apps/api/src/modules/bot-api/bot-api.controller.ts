@@ -45,6 +45,20 @@ class ApplyDto extends TelegramDto {
 const STARS_PER_USD = Number(process.env.STARS_PER_USD ?? 50);
 
 /**
+ * /start parameter → source for the funnel report. Ads use t.me/<bot>?start=ad_<name>
+ * (any short latin name works: ad_tiktok_nov, insta1); a friend's link counts as "ref",
+ * the app's «Войти через Telegram» as "app", buttons on the website as "site".
+ */
+export function sourceOf(startParam?: string | null) {
+  const p = (startParam ?? '').trim();
+  if (!p) return null;
+  if (/^ref_/.test(p)) return 'ref';
+  if (/^link_/.test(p)) return 'app';
+  if (p === 'buy' || p === 'free' || /^doc_/.test(p)) return 'site';
+  return /^[A-Za-z0-9_-]{1,40}$/.test(p) ? p.toLowerCase() : null;
+}
+
+/**
  * Everything the Telegram bot needs to sell access. Payments live only here:
  * the store app never sees a price, it only redeems codes.
  * Mounted under /internal → never exposed by the public proxy.
@@ -96,6 +110,11 @@ export class BotApiController {
   async start(@Body() dto: StartDto) {
     const isNew = !(await this.users.findByTelegramId(BigInt(dto.profile.telegramId)));
     const user = await this.buyer(dto.profile);
+    // First visit: remember where the customer came from (funnel report by source).
+    if (isNew) {
+      const source = sourceOf(dto.startParam);
+      if (source) await this.prisma.user.update({ where: { id: user.id }, data: { source } }).catch(() => undefined);
+    }
     let referred = false;
     const ref = dto.startParam?.match(/^ref_(\d{3,20})$/);
     if (ref && isNew) referred = Boolean(await this.referrals.recordReferralIfNew(user.id, BigInt(ref[1])));

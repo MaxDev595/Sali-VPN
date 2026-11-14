@@ -35,13 +35,14 @@ export class HappSubscriptionController {
   }
 }
 
-/** Bot: «📲 Подключить в Happ». */
+/** Bot: «⚡ Подключиться» and «📲 Подключить в Happ». */
 @Controller('internal/bot/happ')
 @UseGuards(InternalServiceGuard)
 export class HappBotController {
   constructor(private readonly happ: HappService) {}
 
   @Post('enabled') @Header('cache-control', 'no-store') enabled() { return { enabled: this.happ.enabled }; }
+  @Post('connect') @Header('cache-control', 'no-store') connect(@Body() b: TelegramDto) { return this.happ.connectInfo(b.telegramId); }
   @Post('link') link(@Body() b: TelegramDto) { return this.happ.link(b.telegramId); }
   @Post('rotate') rotate(@Body() b: TelegramDto) { return this.happ.rotate(b.telegramId); }
 }

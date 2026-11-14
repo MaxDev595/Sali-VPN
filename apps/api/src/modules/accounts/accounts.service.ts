@@ -101,9 +101,19 @@ export class AccountsService {
    */
   async startFreeOn(accountId: string, deviceId: string) {
     const used = await this.prisma.activationCode.findFirst({ where: { ownerId: accountId, kind: ActivationCodeKind.FREE } });
-    if (used && used.status !== 'ISSUED') return false;
     const trial = await this.prisma.trial.findUnique({ where: { userId: deviceId } });
     if (trial) return false;
+    if (used && used.status !== 'ISSUED') {
+      // Started in the bot before any app (Happ, or «Подключиться» first): an app linked
+      // during those 24 hours shares the same window — it does not get a second one.
+      if (used.redeemedById !== accountId || deviceId === accountId) return false;
+      const own = await this.prisma.trial.findUnique({ where: { userId: accountId } });
+      if (!own || own.status !== 'ACTIVE' || own.expiresAt <= new Date()) return false;
+      await this.prisma.trial.create({
+        data: { userId: deviceId, startedAt: own.startedAt, expiresAt: own.expiresAt, activeSince: new Date(), status: own.status, bonusSeconds: own.bonusSeconds },
+      }).catch(() => undefined);
+      return true;
+    }
     try {
       const code = used ?? await this.codes.issueFree(accountId);
       await this.codes.redeem(deviceId, code.code, { silent: true });
@@ -118,13 +128,16 @@ export class AccountsService {
   async freeFromBot(telegramId: bigint) {
     const account = await this.prisma.user.findUnique({ where: { telegramId } });
     if (!account) throw new ConflictException('Сначала нажмите /start');
+    if ((await this.subscriptions.sharing(telegramId)).sub) throw new ConflictException('У вас уже есть подписка — бесплатный период не нужен 🙂');
     const device = await this.prisma.user.findFirst({ where: { linkedTelegramId: telegramId, appDeviceKey: { not: null } }, orderBy: { linkedAt: 'desc' } });
-    if (!device) throw new ConflictException('Сначала подключите приложение: скачайте Sali VPN и нажмите в нём «Войти через Telegram» — 24 часа включатся сами.');
-    if (await this.subscriptions.getActiveForUser(device.id)) throw new ConflictException('У вас уже есть подписка — бесплатный период не нужен 🙂');
-    const started = await this.startFreeOn(account.id, device.id);
+    // No app yet: the 24 hours start on the account itself, so the customer can connect
+    // right away (Happ), and an app linked later shares the same 24 hours.
+    const target = device ?? account;
+    if (device && await this.subscriptions.getActiveForUser(device.id)) throw new ConflictException('У вас уже есть подписка — бесплатный период не нужен 🙂');
+    const started = await this.startFreeOn(account.id, target.id);
     if (!started) throw new ConflictException('Бесплатные 24 часа уже были использованы на этом аккаунте или устройстве.');
-    const trial = await this.prisma.trial.findUniqueOrThrow({ where: { userId: device.id } });
-    return { device: formatPublicId(device.publicId), expiresAt: trial.expiresAt.toISOString() };
+    const trial = await this.prisma.trial.findUniqueOrThrow({ where: { userId: target.id } });
+    return { device: device ? formatPublicId(device.publicId) : null, expiresAt: trial.expiresAt.toISOString() };
   }
 
   /**

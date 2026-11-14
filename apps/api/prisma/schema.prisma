@@ -37,6 +37,9 @@ model User {
   isAdmin       Boolean  @default(false)
   preferredLanguage String @default("ru")
   notificationsEnabled Boolean @default(true)
+  /// Where the customer came from: the /start parameter of their first visit
+  /// (t.me/<bot>?start=ad_tiktok → "ad_tiktok", a friend's link → "ref"). For the funnel report.
+  source        String?
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -64,6 +67,7 @@ model User {
 
   @@index([telegramId])
   @@index([linkedTelegramId])
+  @@index([createdAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -168,8 +172,12 @@ model HappAccess {
   uuid        String    @unique
   /// What the nodes were last told (follows the account's access).
   enabled     Boolean   @default(false)
+  /// false on the free 24 hours: the UUID is switched on only on the free servers.
+  paid        Boolean   @default(true)
   syncedAt    DateTime?
   lastFetchAt DateTime?
+  /// First time the «Открыть в Happ» page was opened (funnel report).
+  openedAt    DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }

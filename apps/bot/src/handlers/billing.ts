@@ -13,6 +13,7 @@ import {
   PayMethod,
   plansKeyboard,
   welcomeKeyboard,
+  afterFreeKeyboard,
 } from '../keyboards';
 import {
   codesListMessage,
@@ -20,7 +21,6 @@ import {
   freeStartedMessage,
   paidAccountMessage,
   genericError,
-  howItWorks,
   linkResultMessage,
   paidCodeMessage,
   plansMessage,
@@ -99,16 +99,18 @@ export function createBillingHandlers(config: BotConfig) {
         if (startParam?.startsWith('doc_')) return;
         await ctx.replyWithHTML(
           [
-            '<b>Sali VPN</b> — быстрый и приватный VPN в одно нажатие.',
+            '<b>Sali VPN</b> — быстрый и приватный VPN без журналов.',
             '',
-            `Ваш Sali ID в боте: <code>${result.publicId}</code>`,
+            result.freeUsed
+              ? 'Подключение — кнопка «⚡ Подключиться». Подписка — «💎 Купить подписку».'
+              : '<b>Подключение за 2 нажатия:</b>\n1. «🎁 Получить 24 часа бесплатно» — без карты и оплаты\n2. «⚡ Подключиться»',
             '',
-            howItWorks,
+            '🔒 Мы не храним историю посещений и не видим, что вы делаете в интернете. Подробнее — «🔒 Безопасность».',
           ].join('\n'),
           mainReplyKeyboard,
         );
         if (result.referred) await ctx.replyWithHTML(referredWelcome(result.friendBonusHours ?? 3));
-        await ctx.reply('С чего начнём?', welcomeKeyboard(result.freeUsed));
+        await ctx.reply('👇', welcomeKeyboard(result.freeUsed));
       } catch (error) {
         await fail(ctx, error, 'start');
       }
@@ -239,7 +241,7 @@ export function createBillingHandlers(config: BotConfig) {
       if (!ctx.from) return;
       try {
         const started = await api.freeCode(ctx.from.id);
-        await ctx.replyWithHTML(freeStartedMessage(started));
+        await ctx.replyWithHTML(freeStartedMessage(started), afterFreeKeyboard);
       } catch (error) {
         if (error instanceof ApiRejection && error.status === 404) {
           await api.start(profile(ctx)!).catch(() => undefined);
