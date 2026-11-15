@@ -81,7 +81,7 @@ services:
       - key: TRIAL_DURATION_HOURS
         value: "24"
       - key: BOT_PAYMENT_METHODS
-        value: crypto           # Stars switched off 2026-11-15: USDT (TON) only
+        value: stars,crypto     # Stars back on 2026-11-15 (were off for a few hours)
       - key: STARS_PER_USD
         value: "50"
       - key: CRYPTO_TON_RECEIVE_ADDRESS
@@ -176,7 +176,7 @@ services:
       - key: TRIAL_DURATION_HOURS
         value: "24"
       - key: BOT_PAYMENT_METHODS
-        value: crypto
+        value: stars,crypto
       - key: STARS_PER_USD
         value: "50"
       - key: VPN_PROVIDER

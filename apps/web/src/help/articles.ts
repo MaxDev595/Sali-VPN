@@ -272,7 +272,7 @@ export const ARTICLES: Article[] = [
         { h: 'Аккаунт и оплата' },
         { list: [
           'Аккаунт — это ваш Telegram: нет паролей, которые можно подобрать или украсть из базы.',
-          'Оплата проходит в USDT через блокчейн TON. Данные карты к нам не попадают.',
+          'Оплата проходит через Telegram Stars, блокчейн или защищённую страницу платёжного сервиса. Данные карты к нам не попадают.',
           'О каждом новом устройстве и активации вам приходит сообщение в Telegram. Чужое устройство можно отвязать в один клик.',
           'Ссылка для Happ — личная и работает как пароль. Если она попала к чужим, сбросьте её в боте: старая сразу перестанет работать.',
           'Важные действия в системе (новый сервер, ручная выдача доступа) мгновенно видит вся команда.',
@@ -299,7 +299,7 @@ export const ARTICLES: Article[] = [
         { h: 'Account & payments' },
         { list: [
           'Your account is your Telegram — there are no passwords to guess or steal from a database.',
-          'You pay with USDT over the TON blockchain. Card details never reach us.',
+          'You pay through Telegram Stars, a blockchain, or the payment provider’s secure page. Card details never reach us.',
           'You get a Telegram message about every new device and activation, and can unlink a stranger’s device in one tap.',
           'Your Happ link is personal and works like a password. If someone else got it, reset it in the bot — the old one stops working at once.',
           'The whole team instantly sees sensitive actions in the system (a new server, access granted by hand).',
@@ -317,7 +317,7 @@ export const ARTICLES: Article[] = [
     lead: { ru: 'Оплата — в Telegram-боте. Подписка сразу появляется на вашем аккаунте, без кодов.', en: 'You pay in the Telegram bot. The plan lands on your account at once — no codes.' },
     body: {
       ru: [
-        { facts: [['Способы', 'USDT (сеть TON)'], ['Устройств', 'до 3 на подписку'], ['Автосписания', 'нет']] },
+        { facts: [['Способы', 'Telegram Stars, USDT (сеть TON)'], ['Устройств', 'до 3 на подписку'], ['Автосписания', 'нет']] },
         { list: [
           'После оплаты подписка сразу работает во всех ваших приложениях.',
           'Если подписка уже есть, новая покупка добавит дни к текущим.',
@@ -329,7 +329,7 @@ export const ARTICLES: Article[] = [
         { note: 'Оплатили, а подписки нет? Не платите повторно. Для USDT нажмите «Я оплатил — проверить». Через 10 минут — пишите в поддержку.' },
       ],
       en: [
-        { facts: [['Methods', 'USDT (TON network)'], ['Devices', 'up to 3 per plan'], ['Auto-renewal', 'none']] },
+        { facts: [['Methods', 'Telegram Stars, USDT (TON network)'], ['Devices', 'up to 3 per plan'], ['Auto-renewal', 'none']] },
         { list: [
           'After paying, the plan works in all your apps at once.',
           'With an active plan, a new purchase adds days on top.',
