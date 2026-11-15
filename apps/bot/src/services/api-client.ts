@@ -251,6 +251,10 @@ export const api = {
   adminRevocable: (telegramId: number, userId: string) => call<{ title: string; subscriptions: Array<{ id: string; where: string; plan: string; until: string }>; codes: Array<{ id: string; code: string; what: string }> }>('/bot/admin/revocable', { telegramId, userId }, 0),
   adminRevokeSub: (telegramId: number, subscriptionId: string, notify: boolean) => call<{ userId: string }>('/bot/admin/revoke-sub', { telegramId, subscriptionId, notify }, 0),
   adminRevokeCode: (telegramId: number, codeId: string) => call<{ userId: string }>('/bot/admin/revoke-code', { telegramId, codeId }, 0),
+  adminStarPayments: (telegramId: number, userId: string) =>
+    call<{ title: string; payments: Array<{ id: string; plan: string; usd: number; at: string; code: { status: 'ISSUED' | 'REDEEMED' | 'REVOKED'; days: number } | null }> }>('/bot/admin/star-payments', { telegramId, userId }, 0),
+  adminRefundStars: (telegramId: number, paymentId: string, message?: string) =>
+    call<{ userId: string; taken: 'code' | 'days' | 'subscription' | 'nothing'; notified: boolean }>('/bot/admin/refund-stars', { telegramId, paymentId, message }, 0),
   adminBlock: (telegramId: number, userId: string, isBlocked: boolean) => call<{ isBlocked: boolean }>('/bot/admin/block', { telegramId, userId, isBlocked }, 0),
   adminIssued: (telegramId: number) => call<AdminGrantRow[]>('/bot/admin/issued', { telegramId }, 0),
   adminFunnel: (telegramId: number, days: number) => call<AdminFunnel>('/bot/admin/funnel', { telegramId, days }, 0),

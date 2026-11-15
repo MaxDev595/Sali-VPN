@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ActivationCodeKind, ActivationCodeStatus, PaymentStatus, Prisma, SubscriptionStatus, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NodesService } from '../vpn/nodes/nodes.service';
@@ -40,6 +41,7 @@ export class AdminBotService {
     private readonly codes: CodesService,
     private readonly subscriptions: SubscriptionsService,
     private readonly notifications: NotificationsService,
+    private readonly config: ConfigService,
   ) {}
 
   private guard(telegramId: number) {
@@ -265,6 +267,92 @@ export class AdminBotService {
     await this.subscriptions.disableUncovered(sub.userId).catch(() => undefined);
     if (notify) await this.notifications.sendHtml(sub.userId, `⛔ <b>Подписка ${esc(sub.plan.name)} отозвана администрацией.</b>\n\nЕсли это ошибка — напишите в поддержку.`).catch(() => undefined);
     return { userId: sub.userId };
+  }
+
+  /** Paid Telegram Stars payments of this account that can still be refunded. */
+  async starPayments(adminId: number, userId: string) {
+    this.guard(adminId);
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    const rows = await this.prisma.payment.findMany({
+      where: { userId: user.id, provider: 'telegram_stars', status: PaymentStatus.SUCCEEDED, externalPaymentId: { not: null } },
+      include: { plan: true, activationCode: true },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+    return {
+      title: this.title(user),
+      payments: rows.map((p) => ({
+        id: p.id,
+        plan: p.plan.name,
+        usd: Number(p.amountUsd),
+        at: p.createdAt.toISOString(),
+        code: p.activationCode ? { status: p.activationCode.status, days: p.activationCode.durationDays } : null,
+      })),
+    };
+  }
+
+  /**
+   * «↩️ Вернуть звёзды»: refunds a Stars payment through Telegram (refundStarPayment),
+   * takes back what it bought (an unused code is revoked; an activated one loses its days)
+   * and, if asked, tells the customer.
+   */
+  async refundStars(adminId: number, paymentId: string, message?: string) {
+    this.guard(adminId);
+    const payment = await this.prisma.payment.findUnique({ where: { id: paymentId }, include: { user: true, plan: true, activationCode: true } });
+    if (!payment || payment.provider !== 'telegram_stars') throw new NotFoundException('Платёж звёздами не найден');
+    if (payment.status !== PaymentStatus.SUCCEEDED) throw new BadRequestException('Этот платёж уже возвращён или не был оплачен');
+    const payerTelegramId = payment.user.telegramId;
+    if (!payment.externalPaymentId || !payerTelegramId) throw new BadRequestException('У платежа нет номера Telegram — вернуть автоматически нельзя');
+
+    // 1. Money back first: if Telegram refuses, nothing else changes.
+    const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
+    if (!token) throw new BadRequestException('TELEGRAM_BOT_TOKEN не задан');
+    const response = await fetch(`https://api.telegram.org/bot${token}/refundStarPayment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: Number(payerTelegramId), telegram_payment_charge_id: payment.externalPaymentId }),
+    });
+    const result = (await response.json().catch(() => ({}))) as { ok?: boolean; description?: string };
+    if (!result.ok) {
+      this.logger.warn(`refundStarPayment failed for payment ${payment.id}: ${result.description ?? response.status}`);
+      throw new BadRequestException(`Telegram не вернул звёзды: ${result.description ?? `ошибка ${response.status}`}`);
+    }
+    await this.prisma.payment.update({ where: { id: payment.id }, data: { status: PaymentStatus.REFUNDED, failureReason: `refunded by admin ${adminId}` } });
+
+    // 2. Take back what was bought.
+    let taken: 'code' | 'days' | 'subscription' | 'nothing' = 'nothing';
+    const code = payment.activationCode;
+    if (code?.status === ActivationCodeStatus.ISSUED) {
+      await this.prisma.activationCode.update({ where: { id: code.id }, data: { status: ActivationCodeStatus.REVOKED } });
+      taken = 'code';
+    } else if (code?.status === ActivationCodeStatus.REDEEMED && code.redeemedById) {
+      // Days went to the Telegram account the device is linked to, or to the device itself.
+      const device = await this.prisma.user.findUnique({ where: { id: code.redeemedById } });
+      const account = device && !device.telegramId && device.linkedTelegramId ? await this.prisma.user.findUnique({ where: { telegramId: device.linkedTelegramId } }) : null;
+      const holderId = account?.id ?? code.redeemedById;
+      const sub = await this.subscriptions.getActiveForUser(holderId);
+      if (sub?.expiresAt) {
+        const left = new Date(sub.expiresAt.getTime() - code.durationDays * 86_400_000);
+        await this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: left > new Date() ? { expiresAt: left } : { status: SubscriptionStatus.EXPIRED, expiresAt: new Date(), autoRenew: false },
+        });
+        await this.subscriptions.disableUncovered(holderId).catch(() => undefined);
+        if (code.redeemedById !== holderId) await this.subscriptions.disableUncovered(code.redeemedById).catch(() => undefined);
+        taken = left > new Date() ? 'days' : 'subscription';
+      }
+    } else if (payment.subscriptionId) {
+      await this.prisma.subscription.updateMany({ where: { id: payment.subscriptionId, status: SubscriptionStatus.ACTIVE }, data: { status: SubscriptionStatus.EXPIRED, expiresAt: new Date(), autoRenew: false } });
+      await this.subscriptions.disableUncovered(payment.userId).catch(() => undefined);
+      taken = 'subscription';
+    }
+
+    // 3. Tell the customer.
+    let notified = false;
+    if (message?.trim()) {
+      notified = await this.notifications.sendHtml(payment.userId, `↩️ <b>Мы вернули вам звёзды за ${esc(payment.plan.name)}.</b>\n\n${esc(message.trim())}`).catch(() => false);
+    }
+    return { userId: payment.userId, taken, notified };
   }
 
   /** Makes an unused code invalid. */

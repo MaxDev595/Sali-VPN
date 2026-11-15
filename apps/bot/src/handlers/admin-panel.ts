@@ -9,6 +9,7 @@ import { nodes as showNodes } from './admin';
  *                      → срок (1 день … бессрочно, или своё число дней)
  *                      → тип: 🛡 от администрации | 🎁 подарок
  *                      → сообщение получателю (необязательно) → подтверждение
+ *   ↩️ Вернуть звёзды (в карточке) → оплаты звёздами → возврат через Telegram + забрать купленное + сообщение клиенту
  *   ⛔ Отозвать → список активных подписок и неиспользованных кодов, отзыв по одной (молча или с уведомлением) или всё сразу
  *   🔎 Найти пользователя → карточка: доступ, устройства, оплаты, коды; выдать / отозвать / блок
  *   👥 Пользователи → 💎 платные · 🛡 от админа · 🎁 пробные · ⌛ истёкшие (по 10, листание, тап — карточка)
@@ -97,6 +98,7 @@ function cardKeyboard(c: AdminCard) {
   return Markup.inlineKeyboard([
     [Markup.button.callback('🎁 Выдать подписку', `adm:g:${c.id}`), Markup.button.callback('🩺 Почему не работает', `adm:dg:${c.id}`)],
     [Markup.button.callback('⛔ Отозвать', `adm:rl:${c.id}`), Markup.button.callback(c.isBlocked ? '✅ Разблокировать' : '🚫 Заблокировать', `adm:bl:${c.isBlocked ? 0 : 1}:${c.id}`)],
+    ...(c.kind === 'telegram' && c.payments > 0 ? [[Markup.button.callback('↩️ Вернуть звёзды', `adm:sr:${c.id}`)]] : []),
     ...c.devices.slice(0, 5).map((d) => [Markup.button.callback(`📱 ${d.publicId}`, `adm:c:${d.id}`)]),
     back,
   ]);
@@ -400,6 +402,36 @@ async function revokeList(ctx: Context, userId: string) {
   } catch (error) { await fail(ctx, error); }
 }
 
+/** What the customer reads after a Stars refund. */
+const REFUND_MESSAGE = 'С этого момента оплата в Sali VPN — только криптовалютой (USDT в сети TON). Купить подписку: «💎 Подписка» → тариф → «💵 USDT (TON)».';
+
+/** «↩️ Вернуть звёзды»: the account's paid Stars payments, one button each. */
+async function starRefundList(ctx: Context, userId: string) {
+  try {
+    const r = await api.adminStarPayments(ctx.from!.id, userId);
+    const state = { ISSUED: 'код не активирован', REDEEMED: 'код активирован', REVOKED: 'код отозван' } as const;
+    const lines = [`↩️ <b>Возврат звёзд — ${esc(r.title)}</b>`, ''];
+    const rows: ReturnType<typeof Markup.button.callback>[][] = [];
+    if (!r.payments.length) lines.push('Оплат звёздами, которые можно вернуть, нет.');
+    r.payments.forEach((p, i) => {
+      lines.push(`${i + 1}. ${esc(p.plan)} · ${usd(p.usd)} · ${new Date(p.at).toLocaleDateString('ru-RU')}${p.code ? ` · ${state[p.code.status]} (${dur(p.code.days)})` : ''}`);
+      rows.push([Markup.button.callback(`↩️ Вернуть оплату ${i + 1}`, `adm:sq:${p.id}`)]);
+    });
+    if (r.payments.length) lines.push('', 'Звёзды вернутся клиенту, купленный доступ заберётся, клиент получит сообщение:', `<i>${esc(REFUND_MESSAGE)}</i>`);
+    rows.push([Markup.button.callback('👤 Карточка', `adm:c:${userId}`)], back);
+    await show(ctx, lines.join('\n'), Markup.inlineKeyboard(rows));
+  } catch (error) { await fail(ctx, error); }
+}
+
+async function refundStars(ctx: Context, paymentId: string, notify: boolean) {
+  try {
+    const r = await api.adminRefundStars(ctx.from!.id, paymentId, notify ? REFUND_MESSAGE : undefined);
+    const taken = { code: 'неактивированный код отозван', days: 'купленные дни сняты с подписки', subscription: 'платная подписка завершена', nothing: 'забирать было нечего' }[r.taken];
+    await show(ctx, `✅ <b>Звёзды возвращены.</b>\n\n• ${taken}\n• ${r.notified ? 'клиент получил сообщение' : notify ? 'сообщение клиенту не доставлено' : 'клиенту ничего не писали'}`,
+      Markup.inlineKeyboard([[Markup.button.callback('👤 Карточка', `adm:c:${r.userId}`)], back]));
+  } catch (error) { await fail(ctx, error); }
+}
+
 // ---------------------------------------------------------------------------
 // 📣 Рассылка: update notes and news to everyone in the bot, also shown in the apps.
 // ---------------------------------------------------------------------------
@@ -579,6 +611,12 @@ export async function callback(ctx: Context) {
     case 'rv': return show(ctx, '⛔ Забрать весь доступ у этого пользователя и его устройств? Неактивированные коды от админа тоже отзовутся.', Markup.inlineKeyboard([[Markup.button.callback('Да, забрать', `adm:rvy:${a}`), Markup.button.callback('Нет', `adm:c:${a}`)]]));
     case 'rvy':
       try { const r = await api.adminRevoke(id, a!); return show(ctx, `⛔ Готово: завершено подписок — ${r.subscriptions}, отозвано кодов — ${r.codes}.`, Markup.inlineKeyboard([[Markup.button.callback('👤 Карточка', `adm:c:${a}`)], back])); } catch (error) { return fail(ctx, error); }
+    case 'sr': return starRefundList(ctx, a!);
+    case 'sq': return show(ctx, '↩️ Вернуть звёзды за эту оплату и забрать купленный доступ? Отменить возврат будет нельзя.', Markup.inlineKeyboard([
+      [Markup.button.callback('Да, и написать клиенту', `adm:sy:${a}:1`)],
+      [Markup.button.callback('Да, молча', `adm:sy:${a}:0`), Markup.button.callback('Нет', 'adm:menu')],
+    ]));
+    case 'sy': return refundStars(ctx, a!, b === '1');
     case 'bl':
       try { await api.adminBlock(id, b!, a === '1'); return openCard(ctx, b!); } catch (error) { return fail(ctx, error); }
     case 'pp': return people(ctx, (['paid', 'granted', 'trial', 'expired'].includes(a!) ? a : 'paid') as PeopleSegment, Math.max(0, Number(b) || 0));

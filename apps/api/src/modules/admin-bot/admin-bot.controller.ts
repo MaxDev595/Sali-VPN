@@ -14,6 +14,10 @@ class GrantDto extends UserDto {
 class CodeDto extends AdminDto { @IsInt() days!: number; }
 class RevokeSubDto extends AdminDto { @IsString() @MaxLength(40) subscriptionId!: string; @IsOptional() @IsBoolean() notify?: boolean; }
 class RevokeCodeDto extends AdminDto { @IsString() @MaxLength(40) codeId!: string; }
+class RefundStarsDto extends AdminDto {
+  @IsString() @MaxLength(40) paymentId!: string;
+  @IsOptional() @IsString() @MaxLength(1000) message?: string;
+}
 class BlockDto extends UserDto { @IsBoolean() isBlocked!: boolean; }
 class FunnelDto extends AdminDto { @IsOptional() @IsInt() @Min(1) @Max(365) days?: number; }
 class PeopleDto extends AdminDto {
@@ -35,6 +39,8 @@ export class AdminBotController {
   @Post('revocable') revocable(@Body() b: UserDto) { return this.admin.revocable(b.telegramId, b.userId); }
   @Post('revoke-sub') revokeSub(@Body() b: RevokeSubDto) { return this.admin.revokeSubscription(b.telegramId, b.subscriptionId, b.notify ?? false); }
   @Post('revoke-code') revokeCode(@Body() b: RevokeCodeDto) { return this.admin.revokeCode(b.telegramId, b.codeId); }
+  @Post('star-payments') starPayments(@Body() b: UserDto) { return this.admin.starPayments(b.telegramId, b.userId); }
+  @Post('refund-stars') refundStars(@Body() b: RefundStarsDto) { return this.admin.refundStars(b.telegramId, b.paymentId, b.message); }
   @Post('block') block(@Body() b: BlockDto) { return this.admin.setBlocked(b.telegramId, b.userId, b.isBlocked); }
   @Post('issued') issued(@Body() b: AdminDto) { return this.admin.issued(b.telegramId); }
   @Post('funnel') funnel(@Body() b: FunnelDto) { return this.admin.funnel(b.telegramId, b.days ?? 7); }
