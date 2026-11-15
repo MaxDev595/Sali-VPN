@@ -24,7 +24,7 @@ export const copy: Record<LandingLanguage, {
     heroBadge: 'Android и Windows · без логов · WireGuard',
     heroTitle: ['Интернет без границ.', 'В одно касание.'],
     heroText: 'Sali VPN — быстрый и спокойный VPN. Установите приложение, войдите через Telegram — и всё работает. Без кодов, регистрации и паролей.',
-    trust: ['24 часа бесплатно', 'До 3 устройств на подписку', 'Оплата Stars или USDT'],
+    trust: ['24 часа бесплатно', 'До 3 устройств на подписку', 'Оплата в USDT'],
     howEyebrow: 'Как это работает', howTitle: 'Три шага — и вы онлайн', howText: 'Ваш аккаунт — это ваш Telegram. Подписка лежит на аккаунте и сама работает во всех ваших приложениях.',
     steps: [
       ['Установите Sali VPN', 'На Android или Windows — со страницы «Скачать». Без форм, почты и паролей.'],
@@ -34,7 +34,7 @@ export const copy: Record<LandingLanguage, {
     plansEyebrow: 'Тарифы', plansTitle: 'Честные цены', plansText: 'Без автосписаний. Подписка на аккаунт — до 3 устройств. Новая покупка добавляет дни к текущей.',
     free: 'Бесплатно', freeText: '24 часа VPN без ограничений — проверьте всё сами', freeCta: 'Получить в боте',
     month: '1 месяц', year: '1 год', perMonth: '/мес', best: 'Выгоднее всего', buyCta: 'Купить в боте',
-    benefits: ['Все серверы', 'До 3 устройств', 'Без логов и рекламы'], payMethods: 'Telegram Stars · USDT (TON)',
+    benefits: ['Все серверы', 'До 3 устройств', 'Без логов и рекламы'], payMethods: 'USDT (TON)',
     featuresEyebrow: 'Возможности', featuresTitle: 'Всё, что нужно. Ничего лишнего.',
     features: [
       ['bolt', 'Быстро', 'WireGuard — современный протокол, который не тормозит и бережёт батарею.'],
@@ -57,7 +57,7 @@ export const copy: Record<LandingLanguage, {
     faqTitle: 'Частые вопросы',
     faqs: [
       ['Насколько Sali защищён от взлома?', 'Трафик шифруется современными протоколами, ключи хранятся зашифрованными, пользователи изолированы друг от друга, вход на серверы — только по ключам команды, журналы не пишутся на диск. Детали мы намеренно не раскрываем. Подробнее — в справке, раздел «Безопасность» (salivpn.com/help/security).'],
-      ['Почему оплата в Telegram, а не в приложении?', 'Так быстрее и дешевле для вас: доступны Telegram Stars и USDT. После оплаты подписка сразу появляется во всех ваших приложениях.'],
+      ['Почему оплата в Telegram, а не в приложении?', 'Так быстрее и дешевле для вас: оплата в USDT (сеть TON). После оплаты подписка сразу появляется во всех ваших приложениях.'],
       ['Как войти в приложение?', 'Нажмите «Войти через Telegram», в Telegram — «Запустить». Если бот не ответил, отправьте ему номер устройства SL-XXXX-XXXX — приложение уже скопировало его.'],
       ['Есть приложение для компьютера?', 'Да, для Windows. Скачайте установщик на странице «Скачать» — там же пошаговая инструкция.'],
       ['Что будет, если переустановить приложение?', 'Ничего страшного: войдите через тот же Telegram — подписка на месте, а старая установка уберётся сама.'],
@@ -73,7 +73,7 @@ export const copy: Record<LandingLanguage, {
     heroBadge: 'Android & Windows · no logs · WireGuard',
     heroTitle: ['Internet without borders.', 'In one tap.'],
     heroText: 'Sali VPN is fast and calm. Install the app, sign in with Telegram — and you are online. No codes, no sign-up, no passwords.',
-    trust: ['24 hours free', 'Up to 3 devices per plan', 'Pay with Stars or USDT'],
+    trust: ['24 hours free', 'Up to 3 devices per plan', 'Pay with USDT'],
     howEyebrow: 'How it works', howTitle: 'Three steps and you are online', howText: 'Your account is your Telegram. The plan lives on the account and works in all your apps by itself.',
     steps: [
       ['Install Sali VPN', 'On Android or Windows from the Download page. No forms, e-mail or passwords.'],
@@ -83,7 +83,7 @@ export const copy: Record<LandingLanguage, {
     plansEyebrow: 'Pricing', plansTitle: 'Honest prices', plansText: 'No auto-renewals. One plan per account — up to 3 devices. A new purchase adds days on top.',
     free: 'Free', freeText: '24 hours of unlimited VPN to try everything', freeCta: 'Get it in the bot',
     month: '1 month', year: '1 year', perMonth: '/mo', best: 'Best value', buyCta: 'Buy in the bot',
-    benefits: ['All servers', 'Up to 3 devices', 'No logs, no ads'], payMethods: 'Telegram Stars · USDT (TON)',
+    benefits: ['All servers', 'Up to 3 devices', 'No logs, no ads'], payMethods: 'USDT (TON)',
     featuresEyebrow: 'Features', featuresTitle: 'Everything you need. Nothing you don’t.',
     features: [
       ['bolt', 'Fast', 'WireGuard is modern, quick and easy on the battery.'],
@@ -106,7 +106,7 @@ export const copy: Record<LandingLanguage, {
     faqTitle: 'FAQ',
     faqs: [
       ['How well is Sali protected from hackers?', 'Traffic is encrypted with modern protocols, keys are stored encrypted, users are isolated from each other, servers accept only the team’s keys, and logs are never written to disk. We deliberately keep the details private. More in the Help centre, "Security" (salivpn.com/help/security).'],
-      ['Why pay in Telegram instead of the app?', 'It is faster and cheaper for you: Stars and USDT are available. After paying, the plan appears in all your apps at once.'],
+      ['Why pay in Telegram instead of the app?', 'It is faster and cheaper for you: pay with USDT (TON network). After paying, the plan appears in all your apps at once.'],
       ['How do I sign in?', 'Tap "Sign in with Telegram", then "Start" in Telegram. If the bot stays silent, send it your device number SL-XXXX-XXXX — the app has already copied it.'],
       ['Is there a desktop app?', 'Yes, for Windows. Get the installer on the Download page — step-by-step guide included.'],
       ['What if I reinstall the app?', 'No problem: sign in with the same Telegram — your plan is still there and the old install is removed by itself.'],

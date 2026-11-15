@@ -38,9 +38,20 @@ test('rounds remaining duration up for user display', () => {
 test('plan buttons show the official price crossed out and the current one', () => {
   const { planButtonLabel } = require('../dist/keyboards');
   const plan = { code: 'pro_monthly', name: 'Sali Pro', durationDays: 30, priceUsd: 5, originalPriceUsd: 8, stars: 250, maxDevices: 3 };
-  assert.match(planButtonLabel(plan), /^1 мес\. — \$̶8̶ \$5 · 250 ⭐$/);
-  const discounted = { ...plan, discountPercent: 10, discountedPriceUsd: 4.5, discountedStars: 225 };
-  assert.match(planButtonLabel(discounted), /\$̶5̶ \$4\.50 · 225 ⭐/);
+  const saved = process.env.BOT_PAYMENT_METHODS;
+  try {
+    // USDT only (production since 2026-11-15): no Stars price on the button.
+    process.env.BOT_PAYMENT_METHODS = 'crypto';
+    assert.match(planButtonLabel(plan), /^1 мес\. — \$̶8̶ \$5$/);
+    const discounted = { ...plan, discountPercent: 10, discountedPriceUsd: 4.5, discountedStars: 225 };
+    assert.match(planButtonLabel(discounted), /\$̶5̶ \$4\.50$/);
+    // Stars on: the Stars price comes back.
+    process.env.BOT_PAYMENT_METHODS = 'stars,crypto';
+    assert.match(planButtonLabel(plan), /^1 мес\. — \$̶8̶ \$5 · 250 ⭐$/);
+    assert.match(planButtonLabel(discounted), /\$̶5̶ \$4\.50 · 225 ⭐/);
+  } finally {
+    if (saved === undefined) delete process.env.BOT_PAYMENT_METHODS; else process.env.BOT_PAYMENT_METHODS = saved;
+  }
 });
 
 test('main menu is three buttons', () => {

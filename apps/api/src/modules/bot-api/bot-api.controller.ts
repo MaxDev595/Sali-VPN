@@ -88,6 +88,11 @@ export class BotApiController {
     return user;
   }
 
+  /** Payment methods the bot offers (BOT_PAYMENT_METHODS, shared with the bot on Render). */
+  private methodEnabled(method: string) {
+    return (process.env.BOT_PAYMENT_METHODS ?? 'crypto').split(',').map((m) => m.trim()).includes(method);
+  }
+
   /** Stars for a plan; with a referral discount, the same share comes off the Stars price. */
   private starsFor(plan: { code: string; priceUsd: unknown }, discountPercent = 0) {
     const override = Number(process.env[`STARS_PRICE_${plan.code.toUpperCase()}`]);
@@ -223,6 +228,7 @@ export class BotApiController {
     const plan = await this.prisma.plan.findFirst({ where: { code: dto.planCode, isActive: true } });
     if (!plan) throw new NotFoundException('Тариф не найден');
 
+    if (!this.methodEnabled(dto.method)) throw new BadRequestException('Этот способ оплаты больше не принимается. Оплатите в USDT (TON).');
     if (dto.method === 'stars') {
       await this.payments.releaseStaleDiscounts(user.id);
       const payment = await this.payments.createStarsPayment(user.id, plan.id);
@@ -250,6 +256,7 @@ export class BotApiController {
   async precheck(@Body() dto: PrecheckDto) {
     const user = await this.requireUser(dto.telegramId);
     const payment = await this.prisma.payment.findFirst({ where: { id: dto.paymentId, userId: user.id }, include: { plan: true } });
+    if (!this.methodEnabled('stars')) return { ok: false, error: 'Оплата звёздами больше не принимается. Оплатите в USDT (TON): «💎 Подписка» → тариф.' };
     if (!payment || payment.status !== PaymentStatus.PENDING) return { ok: false, error: 'Счёт устарел. Выберите тариф заново.' };
     if (dto.currency !== 'XTR' || dto.amount !== this.starsFor(payment.plan, payment.discountPercent ?? 0)) return { ok: false, error: 'Сумма изменилась. Выберите тариф заново.' };
     return { ok: true };

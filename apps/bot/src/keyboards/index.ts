@@ -63,7 +63,8 @@ export function planButtonLabel(plan: BotPlan) {
   const old = plan.discountedPriceUsd ? plan.priceUsd : plan.originalPriceUsd;
   const stars = plan.discountedStars ?? plan.stars;
   const perMonth = plan.durationDays >= 360 ? ` · ${money(Math.round((price / 12) * 100) / 100)}/мес` : '';
-  return `${period(plan.durationDays)} — ${old && old > price ? `${strike(money(old))} ` : ''}${money(price)} · ${stars} ⭐${perMonth}`;
+  const starsLabel = enabledMethods().includes('stars') ? ` · ${stars} ⭐` : '';
+  return `${period(plan.durationDays)} — ${old && old > price ? `${strike(money(old))} ` : ''}${money(price)}${starsLabel}${perMonth}`;
 }
 
 export function plansKeyboard(plans: BotPlan[]) {
@@ -74,7 +75,7 @@ const METHOD_LABELS = { stars: '⭐ Telegram Stars', crypto: '💵 USDT (сет�
 export type PayMethod = keyof typeof METHOD_LABELS;
 
 export function enabledMethods(): PayMethod[] {
-  const raw = (process.env.BOT_PAYMENT_METHODS ?? 'stars,crypto').split(',').map((item) => item.trim());
+  const raw = (process.env.BOT_PAYMENT_METHODS ?? 'crypto').split(',').map((item) => item.trim());
   return raw.filter((item): item is PayMethod => item in METHOD_LABELS);
 }
 

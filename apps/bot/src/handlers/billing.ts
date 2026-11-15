@@ -144,6 +144,13 @@ export function createBillingHandlers(config: BotConfig) {
     pay: async (ctx: Context, method: PayMethod, planCode: string): Promise<void> => {
       const me = profile(ctx);
       if (!me) return;
+      // An old message may still carry a button for a method that is now off (e.g. Stars).
+      if (!enabledMethods().includes(method)) {
+        const methods = enabledMethods();
+        if (methods.length === 1) return handlers.pay(ctx, methods[0], planCode);
+        await ctx.reply('Этот способ оплаты больше не принимается. Выберите другой:', methodsKeyboard(planCode));
+        return;
+      }
       try {
         const purchase = await api.purchase(me, planCode, method);
         if (purchase.method === 'stars') {
