@@ -356,11 +356,11 @@ export function paidMessage(planName: string, info: AccountInfo) {
   const head = `✅ <b>Оплата прошла!</b>\n\nПодписка <b>${planName}</b> активна ${untilText(info.until)}.\nОна на вашем аккаунте и работает на всех ваших устройствах — до ${info.maxDevices}.`;
   return info.devices
     ? `${head}\n\nОткройте приложение Sali VPN и нажмите «Подключить».`
-    : `${head}\n\n📲 Осталось подключить приложение: скачайте Sali VPN и нажмите в нём «Войти через Telegram».`;
+    : `${head}\n\nОсталось подключиться — кнопка ниже 👇`;
 }
 
 export function paidKeyboard(info: AccountInfo) {
-  return { inline_keyboard: [info.devices ? [{ text: '📱 Мои устройства', callback_data: 'menu_devices' }] : [{ text: '📲 Скачать приложение', callback_data: 'menu_download' }]] };
+  return { inline_keyboard: [info.devices ? [{ text: '📱 Устройства', callback_data: 'menu_devices' }] : [{ text: '⚡ Подключиться', callback_data: 'menu_connect' }]] };
 }
 
 export function activationCodeMessage(code: IssuedCode) {

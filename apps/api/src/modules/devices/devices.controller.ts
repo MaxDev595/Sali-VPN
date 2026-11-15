@@ -53,7 +53,7 @@ export class DevicesController {
     const tg = me.linkedTelegramId ?? me.telegramId;
     const target = await this.prisma.user.findUnique({ where: { publicId: normalizePublicId(dto.publicId) } });
     if (!tg || !target) throw new NotFoundException('Устройство не найдено');
-    if (target.id === me.id) throw new BadRequestException('Это устройство нельзя удалить отсюда. Отвяжите его в Telegram-боте: «Мои устройства».');
+    if (target.id === me.id) throw new BadRequestException('Это устройство нельзя удалить отсюда. Отвяжите его в Telegram-боте: «💎 Подписка» → «📱 Устройства».');
     const app = await this.subscriptions.unlinkInstallation(tg, target.id);
     if (!app) throw new NotFoundException('Это устройство не привязано к вашему аккаунту');
     return { ok: true };

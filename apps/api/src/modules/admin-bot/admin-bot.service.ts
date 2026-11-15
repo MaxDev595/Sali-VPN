@@ -157,8 +157,8 @@ export class AdminBotService {
     const until = !sub?.expiresAt || sub.expiresAt.getFullYear() > new Date().getFullYear() + 50 ? 'бессрочно' : `до ${date(sub.expiresAt)}`;
     const how = devices.length
       ? `✅ Уже работает на всех устройствах вашего аккаунта (до ${sub?.plan.maxDevices ?? 3}). Откройте Sali VPN и нажмите «Подключить».`
-      : '📲 Осталось подключить приложение: скачайте Sali VPN и нажмите в нём «Войти через Telegram» — подписка подхватится сама.';
-    const keyboard = devices.length ? undefined : { inline_keyboard: [[{ text: '📲 Скачать приложение', callback_data: 'menu_download' }]] };
+      : 'Осталось подключиться — кнопка ниже 👇';
+    const keyboard = devices.length ? undefined : { inline_keyboard: [[{ text: '⚡ Подключиться', callback_data: 'menu_connect' }]] };
     const delivered = await this.notifications.sendHtml(account.id, `${head}\nДействует: <b>${until}</b>.\n\n${how}`, keyboard).catch(() => false);
     void this.nodes.notifyAdmins(`Админ ${adminId} выдал подписку «${plan.name}» (${durationText(days)}) → ${this.title(account)}.`);
     return { mode: 'direct' as const, code: '', delivered, devices: devices.map((d) => formatPublicId(d.publicId)), activationError: null, until };

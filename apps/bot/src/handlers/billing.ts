@@ -1,31 +1,30 @@
 import { Context, Markup } from 'telegraf';
 import { BotConfig } from '../config';
 import { api, ApiRejection, TelegramProfile } from '../services/api-client';
-import { happEnabled, happRow } from './happ';
+import { happRow } from './happ';
+import { connect } from './connect';
 import {
   checkPaymentKeyboard,
   chooseDeviceKeyboard,
   codeKeyboard,
-  downloadKeyboard,
+  connectKeyboard,
   enabledMethods,
   mainReplyKeyboard,
   methodsKeyboard,
   PayMethod,
-  plansKeyboard,
+  subscriptionKeyboard,
   welcomeKeyboard,
-  afterFreeKeyboard,
 } from '../keyboards';
 import {
   codesListMessage,
   devicesMessage,
-  freeStartedMessage,
   paidAccountMessage,
   genericError,
   linkResultMessage,
   paidCodeMessage,
-  plansMessage,
   redeemedMessage,
   referredWelcome,
+  subscriptionText,
 } from '../messages';
 
 /** Sali ID typed by the customer: SL-7K4P-Q2M9, sl7k4pq2m9, 7K4P Q2M9… */
@@ -63,7 +62,7 @@ const prettyId = (raw: string) => `SL-${raw.slice(0, 4)}-${raw.slice(4)}`;
 function unlinkKeyboard(others: Array<{ publicId: string; platform: string | null }>) {
   return Markup.inlineKeyboard([
     ...others.map((o) => [Markup.button.callback(`🔓 Отвязать ${o.platform === 'WINDOWS' ? '💻' : '📱'} ${o.publicId}`, `unl_${rawId(o.publicId)}`)]),
-    [Markup.button.callback('📱 Мои устройства', 'menu_devices')],
+    [Markup.button.callback('📱 Устройства', 'menu_devices')],
   ]);
 }
 
@@ -88,7 +87,7 @@ export function createBillingHandlers(config: BotConfig) {
           if (result.link.share?.covered) return;
           if (result.link.status === 'linked' || result.link.status === 'already') {
             await ctx.replyWithHTML(
-              result.freeUsed ? 'Осталось выбрать тариф 👇' : 'Начните с бесплатного тарифа или сразу выберите подписку 👇',
+              result.freeUsed ? 'Подключиться 👇' : 'Попробуйте бесплатно 👇',
               welcomeKeyboard(result.freeUsed),
             );
           }
@@ -98,28 +97,29 @@ export function createBillingHandlers(config: BotConfig) {
         if (startParam === 'free') return handlers.free(ctx);
         if (startParam?.startsWith('doc_')) return;
         await ctx.replyWithHTML(
-          [
-            '<b>Sali VPN</b> — быстрый и приватный VPN без журналов.',
-            '',
-            result.freeUsed
-              ? 'Подключение — кнопка «⚡ Подключиться». Подписка — «💎 Купить подписку».'
-              : '<b>Подключение за 2 нажатия:</b>\n1. «🎁 Получить 24 часа бесплатно» — без карты и оплаты\n2. «⚡ Подключиться»',
-            '',
-            '🔒 Мы не храним историю посещений и не видим, что вы делаете в интернете. Подробнее — «🔒 Безопасность».',
-          ].join('\n'),
+          result.freeUsed
+            ? '<b>Sali VPN</b> — с возвращением!\n\nВсё управление — в трёх кнопках внизу.'
+            : '<b>Sali VPN</b> — быстрый VPN без журналов.\n\nПервые <b>24 часа бесплатно</b>, без карты.',
           mainReplyKeyboard,
         );
         if (result.referred) await ctx.replyWithHTML(referredWelcome(result.friendBonusHours ?? 3));
-        await ctx.reply('👇', welcomeKeyboard(result.freeUsed));
+        await ctx.reply(result.freeUsed ? 'Подключиться 👇' : 'Начните здесь 👇', welcomeKeyboard(result.freeUsed));
       } catch (error) {
         await fail(ctx, error, 'start');
       }
     },
 
+    /** «💎 Подписка»: status, plans as buttons, devices and invites — one screen. */
     buy: async (ctx: Context): Promise<void> => {
+      if (!ctx.from) return;
       try {
-        const plans = await api.plans(ctx.from?.id);
-        await ctx.replyWithHTML(plansMessage(plans), plansKeyboard(plans));
+        const [plans, state, overview] = await Promise.all([
+          api.plans(ctx.from.id),
+          api.getState(ctx.from.id).catch(() => null),
+          api.devices(ctx.from.id).catch(() => null),
+        ]);
+        const discount = plans.find((plan) => plan.discountPercent)?.discountPercent;
+        await ctx.replyWithHTML(subscriptionText(state, overview?.subscription ?? null, discount), subscriptionKeyboard(plans));
       } catch (error) {
         await fail(ctx, error, 'buy');
       }
@@ -207,7 +207,7 @@ export function createBillingHandlers(config: BotConfig) {
           return;
         }
         const result = await api.starsPaid(ctx.from.id, payment.invoice_payload, payment.total_amount, payment.currency, payment.telegram_payment_charge_id);
-        if (result.paid) await ctx.replyWithHTML(paidAccountMessage(result.paid), result.paid.devices ? undefined : downloadKeyboard());
+        if (result.paid) await ctx.replyWithHTML(paidAccountMessage(result.paid), result.paid.devices ? undefined : connectKeyboard);
         else if (result.code) await ctx.replyWithHTML(paidCodeMessage(result.code), codeKeyboard(result.code));
         else await ctx.reply('Оплата получена ✅ Подписка включится на вашем аккаунте через минуту.');
       } catch (error) {
@@ -224,7 +224,7 @@ export function createBillingHandlers(config: BotConfig) {
         const result = await api.paymentStatus(ctx.from.id, paymentId);
         if (result.status === 'SUCCEEDED' && (result.paid || result.code)) {
           await ctx.answerCbQuery('Оплата найдена ✅').catch(() => undefined);
-          if (result.paid) await ctx.replyWithHTML(paidAccountMessage(result.paid), result.paid.devices ? undefined : downloadKeyboard());
+          if (result.paid) await ctx.replyWithHTML(paidAccountMessage(result.paid), result.paid.devices ? undefined : connectKeyboard);
           else await ctx.replyWithHTML(paidCodeMessage(result.code!), codeKeyboard(result.code!));
         } else if (result.status === 'FAILED') {
           await ctx.answerCbQuery('Счёт истёк или платёж не прошёл', { show_alert: true }).catch(() => undefined);
@@ -240,15 +240,17 @@ export function createBillingHandlers(config: BotConfig) {
     free: async (ctx: Context): Promise<void> => {
       if (!ctx.from) return;
       try {
-        const started = await api.freeCode(ctx.from.id);
-        await ctx.replyWithHTML(freeStartedMessage(started), afterFreeKeyboard);
+        await api.freeCode(ctx.from.id);
+        // Straight to the ways to connect: no extra «Подключиться» tap.
+        await connect(ctx, '✅ <b>24 часа бесплатно включены!</b>');
       } catch (error) {
         if (error instanceof ApiRejection && error.status === 404) {
           await api.start(profile(ctx)!).catch(() => undefined);
           return handlers.free(ctx);
         }
         if (error instanceof ApiRejection) {
-          await ctx.reply(`${error.message}. Выберите подписку на месяц или год 👇`, Markup.inlineKeyboard([[Markup.button.callback('💎 Купить подписку', 'menu_buy')]]));
+          // «уже использованы» or «уже есть подписка»: both ways forward, the customer picks.
+          await ctx.reply(error.message, Markup.inlineKeyboard([[Markup.button.callback('⚡ Подключиться', 'menu_connect'), Markup.button.callback('💎 Подписка', 'menu_plan')]]));
           return;
         }
         await fail(ctx, error, 'free');
@@ -270,8 +272,8 @@ export function createBillingHandlers(config: BotConfig) {
         const overview = await api.devices(ctx.from.id);
         await ctx.replyWithHTML(devicesMessage(overview), Markup.inlineKeyboard([
           ...overview.devices.map((d) => [Markup.button.callback(`🔓 Отвязать ${d.publicId}`, `unl_${rawId(d.publicId)}`)]),
-          [Markup.button.callback('📲 Скачать приложение', 'menu_download')],
           ...await happRow(),
+          [Markup.button.callback('← Подписка', 'menu_plan')],
         ]));
       } catch (error) {
         await fail(ctx, error, 'devices');
@@ -309,25 +311,11 @@ export function createBillingHandlers(config: BotConfig) {
       if (!yes) return;
       try {
         const r = await api.unlink(ctx.from.id, yes[1]);
-        await ctx.replyWithHTML(`🔓 Устройство <b>${r.publicId}</b> отвязано. Если на новом устройстве приложение уже открыто — нажмите «Подключить».`);
+        await ctx.replyWithHTML(`🔓 Устройство <b>${r.publicId}</b> отвязано, место свободно.`);
         await handlers.devices(ctx);
       } catch (error) {
         await fail(ctx, error, 'devices');
       }
-    },
-
-    download: async (ctx: Context) => {
-      await ctx.replyWithHTML(
-        [
-          '<b>Приложение Sali VPN</b>',
-          '',
-          'Есть для телефона (Android) и компьютера (Windows). Одна подписка — до 3 устройств.',
-          '',
-          'После установки откройте приложение и нажмите «Войти через Telegram» — подписка появится сама, устройство — в «📱 Мои устройства».',
-          ...((await happEnabled()) ? ['', 'На iPhone и Mac — через приложение Happ: кнопка «📲 Подключить в Happ».'] : []),
-        ].join('\n'),
-        (await happEnabled()) ? Markup.inlineKeyboard([...downloadKeyboard().reply_markup.inline_keyboard, ...await happRow()]) : downloadKeyboard(),
-      );
     },
 
     /** apply_<code> and at_<code>_<SaliID>: redeem a code onto a linked device without typing. */

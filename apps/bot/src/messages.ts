@@ -16,21 +16,26 @@ export function date(value: string | null) {
   return value ? new Date(value).toLocaleDateString('ru-RU', { timeZone: 'UTC' }) : '—';
 }
 
-export function accessText(state: BotUserState) {
-  if (state.state === 'BLOCKED') return '<b>Sali VPN</b>\n\nДоступ к аккаунту ограничен. Обратитесь в поддержку.';
-  if (state.state === 'SUBSCRIPTION_ACTIVE' && state.subscription) {
-    return `<b>Sali VPN</b>\n\n🟢 VPN доступен\nТариф: ${state.subscription.plan.name}\nДействует до: ${date(state.subscription.expiresAt)}`;
-  }
-  if (state.state === 'TRIAL_ACTIVE' && state.trial) {
-    return `<b>Sali VPN</b>\n\n🟢 VPN доступен\nТариф: бесплатный\nОсталось: ${duration(state.trial.secondsRemaining)}`;
-  }
-  if (state.state === 'SUBSCRIPTION_EXPIRED') {
-    return '<b>Подписка закончилась</b>\n\nДля продолжения использования Sali VPN необходимо продлить подписку.';
-  }
-  if (state.state === 'TRIAL_EXPIRED') {
-    return '<b>Пробный период закончился</b>\n\nЧтобы продолжить пользоваться Sali VPN, подключите подписку.';
-  }
-  return '<b>Sali VPN</b>\n\nVPN доступ: неактивен';
+/** «💎 Подписка»: one line of status, what a subscription gives, and the prices are the buttons. */
+const untilText = (iso: string | null) => (!iso || new Date(iso).getFullYear() > new Date().getFullYear() + 50 ? 'бессрочно' : `до ${date(iso)}`);
+
+export function subscriptionText(
+  state: BotUserState | null,
+  sub: { plan: string; until: string | null; used: number; max: number } | null,
+  discountPercent?: number,
+) {
+  if (state?.state === 'BLOCKED') return '<b>Sali VPN</b>\n\nДоступ к аккаунту ограничен. Напишите в поддержку.';
+  const status = sub
+    ? `🟢 <b>Подписка активна</b> ${untilText(sub.until)}\nУстройств: ${sub.used} из ${sub.max}`
+    : state?.trial?.status === 'ACTIVE'
+      ? `🎁 <b>Бесплатный доступ</b> — осталось ${duration(state.trial.secondsRemaining)}`
+      : '⚪️ <b>Сейчас доступа нет</b>';
+  return [
+    status,
+    '',
+    sub ? 'Продлить — дни добавятся к текущим:' : 'Подписка: все серверы, без рекламы, до 3 устройств.',
+    ...(discountPercent ? ['', `🎁 Ваша скидка за друзей <b>${discountPercent}%</b> уже в цене.`] : []),
+  ].join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -46,11 +51,9 @@ export function period(days: number) {
 export const howItWorks = [
   '<b>Как это работает</b>',
   '',
-  '1️⃣ Нажмите «🎁 Получить 24 часа бесплатно» — без карты и оплаты',
-  '2️⃣ Нажмите «⚡ Подключиться» и выберите приложение: Sali (Android, Windows) или Happ (iPhone, Mac)',
-  '3️⃣ Понравилось — подписку покупаете здесь, в боте, она сама появится в приложении',
-  '',
-  'Подписка — на ваш аккаунт: до 3 устройств, не пропадает при переустановке. Никаких кодов.',
+  '1. «🎁 Попробовать бесплатно» — 24 часа без карты и оплаты.',
+  '2. Выберите, где пользоваться: Android, Windows, iPhone или Mac.',
+  '3. Понравилось — «💎 Подписка». Она сразу работает во всех ваших приложениях, до 3 устройств.',
 ].join('\n');
 
 export function paidCodeMessage(code: IssuedCode) {
@@ -95,20 +98,17 @@ export function codesListMessage(codes: OwnedCode[]) {
 
 const platformIcon = (p?: string | null) => (p === 'WINDOWS' || p === 'MACOS' ? '💻' : '📱');
 const platformName = (p?: string | null) => (p === 'WINDOWS' ? 'ПК (Windows)' : p === 'MACOS' ? 'Mac' : p === 'IOS' ? 'iPhone' : 'Android');
-const untilText = (iso: string | null) => (!iso || new Date(iso).getFullYear() > new Date().getFullYear() + 50 ? 'бессрочно' : `до ${date(iso)}`);
 
 export function devicesMessage({ devices, subscription }: DevicesOverview) {
   if (!devices.length) {
     return [
-      '<b>Мои устройства</b>',
+      '<b>Устройства</b>',
       '',
-      'Пока ни одно устройство не привязано.',
-      '',
-      'Откройте приложение Sali VPN → «Привязать Telegram». Или просто пришлите сюда ваш Sali ID — он выглядит так: <code>SL-XXXX-XXXX</code>.',
+      'Пока ни одного. Нажмите «⚡ Подключиться» — устройство появится здесь само.',
     ].join('\n');
   }
   const head = subscription
-    ? [`💎 <b>${subscription.plan}</b> ${untilText(subscription.until)}`, `Работает на <b>${subscription.used} из ${subscription.max}</b> устройств — телефон, ПК, переустановленное приложение.`, '']
+    ? [`💎 <b>${subscription.plan}</b> ${untilText(subscription.until)}`, `Занято устройств: <b>${subscription.used} из ${subscription.max}</b>`, '']
     : [];
   const lines = devices.map((device) => {
     const status = device.active
@@ -117,7 +117,7 @@ export function devicesMessage({ devices, subscription }: DevicesOverview) {
     const used = device.idleDays == null ? '\n     ⚠️ ещё ни разу не подключалось' : device.idleDays >= 14 ? `\n     ⚠️ не используется ${device.idleDays} дн. — можно отвязать` : '';
     return `${platformIcon(device.platform)} <b>${device.publicId}</b> · ${platformName(device.platform)}\n     ${status}${used}`;
   });
-  return ['<b>Мои устройства</b>', '', ...head, ...lines, '', 'Старое или удалённое устройство можно отвязать кнопкой ниже — освободится место.', 'Чтобы добавить новое, откройте в приложении «Привязать Telegram» или пришлите сюда его Sali ID.'].join('\n');
+  return ['<b>Устройства</b>', '', ...head, ...lines, '', 'Старое устройство можно отвязать кнопкой ниже — место освободится для нового.'].join('\n');
 }
 
 export type LinkNotes = { replaced: string[]; freed: string | null; trialStarted: boolean };
@@ -128,7 +128,7 @@ export function linkNotesText(notes?: LinkNotes | null) {
   const lines = [
     notes.trialStarted ? '🎁 <b>24 часа бесплатно уже включены</b> — нажмите «Подключить» в приложении.' : null,
     notes.replaced.length ? `♻️ Старая установка ${notes.replaced.join(', ')} на этом же устройстве убрана — одно устройство, один номер.` : null,
-    notes.freed ? `📱 На аккаунте было 3 устройства — отключили ${notes.freed}, им дольше всех не пользовались. Вернуть можно в «Мои устройства».` : null,
+    notes.freed ? `📱 На аккаунте было 3 устройства — отключили ${notes.freed}, им дольше всех не пользовались. Вернуть можно в «💎 Подписка» → «📱 Устройства».` : null,
   ].filter(Boolean);
   return lines.length ? `\n\n${lines.join('\n')}` : '';
 }
@@ -154,47 +154,20 @@ function money(value: number) {
   return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
 }
 
-/** «Купить подписку»: официальная цена зачёркнута, ниже — текущая и, если есть, реферальная скидка. */
-export function plansMessage(plans: BotPlan[]) {
-  const lines = plans.map((plan) => {
-    const old = plan.originalPriceUsd && plan.originalPriceUsd > plan.priceUsd ? `<s>${money(plan.originalPriceUsd)}</s> ` : '';
-    const now = plan.discountedPriceUsd
-      ? `<s>${money(plan.priceUsd)}</s> <b>${money(plan.discountedPriceUsd)}</b>`
-      : `<b>${money(plan.priceUsd)}</b>`;
-    const stars = plan.discountedStars ?? plan.stars;
-    return `• ${period(plan.durationDays)} — ${old}${now} · ${stars} ⭐`;
-  });
-  const discount = plans.find((plan) => plan.discountPercent)?.discountPercent;
-  return [
-    '<b>Подписка Sali VPN</b>',
-    '',
-    ...lines,
-    '',
-    '• все серверы и максимальная скорость',
-    '• без рекламы и логов',
-    '• до 3 устройств: телефон, ПК и ещё одно',
-    ...(discount ? ['', `🎁 У вас есть реферальная скидка <b>${discount}%</b> — она уже учтена в цене.`] : []),
-    '',
-    'После оплаты подписка сразу включится на вашем аккаунте — во всех ваших приложениях. Если подписка уже есть, дни добавятся к текущим.',
-  ].join('\n');
-}
-
 export function referralMessage(stats: ReferralStats) {
   return [
-    '<b>Приглашайте друзей в Sali VPN</b>',
+    '<b>Пригласите друга</b>',
     '',
-    `• Друг получает <b>+${stats.friendBonusHours} часа</b> VPN бесплатно — сразу после входа в приложение.`,
-    `• Вы получаете <b>скидку ${stats.discountPercent}%</b> на следующую оплату за каждого друга.`,
+    `Друг получит <b>+${stats.friendBonusHours} часа</b> бесплатно, а вы — <b>скидку ${stats.discountPercent}%</b> на следующую оплату.`,
     '',
-    `Приглашено: <b>${stats.totalInvited}</b> · бонусов получено: <b>${stats.totalRewarded}</b>`,
-    `Скидок ждёт следующей оплаты: <b>${stats.availableDiscounts}</b>`,
+    `Приглашено: <b>${stats.totalInvited}</b>${stats.availableDiscounts ? ` · скидок ждёт оплаты: <b>${stats.availableDiscounts}</b>` : ''}`,
     '',
-    'Бонус действует только для новых аккаунтов Telegram. Ссылка — в сообщении ниже.',
+    'Ваша ссылка — в следующем сообщении. Перешлите его другу.',
   ].join('\n');
 }
 
 export function referredWelcome(hours: number) {
-  return `🎁 <b>Вы пришли по приглашению друга</b>\n\nПосле входа в приложение вы получите <b>+${hours} часа</b> VPN бесплатно.`;
+  return `🎁 <b>Вы пришли по приглашению друга</b>\n\nВам <b>+${hours} часа</b> VPN бесплатно — они добавятся, когда подключитесь.`;
 }
 
 /** Bot purchase finished: it is already on the account. */
@@ -203,13 +176,5 @@ export function paidAccountMessage(paid: { plan: string; until: string | null; m
   const head = `✅ <b>Оплата прошла!</b>\n\nПодписка <b>${paid.plan}</b> активна ${until}.\nОна на вашем аккаунте и работает на всех ваших устройствах — до ${paid.maxDevices}.`;
   return paid.devices
     ? `${head}\n\nОткройте приложение Sali VPN и нажмите «Подключить».`
-    : `${head}\n\n📲 Осталось подключить приложение: скачайте Sali VPN и нажмите в нём «Войти через Telegram».`;
-}
-
-/** «🎁 24 часа бесплатно» from the bot. */
-export function freeStartedMessage(r: { device: string | null; expiresAt: string }) {
-  const until = new Date(r.expiresAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow' });
-  return r.device
-    ? `🎁 <b>24 часа бесплатно включены</b> на устройстве <b>${r.device}</b> — до ${until} (МСК).\n\nОткройте приложение и нажмите «Подключить» — или подключите ещё одно устройство кнопкой ниже.`
-    : `🎁 <b>24 часа бесплатно включены</b> — до ${until} (МСК).\n\nОсталась одна кнопка 👇`;
+    : `${head}\n\nОсталось подключиться — кнопка ниже 👇`;
 }

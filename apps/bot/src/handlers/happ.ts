@@ -16,7 +16,7 @@ export async function happEnabled() {
 
 /** Extra keyboard row for menus (empty when Happ is off). */
 export async function happRow() {
-  return (await happEnabled()) ? [[Markup.button.callback('📲 Подключить в Happ', 'menu_happ')]] : [];
+  return (await happEnabled()) ? [[Markup.button.callback('🍏 Ссылка для Happ', 'menu_happ')]] : [];
 }
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
@@ -26,17 +26,13 @@ function message(link: HappLink, rotated = false) {
   return [
     rotated ? '🔄 <b>Новая ссылка для Happ готова</b>\nСтарая больше не работает — добавьте новую в Happ заново.' : '📲 <b>Sali VPN в Happ</b>',
     '',
-    'Happ — приложение для iPhone, Android, Windows и Mac. Sali работает в нём по протоколу VLESS + Reality: трафик выглядит как обычный сайт, поэтому его труднее заблокировать.',
-    '',
-    '1. Установите Happ (кнопка «Открыть в Happ» подскажет ссылки).',
-    '2. Нажмите «Открыть в Happ» — серверы Sali добавятся сами.',
-    '   Или скопируйте ссылку ниже и добавьте её в Happ через «+» → «Вставить из буфера».',
+    'Нажмите «Открыть в Happ» — серверы Sali добавятся сами. Не открылось? Скопируйте ссылку ниже и вставьте в Happ через «+».',
     '',
     `<code>${esc(link.url)}</code>`,
     '',
     `Подписка до: <b>${until(link.expiresAt)}</b> · серверов: ${link.servers}`,
     '',
-    '🔒 Ссылка личная и работает как пароль — не пересылайте её. Если она попала к чужим, нажмите «Сбросить ссылку».',
+    '🔒 Ссылка личная, как пароль — не пересылайте её.',
   ].join('\n');
 }
 
@@ -49,7 +45,7 @@ function keyboard(link: HappLink) {
 
 async function fail(ctx: Context, error: unknown) {
   if (error instanceof ApiRejection) {
-    await ctx.reply(error.message, Markup.inlineKeyboard([[Markup.button.callback('💎 Купить подписку', 'menu_buy')]]));
+    await ctx.reply(error.message, Markup.inlineKeyboard([[Markup.button.callback('💎 Купить подписку', 'menu_plan')]]));
     return;
   }
   console.error('Bot happ error', error);

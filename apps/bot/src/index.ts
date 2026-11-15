@@ -9,7 +9,7 @@ import * as happ from './handlers/happ';
 import { connect } from './handlers/connect';
 import { createBillingHandlers } from './handlers/billing';
 import { genericError } from './messages';
-import { menuLabels } from './keyboards';
+import { legacyLabels, menuLabels } from './keyboards';
 
 // npm workspaces starts this process with apps/bot as the working directory.
 // Resolve from __dirname so both src/ (development) and dist/ (production)
@@ -17,18 +17,15 @@ import { menuLabels } from './keyboards';
 loadEnv({ path: resolve(__dirname, '../../../.env') });
 
 /**
- * Bot structure (payments live only here):
+ * Bot structure — three buttons, everything else one tap inside:
  *
- *   /start [link_<SaliID> | buy | free | ref_<id>]
- *     ├─ 💎 Купить подписку → месяц / год → Stars | USDT | карта → код SALI-XXXX-XXXX-XXXX
- *     ├─ 🎁 24 часа бесплатно → FREE-код (один на Telegram)
- *     ├─ 🔑 Мои коды       → все купленные коды и где активированы
- *     ├─ 📱 Мои устройства → привязанные приложения и их тариф
- *     ├─ 📲 Скачать приложение
- *     ├─ 👥 Пригласить друга
- *     ├─ 📖 Документация  → короткие статьи + ссылки на salivpn.com/help/*
- *     ├─ 💬 Поддержка (FAQ → бот поддержки)
- *     └─ ⚙️ Аккаунт
+ *   /start [link_<SaliID> | buy | free | ref_<id> | ad_<source>]
+ *     → «🎁 Попробовать бесплатно» → сразу способы подключения
+ *
+ *   ⚡ Подключиться → Android · Windows (приложение Sali) · iPhone · Mac (Happ)
+ *   💎 Подписка     → статус, тарифы кнопками → Stars | USDT | карта;
+ *                     📱 Устройства (отвязать, ссылка Happ) · 👥 Пригласить друга
+ *   ❓ Помощь       → как начать · не подключается · устройства · оплата · безопасность · написать нам
  *
  *   Text "SL-XXXX-XXXX" → привязать устройство; text with a code → «Активировать».
  */
@@ -47,16 +44,14 @@ async function main() {
     const payload = (ctx as Context & { startPayload?: string }).startPayload || undefined;
     await billing.start(ctx, payload);
   });
+  const toConnect = (ctx: Context) => connect(ctx);
   bot.command('menu', handlers.menu);
-  bot.command('buy', billing.buy);
+  bot.command('connect', toConnect);
+  bot.command(['buy', 'plan', 'subscription', 'account', 'vpn'], billing.buy);
   bot.command('free', billing.free);
   bot.command('codes', billing.codes);
   bot.command('devices', billing.devices);
-  bot.command('vpn', handlers.vpn);
-  bot.command('subscription', handlers.subscription);
-  bot.command('account', handlers.account);
-  bot.command('help', handlers.help);
-  bot.command('docs', handlers.docs);
+  bot.command(['help', 'docs'], handlers.help);
   bot.command('invite', handlers.invite);
   bot.command('myid', admin.myId);
   bot.command('addserver', admin.addServer);
@@ -66,47 +61,28 @@ async function main() {
   bot.command('node_free', admin.nodeFree);
   bot.command('node_paid', admin.nodePaid);
   bot.command('happ', happ.show);
-  bot.command('connect', connect);
   bot.command('admin', adminPanel.menu);
   bot.command('funnel', (ctx) => adminPanel.funnel(ctx));
   bot.action(/^adm:/, adminPanel.callback);
   // Admin panel steps (waiting for a name, a number of days, a message) come before the normal text handler.
   bot.on('text', adminPanel.text);
 
-  bot.hears(menuLabels.connect, connect);
-  bot.hears(menuLabels.buy, billing.buy);
-  bot.hears([menuLabels.free, '🎁 Бесплатный день', '🎁 Бесплатный тариф'], billing.free);
-  bot.hears([menuLabels.codes, '🔑 Мои коды'], billing.devices);
-  bot.hears(menuLabels.devices, billing.devices);
-  bot.hears(menuLabels.download, billing.download);
-  bot.hears(menuLabels.invite, handlers.invite);
-  bot.hears(menuLabels.support, handlers.help);
-  bot.hears(menuLabels.docs, handlers.docs);
-  bot.hears(menuLabels.settings, handlers.account);
-  // Old persistent keyboards
-  bot.hears(menuLabels.legacyVpn, handlers.vpn);
-  bot.hears(menuLabels.legacySubscription, handlers.subscription);
-  bot.hears(menuLabels.legacyTariffs, billing.buy);
-  bot.hears(menuLabels.legacyServers, handlers.servers);
-  bot.hears(menuLabels.legacyInvite, handlers.invite);
-  bot.hears(menuLabels.legacySupport, handlers.help);
-  bot.hears(menuLabels.legacySettings, handlers.account);
+  bot.hears([menuLabels.connect, ...legacyLabels.connect], toConnect);
+  bot.hears([menuLabels.plan, ...legacyLabels.plan], billing.buy);
+  bot.hears([menuLabels.help, ...legacyLabels.help], handlers.help);
+  bot.hears(legacyLabels.free, billing.free);
+  bot.hears(legacyLabels.devices, billing.devices);
+  bot.hears(legacyLabels.invite, handlers.invite);
 
-  bot.action('menu_buy', action(billing.buy));
+  bot.action('menu_connect', action(toConnect));
   bot.action('menu_free', action(billing.free));
-  bot.action('menu_codes', action(billing.devices));
+  bot.action(['menu_plan', 'menu_buy', 'menu_codes', 'menu_vpn', 'menu_subscription', 'menu_tariffs', 'menu_settings'], action(billing.buy));
   bot.action('menu_devices', action(billing.devices));
-  bot.action('menu_download', action(billing.download));
-  bot.action('menu_vpn', action(handlers.vpn));
-  bot.action('menu_subscription', action(handlers.subscription));
-  bot.action('menu_tariffs', action(billing.buy));
-  bot.action('menu_servers', action(handlers.servers));
+  bot.action('menu_download', action(toConnect));
   bot.action('menu_invite', action(handlers.invite));
-  bot.action('menu_support', action(handlers.help));
-  bot.action('menu_settings', action(handlers.account));
-  bot.action('menu_docs', action(handlers.docs));
+  bot.action(['menu_help', 'menu_support', 'menu_docs', 'menu_servers'], action(handlers.help));
+  bot.action(/^faq_/, action(handlers.help));
   bot.action('menu_happ', action(happ.show));
-  bot.action('menu_connect', action(connect));
   bot.action(/^happ_rotate/, happ.rotate);
   bot.action(/^doc_/, handlers.doc);
   bot.action(/^buy_/, billing.choosePlan);
@@ -115,7 +91,6 @@ async function main() {
   bot.action(/^(apply|at)_/, billing.apply);
   bot.action(/^unly?_/, billing.unlink);
   bot.action(/^lnk_/, billing.linkDevice);
-  bot.action(/^faq_/, handlers.faq);
   bot.action(/^language_(ru|en)$/, action((ctx) => billing.start(ctx)));
 
   bot.on('pre_checkout_query', billing.preCheckout);
@@ -142,16 +117,10 @@ async function main() {
   }
 
   await bot.telegram.setMyCommands([
-    { command: 'start', description: 'Открыть Sali VPN' },
+    { command: 'start', description: 'Начать' },
     { command: 'connect', description: '⚡ Подключиться' },
-    { command: 'buy', description: 'Купить подписку' },
-    { command: 'free', description: '24 часа бесплатно' },
-    { command: 'codes', description: 'Мои коды' },
-    { command: 'devices', description: 'Мои устройства' },
-    { command: 'invite', description: 'Пригласить друга' },
-    { command: 'docs', description: 'Документация' },
-    { command: 'account', description: 'Аккаунт' },
-    { command: 'help', description: 'Помощь и поддержка' },
+    { command: 'buy', description: '💎 Подписка' },
+    { command: 'help', description: '❓ Помощь' },
   ]).catch((error) => {
     console.warn('Failed to register bot commands; continuing with polling', error);
   });
@@ -160,11 +129,10 @@ async function main() {
     await bot.telegram.setMyCommands([
       { command: 'admin', description: '🛠 Админ-панель' },
       { command: 'start', description: 'Открыть Sali VPN' },
-      { command: 'buy', description: 'Купить подписку' },
-      { command: 'devices', description: 'Мои устройства' },
+      { command: 'buy', description: '💎 Подписка' },
       { command: 'nodes', description: 'VPN-серверы' },
       { command: 'funnel', description: '📉 Воронка' },
-      { command: 'help', description: 'Помощь и поддержка' },
+      { command: 'help', description: '❓ Помощь' },
     ], { scope: { type: 'chat', chat_id: Number(id) } }).catch(() => undefined);
   }
 

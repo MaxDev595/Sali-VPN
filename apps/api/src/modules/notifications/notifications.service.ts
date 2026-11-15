@@ -58,11 +58,9 @@ export class NotificationsService {
           text: 'Спасибо, что выбрали Sali VPN!\n\nВаш аккаунт создан. Желаем приятного и безопасного использования!',
           reply_markup: {
             keyboard: [
-              [{ text: '💎 Купить подписку' }],
-              [{ text: '🎁 Бесплатный тариф' }, { text: '🔑 Мои коды' }],
-              [{ text: '📱 Мои устройства' }, { text: '📲 Скачать приложение' }],
-              [{ text: '👥 Пригласить друга' }, { text: '💬 Поддержка' }],
-              [{ text: '⚙️ Аккаунт' }],
+              // Same three buttons as the bot's own menu (apps/bot/src/keyboards).
+              [{ text: '⚡ Подключиться' }],
+              [{ text: '💎 Подписка' }, { text: '❓ Помощь' }],
             ],
             resize_keyboard: true,
             is_persistent: true,

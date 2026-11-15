@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { accessText, duration } = require('../dist/messages');
+const { subscriptionText, duration } = require('../dist/messages');
 
 const base = {
   registered: true,
@@ -10,27 +10,23 @@ const base = {
   referralStats: { link: '' },
 };
 
-test('formats trial time without exposing technical data', () => {
-  const text = accessText({
+test('subscription screen: free time left, without technical data', () => {
+  const text = subscriptionText({
     ...base,
     state: 'TRIAL_ACTIVE',
     trial: { status: 'ACTIVE', startedAt: '', expiresAt: '', secondsRemaining: 2580 },
-  });
-  assert.match(text, /Осталось: 43 мин\./);
+  }, null);
+  assert.match(text, /осталось 43 мин\./);
   assert.doesNotMatch(text, /telegramId|token|credential/i);
 });
 
-test('formats active and expired subscription states', () => {
-  const active = accessText({
-    ...base,
-    state: 'SUBSCRIPTION_ACTIVE',
-    subscription: {
-      status: 'ACTIVE', startedAt: null, expiresAt: '2026-08-20T00:00:00.000Z', plan: { name: 'Sali Pro' },
-    },
-  });
-  assert.match(active, /Sali Pro/);
+test('subscription screen: active plan with devices, and no access', () => {
+  const active = subscriptionText({ ...base, state: 'SUBSCRIPTION_ACTIVE' }, { plan: 'Sali Pro', until: '2026-08-20T00:00:00.000Z', used: 1, max: 3 });
+  assert.match(active, /Подписка активна/);
   assert.match(active, /20\.08\.2026/);
-  assert.match(accessText({ ...base, state: 'SUBSCRIPTION_EXPIRED' }), /Подписка закончилась/);
+  assert.match(active, /1 из 3/);
+  assert.match(subscriptionText({ ...base, state: 'SUBSCRIPTION_EXPIRED' }, null), /доступа нет/);
+  assert.match(subscriptionText(null, null, 10), /скидка за друзей <b>10%<\/b>/);
 });
 
 test('rounds remaining duration up for user display', () => {
@@ -39,20 +35,24 @@ test('rounds remaining duration up for user display', () => {
   assert.equal(duration(3600), '1 ч.');
 });
 
-test('plans show the official price crossed out and the current one', () => {
-  const { plansMessage } = require('../dist/messages');
+test('plan buttons show the official price crossed out and the current one', () => {
   const { planButtonLabel } = require('../dist/keyboards');
   const plan = { code: 'pro_monthly', name: 'Sali Pro', durationDays: 30, priceUsd: 5, originalPriceUsd: 8, stars: 250, maxDevices: 3 };
-  assert.match(plansMessage([plan]), /<s>\$8<\/s> <b>\$5<\/b> · 250 ⭐/);
   assert.match(planButtonLabel(plan), /^1 мес\. — \$̶8̶ \$5 · 250 ⭐$/);
+  const discounted = { ...plan, discountPercent: 10, discountedPriceUsd: 4.5, discountedStars: 225 };
+  assert.match(planButtonLabel(discounted), /\$̶5̶ \$4\.50 · 225 ⭐/);
 });
 
-test('referral discount replaces the price and is announced', () => {
-  const { plansMessage } = require('../dist/messages');
-  const plan = { code: 'pro_monthly', name: 'Sali Pro', durationDays: 30, priceUsd: 5, originalPriceUsd: 8, stars: 250, maxDevices: 3, discountPercent: 10, discountedPriceUsd: 4.5, discountedStars: 225 };
-  const text = plansMessage([plan]);
-  assert.match(text, /<s>\$5<\/s> <b>\$4\.50<\/b> · 225 ⭐/);
-  assert.match(text, /скидка <b>10%<\/b>/);
+test('main menu is three buttons', () => {
+  const { mainReplyKeyboard } = require('../dist/keyboards');
+  const rows = mainReplyKeyboard.reply_markup.keyboard;
+  assert.equal(rows.flat().length, 3);
+});
+
+test('first screen has exactly one button', () => {
+  const { welcomeKeyboard } = require('../dist/keyboards');
+  assert.equal(welcomeKeyboard(false).reply_markup.inline_keyboard.flat().length, 1);
+  assert.equal(welcomeKeyboard(true).reply_markup.inline_keyboard.flat().length, 1);
 });
 
 test('referral message names both rewards', () => {
