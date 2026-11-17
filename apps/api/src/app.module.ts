@@ -25,6 +25,7 @@ import { CodesModule } from './modules/codes/codes.module';
 import { BotApiModule } from './modules/bot-api/bot-api.module';
 import { AdminBotModule } from './modules/admin-bot/admin-bot.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
+import { AppClientModule } from './modules/app/app.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { AnnouncementsModule } from './modules/announcements/announcements.modul
     BotApiModule,
     AdminBotModule,
     AnnouncementsModule,
+    AppClientModule,
     HappModule,
     HealthModule,
   ],

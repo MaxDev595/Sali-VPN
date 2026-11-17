@@ -7,7 +7,7 @@ import { VpnService } from '../vpn/vpn.service';
 import { CodesService } from '../codes/codes.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { formatCode, formatPublicId, normalizePublicId } from '../codes/code-format';
+import { formatCode, formatDeviceId, formatPublicId, normalizePublicId } from '../codes/code-format';
 
 /** 100 years: shown everywhere as «бессрочно». */
 export const FOREVER_DAYS = 36_500;
@@ -68,7 +68,7 @@ export class AdminBotService {
       const name = q.replace(/^@/, '').replace(/^https?:\/\/t\.me\//, '');
       user = await this.prisma.user.findFirst({ where: { username: { equals: name, mode: 'insensitive' }, telegramId: { not: null } } });
     }
-    if (!user) throw new NotFoundException('Не нашёл. Пришлите @username, Telegram ID или номер устройства SL-XXXX-XXXX. Человек должен хотя бы раз открыть бота или приложение.');
+    if (!user) throw new NotFoundException('Не нашёл. Пришлите @username, Telegram ID, Sali ID (SL-XXXX-XXXX) или номер устройства D-XXXXXX.');
     return user;
   }
 
@@ -84,7 +84,7 @@ export class AdminBotService {
 
   private title(u: User) {
     if (u.telegramId) return [u.firstName, u.lastName].filter(Boolean).join(' ') || (u.username ? `@${u.username}` : `ID ${u.telegramId}`);
-    return `Устройство ${formatPublicId(u.publicId)}`;
+    return u.linkedTelegramId ? `Устройство ${formatDeviceId(u.id)}` : `Аккаунт ${formatPublicId(u.publicId)} (без Telegram)`;
   }
 
   /** Card for the panel. */
@@ -98,7 +98,7 @@ export class AdminBotService {
     const owner = !user.telegramId && user.linkedTelegramId ? await this.prisma.user.findUnique({ where: { telegramId: user.linkedTelegramId } }) : null;
     const [access, deviceAccess, paid, codes, invited] = await Promise.all([
       this.access(user.id),
-      Promise.all(devices.map(async (d) => ({ id: d.id, publicId: formatPublicId(d.publicId), access: (await this.access(d.id)).label }))),
+      Promise.all(devices.map(async (d) => ({ id: d.id, publicId: formatDeviceId(d.id), access: (await this.access(d.id)).label }))),
       this.prisma.payment.aggregate({ where: { userId: user.id, status: PaymentStatus.SUCCEEDED }, _sum: { amountUsd: true }, _count: true }),
       this.prisma.activationCode.groupBy({ by: ['status'], where: { ownerId: user.id }, _count: true }),
       this.prisma.referral.count({ where: { referrerId: user.id } }).catch(() => 0),
@@ -459,7 +459,7 @@ export class AdminBotService {
         userId: r.userId,
         name: who ? this.title(who) : u ? this.title(u) : '—',
         username: who?.username ?? null,
-        device: u && !u.telegramId ? formatPublicId(u.publicId) : null,
+        device: u && !u.telegramId ? (u.linkedTelegramId ? formatDeviceId(u.id) : formatPublicId(u.publicId)) : null,
         plan: r.plan,
         until: !r.until || r.until.getTime() - now.getTime() > 50 * 365 * 86_400_000 ? 'бессрочно' : date(r.until), // 50+ years = «forever» grants
         via: r.via ? (VIA[r.via] ?? r.via) : null,

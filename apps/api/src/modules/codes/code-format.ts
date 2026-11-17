@@ -29,3 +29,14 @@ export function normalizePublicId(input: string) {
 
 export const formatCode = (code: string) => `SALI-${code.slice(0, 4)}-${code.slice(4, 8)}-${code.slice(8, 12)}`;
 export const formatPublicId = (id: string) => `SL-${id.slice(0, 4)}-${id.slice(4, 8)}`;
+
+/**
+ * Device number: a separate, purely technical numbering («D-3F9A1C»), so it never looks like
+ * the account's Sali ID. The account has one ID for life; devices only get a label.
+ */
+export const formatDeviceId = (rowId: string) => `D-${rowId.replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+/** «D-3F9A1C» → "3f9a1c" (prefix of the installation's row id). */
+export const parseDeviceId = (input: string) => {
+  const m = input.trim().match(/^D-?([0-9A-F]{6})$/i);
+  return m ? m[1]!.toLowerCase() : null;
+};

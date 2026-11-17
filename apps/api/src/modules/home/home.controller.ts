@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Headers, Post, UseGuards, BadRequestException, ForbiddenException } from '@nestjs/common';
-import { formatPublicId } from '../codes/code-format';
+import { formatDeviceId, formatPublicId } from '../codes/code-format';
+import { NodesService } from '../vpn/nodes/nodes.service';
+import { ReferralsService } from '../referrals/referrals.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthTokenPayload } from '../auth/auth.service';
@@ -24,11 +26,17 @@ export class HomeController {
     private readonly devices: DevicesService,
     private readonly prisma: PrismaService,
     private readonly accounts: AccountsService,
+    private readonly nodes: NodesService,
+    private readonly referrals: ReferralsService,
   ) {}
 
   @Get('home')
-  async getHome(@CurrentUser() authUser: AuthTokenPayload): Promise<HomeStateDTO & { account: Awaited<ReturnType<AccountsService['summary']>> }> {
+  async getHome(@CurrentUser() authUser: AuthTokenPayload) {
     const user = await this.users.findById(authUser.sub);
+    // One ID per account: a linked app shows its account's Sali ID; the device has its own label.
+    const owner = await this.accounts.accountFor(authUser.sub).catch(() => null);
+    const tg = owner?.telegramId ?? null;
+    const lastDevice = await this.prisma.device.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, select: { name: true, platform: true } });
     const [account, trial, subscription] = await Promise.all([
       this.vpn.getAccountWithServer(authUser.sub),
       this.trials.getTrial(authUser.sub),
@@ -40,15 +48,15 @@ export class HomeController {
     const totalSeconds = trial ? trialSecondsUsed(trial, now) : 0;
     const limitSeconds = trial ? trialLimitSeconds(trial) : 0;
 
-    return {
+    const dto: HomeStateDTO = {
       user: {
         id: user.id,
         telegramId: user.telegramId?.toString() ?? null,
-        publicId: formatPublicId(user.publicId),
+        publicId: formatPublicId((owner ?? user).publicId),
         telegramLinked: Boolean(user.telegramId ?? user.linkedTelegramId),
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        username: owner?.username ?? user.username,
+        firstName: owner?.firstName ?? user.firstName,
+        lastName: owner?.lastName ?? user.lastName,
         isBlocked: user.isBlocked,
         createdAt: user.createdAt.toISOString(),
       },
@@ -88,8 +96,15 @@ export class HomeController {
           }
         : null,
       hasEverHadAccess: Boolean(account),
+    };
+    return {
+      ...dto,
       // The Telegram account this device belongs to: its ID, subscription and devices (N of 3).
       account: await this.accounts.summary(authUser.sub).catch(() => null),
+      // This installation: a technical label only (D-XXXXXX); linkCode is what «Привязать Telegram» sends.
+      device: { id: formatDeviceId(user.id), linkCode: user.publicId, name: lastDevice?.name ?? null, platform: lastDevice?.platform ?? null },
+      telegram: { linked: Boolean(tg), username: owner?.username ?? null },
+      isAdmin: Boolean(tg && this.nodes.isAdmin(tg)),
     };
   }
 
@@ -117,19 +132,21 @@ export class HomeController {
 
     const activeSub = access.activeSub;
     if (!activeSub) {
-      // Store-app accounts get the free tariff only through a FREE code from the bot.
+      // Free 24 hours: just press «Включить». No Telegram needed; once per device (the device
+      // claim is checked above) and once per account (a linked app shares the account's).
       const user = await this.users.findById(authUser.sub);
       if (!user.telegramId && !(await this.trials.getTrial(authUser.sub))) {
-        // The free 24 hours come with the account: linked device → they start right here.
         const owner = await this.accounts.accountFor(authUser.sub);
-        const started = owner ? await this.accounts.startFreeOn(owner.id, authUser.sub) : false;
-        if (!started) {
-          throw new ForbiddenException(owner
-            ? 'Нет активной подписки. Купите её в Telegram-боте — она сразу заработает здесь'
-            : 'Войдите через Telegram — получите 24 часа бесплатно, а подписка будет работать на всех ваших устройствах');
+        if (owner && !(await this.accounts.startFreeOn(owner.id, authUser.sub))) {
+          throw new ForbiddenException('Бесплатные 24 часа уже использованы. Оформите подписку во вкладке «Подписка» — она заработает на всех ваших устройствах');
         }
       }
       await this.trials.assertAvailable(authUser.sub);
+      // Came with a friend's Sali ID: the friend's bonus lands once there is time to add it to.
+      const owner = await this.accounts.accountFor(authUser.sub).catch(() => null);
+      for (const id of new Set([authUser.sub, owner?.id].filter((v): v is string => Boolean(v)))) {
+        await this.referrals.rewardIfEligible(id, authUser.sub).catch(() => undefined);
+      }
     }
     await this.vpn.enable(authUser.sub);
     if (!activeSub) await this.trials.startSession(authUser.sub);

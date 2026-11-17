@@ -10,6 +10,7 @@ import { connect } from './handlers/connect';
 import { createBillingHandlers } from './handlers/billing';
 import { genericError } from './messages';
 import { legacyLabels, menuLabels } from './keyboards';
+import { clientGate } from './handlers/clients';
 
 // npm workspaces starts this process with apps/bot as the working directory.
 // Resolve from __dirname so both src/ (development) and dist/ (production)
@@ -39,6 +40,10 @@ async function main() {
     await ctx.answerCbQuery().catch(() => undefined);
     await handler(ctx);
   };
+
+  // Customers use the app; for them the bot only links the app to Telegram (handlers/clients.ts).
+  // Everything below is reached by admins only.
+  bot.use(clientGate());
 
   bot.start(async (ctx) => {
     const payload = (ctx as Context & { startPayload?: string }).startPayload || undefined;
@@ -107,7 +112,7 @@ async function main() {
   const news = `@${(process.env.NEWS_CHANNEL_URL || 'https://t.me/SaliVpnNews').replace(/^https?:\/\/t\.me\//, '').replace(/^@/, '')}`;
   const help = `@${(process.env.SUPPORT_BOT_USERNAME || 'SaliVPNHelpBot').replace(/^@/, '')}`;
   for (const [lang, description, short] of [
-    [undefined, `SALI VPN — быстрый и надёжный VPN для свободного доступа к интернету.\n\n📢 Новости и обновления: ${news}\n💬 Поддержка: ${help}\n🌐 Сайт: ${site}`,
+    [undefined, `SALI VPN — быстрый и надёжный VPN для свободного доступа к интернету.\nВсё — в приложении Sali VPN: ${site}\n\n📢 Новости и обновления: ${news}\n💬 Поддержка: ${help}\n🌐 Сайт: ${site}`,
       `Быстрый и надёжный VPN. Новости: ${news} · Поддержка: ${help} · ${site}`],
     ['en', `SALI VPN — a fast and reliable VPN for free access to the internet.\n\n📢 News and updates: ${news}\n💬 Support: ${help}\n🌐 Website: ${site}`,
       `Fast and reliable VPN. News: ${news} · Support: ${help} · ${site}`],
@@ -117,10 +122,7 @@ async function main() {
   }
 
   await bot.telegram.setMyCommands([
-    { command: 'start', description: 'Начать' },
-    { command: 'connect', description: '⚡ Подключиться' },
-    { command: 'buy', description: '💎 Подписка' },
-    { command: 'help', description: '❓ Помощь' },
+    { command: 'start', description: 'Sali VPN — в приложении' },
   ]).catch((error) => {
     console.warn('Failed to register bot commands; continuing with polling', error);
   });

@@ -7,4 +7,9 @@ export interface User { id: string; telegramId: string | null; publicId: string;
 export interface Subscription { status: SubscriptionStatus; expiresAt: string | null; secondsRemaining?: number; planName?: string }
 export interface HomeState { user: User; vpn: { status: 'ACTIVE' | 'DISABLED' | 'PENDING' | 'ERROR'; serverLocation: string } | null; trial: { status: 'ACTIVE' | 'EXPIRED'; expiresAt: string; secondsRemaining: number; isRunning: boolean } | null; subscription: { status: string; expiresAt: string | null; plan: { id: string; name: string; priceUsd: number; originalPriceUsd: number | null } } | null;
   /** The Telegram account this device belongs to (null until signed in through Telegram). */
-  account?: { accountId: string; plan: string | null; until: string | null; used: number; max: number; devices: Array<{ publicId: string; platform: string | null; covered: boolean }> } | null }
+  account?: { accountId: string; plan: string | null; until: string | null; used: number; max: number; devices: Array<{ publicId: string; platform: string | null; covered: boolean }> } | null;
+  /** This installation: a technical label (D-XXXXXX), not an ID. linkCode goes into the Telegram link. */
+  device?: { id: string; linkCode: string; name: string | null; platform: string | null };
+  telegram?: { linked: boolean; username: string | null };
+  /** The account's Telegram is an admin: the app shows the admin panel. */
+  isAdmin?: boolean }

@@ -2,10 +2,10 @@ import { usePreferencesStore } from './store/preferencesStore';
 
 const dictionary = {
   ru: {
-    vpn: 'VPN', locations: 'Локации', devices: 'Устройства', profile: 'Профиль',
-    connect: 'Подключить', disconnect: 'Отключить', connecting: 'Подключаемся…', disconnecting: 'Отключаемся…',
+    vpn: 'VPN', locations: 'Локации', devices: 'Устройства', subscription: 'Подписка', profile: 'Профиль',
+    connect: 'Включить', disconnect: 'Выключить', connecting: 'Подключаемся…', disconnecting: 'Отключаемся…',
     stateOff: 'VPN выключен', stateOn: 'Соединение защищено', stateConnecting: 'Рисуем туннель', stateError: 'Не получилось подключиться',
-    tapToConnect: 'Нажмите на знак, чтобы подключиться', tapToDisconnect: 'Нажмите ещё раз, чтобы отключиться',
+    tapToConnect: 'Нажмите, чтобы включить VPN', tapToDisconnect: 'Нажмите ещё раз, чтобы отключиться',
     enterCode: 'Промокод', tariff: 'ТАРИФ', location: 'ЛОКАЦИЯ', auto: 'Авто', unknownPing: 'пинг измеряется',
     chooseLocation: 'Выберите, откуда вы будто бы выходите в интернет.', recommended: 'Рекомендуем', needsPlan: 'По подписке', offline: 'Список с сервера не загрузился — показываем основные локации. Подключение всё равно выберет ближайший рабочий сервер.', refresh: '↻ Обновить список', refreshing: 'Обновляю…',
     autoConnect: 'Автоподключение', autoConnectHint: 'Подключаться при открытии приложения', killSwitch: 'Kill Switch', killSwitchHint: 'Блокировать интернет без VPN',
@@ -16,8 +16,8 @@ const dictionary = {
     faq: 'ЧАСТЫЕ ВОПРОСЫ', writeSupport: 'Написать в поддержку', supportIntro: 'Короткие ответы — ниже. Если не помогло, напишите нам в Telegram: отвечает живой человек.', allArticles: 'Все статьи на сайте',
   },
   en: {
-    vpn: 'VPN', locations: 'Locations', devices: 'Devices', profile: 'Profile',
-    connect: 'Connect', disconnect: 'Disconnect', connecting: 'Connecting…', disconnecting: 'Disconnecting…',
+    vpn: 'VPN', locations: 'Locations', devices: 'Devices', subscription: 'Plan', profile: 'Profile',
+    connect: 'Turn on', disconnect: 'Turn off', connecting: 'Connecting…', disconnecting: 'Disconnecting…',
     stateOff: 'VPN is off', stateOn: 'Connection protected', stateConnecting: 'Drawing the tunnel', stateError: 'Could not connect',
     tapToConnect: 'Tap the mark to connect', tapToDisconnect: 'Tap again to disconnect',
     enterCode: 'Promo code', tariff: 'PLAN', location: 'LOCATION', auto: 'Auto', unknownPing: 'measuring ping',

@@ -7,12 +7,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Text } from '../../src/components/Text';
 import { SaliModal } from '../../src/components/SaliModal';
 import { Group, Row, SectionLabel } from '../../src/components/List';
-import { TelegramLinkCard } from '../../src/components/TelegramLinkCard';
 import { Icon } from '../../src/components/Icon';
 import { useI18n } from '../../src/i18n';
 import { Language, usePreferencesStore } from '../../src/store/preferencesStore';
 import { useAccountStore } from '../../src/store/accountStore';
-import { linkTelegram, telegramBotUrl } from '../../src/services/session';
+import { linkCodeOf, linkTelegram } from '../../src/services/session';
 import { openHelp, openSite } from '../../src/services/links';
 import { theme } from '../../src/theme';
 
@@ -41,6 +40,7 @@ export default function ProfileScreen() {
     if (value && Platform.OS === 'android') void Linking.sendIntent('android.settings.VPN_SETTINGS').catch(() => openHelp('kill-switch'));
   };
 
+  const linked = Boolean(home?.telegram?.linked ?? home?.user.telegramLinked);
   const until = home?.subscription?.expiresAt ? new Date(home.subscription.expiresAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
   const tariff = access === 'premium' ? (until ? `Подписка до ${until}` : 'Подписка') : access === 'trial' ? 'Бесплатный тариф' : access === 'expired' ? 'Тариф закончился' : 'Нет тарифа';
 
@@ -53,19 +53,26 @@ export default function ProfileScreen() {
         <View style={styles.passBadge}><Icon name="shield" size={26} color={theme.colors.accent} /></View>
         <Text style={styles.passLabel}>SALI ID</Text>
         <Pressable onPress={() => home && void Share.share({ message: home.user.publicId })} hitSlop={8}><Text style={styles.passId}>{home?.user.publicId ?? '····-····'}</Text></Pressable>
+        <Text style={styles.passDevice}>Один номер на весь аккаунт{home?.device ? ` · это устройство ${home.device.id}` : ''}</Text>
         <View style={styles.passFoot}>
           <Icon name={access === 'premium' || access === 'trial' ? 'check' : 'info'} size={16} color={access === 'premium' ? theme.colors.success : access === 'trial' ? theme.colors.accent : theme.colors.textSecondary} />
           <Text style={styles.passTariff}>{tariff}</Text>
-          <Pressable onPress={() => router.push('/activate')} style={({ pressed }) => [styles.passButton, pressed && { opacity: .8 }]}><Text style={styles.passButtonText}>Подписка</Text></Pressable>
+          <Pressable onPress={() => router.push('/subscription')} style={({ pressed }) => [styles.passButton, pressed && { opacity: .8 }]}><Text style={styles.passButtonText}>Подписка</Text></Pressable>
         </View>
       </Animated.View>
 
-      <View style={{ marginTop: 14 }}><TelegramLinkCard /></View>
+      {home?.isAdmin && <Pressable onPress={() => router.push('/admin')} style={({ pressed }) => [styles.admin, pressed && { opacity: .85 }]}>
+        <Icon name="gear" size={20} color={theme.colors.onPrimary} />
+        <Text style={styles.adminText}>Админ-панель</Text>
+        <Icon name="chevron" size={18} color={theme.colors.onPrimary} />
+      </Pressable>}
 
       <SectionLabel icon="user">{t.account}</SectionLabel>
       <Group>
-        <Row title="Telegram" hint={home?.user.telegramLinked ? 'Коды и напоминания приходят в бот' : 'Привяжите, чтобы активировать коды одной кнопкой'} value={home?.user.telegramLinked ? 'Привязан' : 'Привязать'} onPress={() => (home && !home.user.telegramLinked ? void linkTelegram(home.user.publicId, refresh) : void Linking.openURL(telegramBotUrl()))} />
-        <Row title="Оплата и коды" kind="external" onPress={() => openHelp('payments')} last />
+        <Row title="Telegram" hint={linked ? 'Подписки и подарки начисляются на этот аккаунт' : 'Нужно только для оплаты подписки'} value={linked ? (home?.telegram?.username ? `@${home.telegram.username}` : 'Привязан') : 'Привязать'} kind={linked ? 'none' : 'nav'} onPress={linked ? undefined : () => home && void linkTelegram(linkCodeOf(home), refresh)} />
+        <Row title="Устройства" value={home?.account ? `${home.account.used} из ${home.account.max}` : undefined} onPress={() => router.push('/devices')} />
+        <Row title="Пригласить друга" onPress={() => router.push('/invite')} />
+        <Row title="Как оплатить" kind="external" onPress={() => openHelp('payments')} last />
       </Group>
 
       <SectionLabel icon="shield">{t.connection}</SectionLabel>
@@ -112,6 +119,9 @@ const styles = StyleSheet.create({
   passId: { color: theme.colors.cream, fontSize: 30, letterSpacing: 2, fontFamily: 'SaliSans-SemiBold', marginTop: 6, fontVariant: ['tabular-nums'] },
   passFoot: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18 },
   passTariff: { flex: 1, color: '#C9D2E6', fontSize: 14 },
+  passDevice: { color: '#8E9CBB', fontSize: 12.5, marginTop: 4 },
+  admin: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, paddingHorizontal: 18, height: 56, borderRadius: theme.radius.lg, backgroundColor: theme.colors.accent },
+  adminText: { flex: 1, color: theme.colors.onPrimary, fontSize: 16, fontFamily: 'SaliSans-Bold' },
   passButton: { paddingHorizontal: 14, height: 34, borderRadius: 17, backgroundColor: theme.colors.accent, justifyContent: 'center' },
   passButtonText: { color: theme.colors.onPrimary, fontSize: 13, fontFamily: 'SaliSans-Bold' },
   option: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },

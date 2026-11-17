@@ -11,8 +11,7 @@ export default function TabsLayout() {
   >
     <Tabs.Screen name="index" options={{ title: t.vpn }} />
     <Tabs.Screen name="servers" options={{ title: t.locations }} />
-    <Tabs.Screen name="devices" options={{ title: t.devices }} />
+    <Tabs.Screen name="subscription" options={{ title: t.subscription }} />
     <Tabs.Screen name="settings" options={{ title: t.profile }} />
-    <Tabs.Screen name="subscription" options={{ href: null }} />
   </Tabs>;
 }

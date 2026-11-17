@@ -31,11 +31,13 @@ export const telegramBotUrl = () => `https://t.me/${BOT}`;
  * the account for two minutes so the app flips to «привязан» by itself.
  */
 let watching: ReturnType<typeof setInterval> | null = null;
+/** The number that goes into the Telegram link: this installation's own code (not the account ID). */
+export const linkCodeOf = (home: { user: { publicId: string }; device?: { linkCode: string } } | null) => home?.device?.linkCode ?? home?.user.publicId ?? '';
 export async function linkTelegram(publicId: string, onTick: () => Promise<{ user: { telegramLinked: boolean } } | null>) {
   const { setStringAsync } = await import('expo-clipboard');
   const { Linking, Platform, ToastAndroid } = await import('react-native');
   await setStringAsync(publicId).catch(() => undefined);
-  if (Platform.OS === 'android') ToastAndroid.show(`В Telegram нажмите «Запустить» внизу. Если бот не ответил — вставьте ему номер ${publicId} (уже скопирован)`, ToastAndroid.LONG);
+  if (Platform.OS === 'android') ToastAndroid.show('В Telegram нажмите «Запустить» внизу — аккаунт привяжется сам. Если бот промолчал, вставьте ему скопированный номер', ToastAndroid.LONG);
   await Linking.openURL(telegramLinkUrl(publicId));
   if (watching) clearInterval(watching);
   const started = Date.now();

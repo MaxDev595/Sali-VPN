@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { Icon, type IconName } from './Icon';
 import { theme } from '../theme';
 
-const ICONS: Record<string, IconName> = { index: 'key', servers: 'globe', devices: 'devices', settings: 'user' };
+const ICONS: Record<string, IconName> = { index: 'power', servers: 'globe', subscription: 'key', settings: 'user' };
 const IDLE = '#5E6A85';
 const ACTIVE = theme.colors.accent;
 const DURATION = 560;

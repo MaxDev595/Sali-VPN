@@ -3,7 +3,7 @@ import { ActivationCodeKind, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { CodesService } from '../codes/codes.service';
-import { formatPublicId } from '../codes/code-format';
+import { formatDeviceId, formatPublicId, newPublicId } from '../codes/code-format';
 
 /**
  * The account is the Telegram user. Everything is given to the account — a purchase,
@@ -44,6 +44,11 @@ export class AccountsService {
     if (!already) await this.prisma.user.update({ where: { id: app.id }, data: { linkedTelegramId: telegramId, linkedAt: new Date() } });
 
     const notes: { replaced: string[]; freed: string | null; trialStarted: boolean } = { replaced: [], freed: null, trialStarted: false };
+    // 0. One ID for the account, for life: the first app linked to a Telegram account keeps the
+    //    Sali ID the customer already sees — the account takes it over, the installation
+    //    gets a new internal one (devices are shown by their own D-XXXXXX label anyway).
+    if (account && !already) await this.adoptId(account.id, app.id, telegramId).catch((error) => this.logger.warn(`ID adopt skipped: ${(error as Error).message}`));
+
     // 1. The account owns the subscription — never a single installation.
     if (account) await this.prisma.subscription.updateMany({ where: { userId: app.id, status: SubscriptionStatus.ACTIVE }, data: { userId: account.id } });
 
@@ -52,6 +57,10 @@ export class AccountsService {
       const waiting = await this.prisma.activationCode.findMany({ where: { ownerId: account.id, status: 'ISSUED', kind: { in: [ActivationCodeKind.PAID, ActivationCodeKind.GIFT] }, expiresAt: { gt: new Date() }, NOT: { note: { contains: 'без получателя' } } } });
       for (const code of waiting) await this.codes.redeem(account.id, code.code, { silent: true }).catch(() => undefined);
     }
+
+    // 1c. The free 24 hours this app already used (pressed «Включить» before linking) count
+    //     as the account's free 24 hours: other devices of the account don't get another one.
+    if (account) await this.recordFreeUsed(account.id, app.id).catch(() => undefined);
 
     // 2. Same phone / PC installed again: the older installation goes away.
     notes.replaced = await this.replaceTwins(app.id);
@@ -63,16 +72,42 @@ export class AccountsService {
         .sort((a, b) => (a.lastActiveAt?.getTime() ?? 0) - (b.lastActiveAt?.getTime() ?? 0))[0];
       if (idle) {
         await this.subscriptions.unlinkInstallation(telegramId, idle.id);
-        notes.freed = formatPublicId(idle.publicId);
+        notes.freed = formatDeviceId(idle.id);
       }
     }
-
-    // 4. A new account: the free 24 hours start on this device, nothing to request.
-    if (account && !(await this.subscriptions.getActiveForUser(app.id))) {
-      notes.trialStarted = await this.startFreeOn(account.id, app.id);
-    }
+    // 4. The free 24 hours are not started here: they start when the customer presses «Включить».
     const fresh = await this.prisma.user.findUniqueOrThrow({ where: { id: app.id } });
     return { status: already ? 'already' as const : 'linked' as const, app: fresh, notes };
+  }
+
+  /**
+   * The account takes over the Sali ID of its first app, so the number the customer saw in
+   * the app before linking stays theirs. Only when the account has no other app yet.
+   */
+  private async adoptId(accountId: string, appId: string, telegramId: bigint) {
+    const [account, app] = await Promise.all([
+      this.prisma.user.findUniqueOrThrow({ where: { id: accountId } }),
+      this.prisma.user.findUniqueOrThrow({ where: { id: appId } }),
+    ]);
+    if (account.idLockedAt) return;
+    const others = await this.prisma.user.count({ where: { linkedTelegramId: telegramId, appDeviceKey: { not: null }, id: { not: appId } } });
+    if (others) { await this.prisma.user.update({ where: { id: account.id }, data: { idLockedAt: new Date() } }); return; }
+    const temp = `~${newPublicId()}`;
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: app.id }, data: { publicId: temp } }),
+      this.prisma.user.update({ where: { id: account.id }, data: { publicId: app.publicId, idLockedAt: new Date() } }),
+      this.prisma.user.update({ where: { id: app.id }, data: { publicId: account.publicId } }),
+    ]);
+  }
+
+  /** An app that used its free 24 hours before linking: the account's free 24 hours are used too. */
+  private async recordFreeUsed(accountId: string, appId: string) {
+    const trial = await this.prisma.trial.findUnique({ where: { userId: appId } });
+    if (!trial) return;
+    const used = await this.prisma.activationCode.findFirst({ where: { ownerId: accountId, kind: ActivationCodeKind.FREE } });
+    if (used) return;
+    const code = await this.codes.issueFree(accountId);
+    await this.prisma.activationCode.update({ where: { code: code.code }, data: { status: 'REDEEMED', redeemedById: appId, redeemedAt: trial.startedAt } });
   }
 
   /**
@@ -90,7 +125,7 @@ export class AccountsService {
     const replaced: string[] = [];
     for (const twin of twins) {
       await this.subscriptions.unlinkInstallation(app.linkedTelegramId, twin.id);
-      replaced.push(formatPublicId(twin.publicId));
+      replaced.push(formatDeviceId(twin.id));
     }
     return replaced;
   }
@@ -162,7 +197,7 @@ export class AccountsService {
       until: family.sub?.expiresAt?.toISOString() ?? null,
       used: family.used,
       max: family.max || 3,
-      devices: family.devices.map((d) => ({ publicId: formatPublicId(d.publicId), platform: d.platform, covered: d.covered || d.ownSub })),
+      devices: family.devices.map((d) => ({ publicId: formatDeviceId(d.id), platform: d.platform, covered: d.covered || d.ownSub })),
     };
   }
 }

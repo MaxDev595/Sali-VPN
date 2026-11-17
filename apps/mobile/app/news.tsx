@@ -26,7 +26,7 @@ export default function NewsScreen() {
         <Pressable accessibilityLabel="Назад" onPress={() => router.back()} style={styles.back}><Icon name="chevron" size={20} style={{ transform: [{ scaleX: -1 }] }} /></Pressable>
         <Text style={styles.title}>Что нового</Text>
       </View>
-      <Text style={styles.intro}>У вас версия {APP_VERSION}. Новости приходят и в наш Telegram-бот.</Text>
+      <Text style={styles.intro}>У вас версия {APP_VERSION}. Новости — и в нашем канале @SaliVpnNews.</Text>
 
       {isNewerUpdate(newest) && <View style={{ marginBottom: 16 }}><SaliButton title={`Скачать версию ${newest!.version}`} onPress={openApkDownload} /></View>}
 

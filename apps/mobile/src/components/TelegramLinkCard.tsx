@@ -2,22 +2,22 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import { Icon } from './Icon';
 import { useAccountStore } from '../store/accountStore';
-import { linkTelegram } from '../services/session';
+import { linkCodeOf, linkTelegram } from '../services/session';
 import { theme } from '../theme';
 
 /**
- * Optional: link Telegram so the subscription survives reinstalling and codes/reminders land
- * in the bot. The VPN never needs it — a code entered in the app is enough.
+ * Linking Telegram is needed only to pay: the subscription then belongs to the account, works on
+ * all its devices (up to 3) and survives reinstalling. The free 24 hours never need it.
  */
 export function TelegramLinkCard() {
   const home = useAccountStore(state => state.home);
   const refresh = useAccountStore(state => state.refresh);
   if (!home || home.user.telegramLinked) return null;
-  return <Pressable accessibilityRole="button" onPress={() => void linkTelegram(home.user.publicId, refresh)} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
+  return <Pressable accessibilityRole="button" onPress={() => void linkTelegram(linkCodeOf(home), refresh)} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
     <View style={styles.icon}><Icon name="telegram" size={20} color="#fff" /></View>
     <View style={styles.copy}>
-      <Text style={styles.title}>Войти через Telegram</Text>
-      <Text style={styles.text}>Сразу 24 часа бесплатно. Подписка — на аккаунт, работает на всех ваших устройствах (до 3) и не пропадёт при переустановке.</Text>
+      <Text style={styles.title}>Привязать Telegram</Text>
+      <Text style={styles.text}>Нужно для оплаты: подписка будет на вашем аккаунте, заработает на всех ваших устройствах (до 3) и не пропадёт при переустановке.</Text>
     </View>
     <Icon name="chevron" size={18} color={theme.colors.textSecondary} />
   </Pressable>;

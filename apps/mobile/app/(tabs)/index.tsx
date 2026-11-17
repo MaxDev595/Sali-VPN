@@ -1,6 +1,6 @@
 import { openSupport } from '../../src/services/links';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
@@ -15,8 +15,6 @@ import { useI18n } from '../../src/i18n';
 import { useVpnStore } from '../../src/store/vpnStore';
 import { useAccountStore } from '../../src/store/accountStore';
 import { usePreferencesStore } from '../../src/store/preferencesStore';
-import { linkTelegram, telegramBotUrl } from '../../src/services/session';
-import { TelegramLinkCard } from '../../src/components/TelegramLinkCard';
 import { FLAGS } from '../../src/data/fallbackServers';
 import { theme } from '../../src/theme';
 
@@ -38,7 +36,8 @@ function TariffStub() {
     const left = home.trial.secondsRemaining - (now - synced.current) / 1000;
     return <><Text style={[styles.stubMain, styles.mono]}>{clock(left)}</Text><Text style={styles.stubSub}>Бесплатно</Text></>;
   }
-  return <><Text style={[styles.stubMain, { color: theme.colors.accent }]}>Ввести код</Text><Text style={styles.stubSub}>{access === 'expired' ? 'Тариф закончился' : 'Нет тарифа'}</Text></>;
+  if (access === 'expired') return <><Text style={[styles.stubMain, { color: theme.colors.accent }]}>Подписка</Text><Text style={styles.stubSub}>Бесплатное время вышло</Text></>;
+  return <><Text style={[styles.stubMain, { color: theme.colors.accent }]}>24 часа</Text><Text style={styles.stubSub}>Бесплатно — «Включить»</Text></>;
 }
 
 export default function VpnScreen() {
@@ -58,10 +57,7 @@ export default function VpnScreen() {
     if (prefs.autoConnect && (access === 'premium' || access === 'trial') && status === 'disconnected') void toggle();
   }, [access, home, prefs.autoConnect, prefs.hydrated, status, toggle]);
 
-  const openBot = () => void Linking.openURL(telegramBotUrl());
-  const linked = Boolean(home?.user.telegramLinked);
-  const refreshAccount = useAccountStore(state => state.refresh);
-  const signIn = () => home && void linkTelegram(home.user.publicId, refreshAccount);
+  const toPlans = () => router.push('/subscription');
   const active = status === 'connected';
   const title = status === 'connecting' ? t.stateConnecting : status === 'disconnecting' ? t.disconnecting : active ? t.stateOn : status === 'error' ? t.stateError : t.stateOff;
   const label = active ? t.disconnect : t.connect;
@@ -73,20 +69,17 @@ export default function VpnScreen() {
           <BrandMark size={30} />
           <View><Text style={styles.idLabel}>SALI ID</Text><Text style={styles.idValue}>{home?.user.publicId ?? '····-····'}</Text></View>
         </Pressable>
-        {!linked
-          ? <Pressable accessibilityRole="button" onPress={signIn} style={({ pressed }) => [styles.codeButton, pressed && { opacity: .8 }]}>
-              <Icon name="telegram" size={16} color={theme.colors.accent} /><Text style={styles.codeText}>Войти</Text>
+        {access === 'premium' && home?.account
+          ? <Pressable accessibilityRole="button" onPress={() => router.push('/devices')} style={({ pressed }) => [styles.codeButton, pressed && { opacity: .8 }]}>
+              <Icon name="devices" size={16} color={theme.colors.accent} /><Text style={styles.codeText}>{home.account.used}/{home.account.max}</Text>
             </Pressable>
           : access !== 'premium'
-            ? <Pressable accessibilityRole="button" onPress={openBot} style={({ pressed }) => [styles.codeButton, pressed && { opacity: .8 }]}>
-                <Icon name="key" size={16} color={theme.colors.accent} /><Text style={styles.codeText}>Купить</Text>
+            ? <Pressable accessibilityRole="button" onPress={toPlans} style={({ pressed }) => [styles.codeButton, pressed && { opacity: .8 }]}>
+                <Icon name="key" size={16} color={theme.colors.accent} /><Text style={styles.codeText}>Подписка</Text>
               </Pressable>
-            : home?.account ? <Pressable accessibilityRole="button" onPress={() => router.push('/devices')} style={({ pressed }) => [styles.codeButton, pressed && { opacity: .8 }]}>
-                <Icon name="devices" size={16} color={theme.colors.accent} /><Text style={styles.codeText}>{home.account.used}/{home.account.max}</Text>
-              </Pressable> : null}
+            : null}
       </View>
 
-      <TelegramLinkCard />
       <NewsCard />
 
       <View style={styles.hero}>
@@ -107,7 +100,7 @@ export default function VpnScreen() {
 
       {/* Ticket: tariff stub | location, joined by a perforation. */}
       <Animated.View entering={FadeInDown.delay(120).duration(420)} style={styles.ticket}>
-        <Pressable accessibilityRole="button" onPress={() => (!linked ? signIn() : access === 'premium' ? router.push('/devices') : openBot())} style={({ pressed }) => [styles.stub, pressed && styles.pressed]}>
+        <Pressable accessibilityRole="button" onPress={toPlans} style={({ pressed }) => [styles.stub, pressed && styles.pressed]}>
           <Text style={styles.stubLabel}>{t.tariff}</Text>
           <TariffStub />
         </Pressable>
@@ -127,14 +120,10 @@ export default function VpnScreen() {
       </Animated.View>
     </ScrollView>
 
-    <SaliModal visible={needsCode} title={linked ? 'Нужна подписка' : 'Войдите через Telegram'} onClose={clearError}>
-      <Text style={styles.modalText}>{linked
-        ? 'Купите подписку в нашем Telegram-боте — она сразу заработает здесь и на всех ваших устройствах (до 3).'
-        : 'Один вход — и сразу 24 часа бесплатно. Подписка из бота работает на всех ваших устройствах (до 3).'}</Text>
+    <SaliModal visible={needsCode} title="Нужна подписка" onClose={clearError}>
+      <Text style={styles.modalText}>{error ?? 'Бесплатные 24 часа закончились.'}{'\n\n'}Подписка работает на всех ваших устройствах (до 3). Оплата — USDT, прямо в приложении.</Text>
       <View style={{ gap: 10, marginTop: 20 }}>
-        {linked
-          ? <SaliButton title="Купить подписку" onPress={() => { clearError(); openBot(); }} />
-          : <SaliButton title="Войти через Telegram" onPress={() => { clearError(); signIn(); }} />}
+        <SaliButton title="Выбрать тариф" onPress={() => { clearError(); toPlans(); }} />
         <SaliButton secondary title="Не подключается? Поддержка" onPress={() => { clearError(); openSupport(); }} />
       </View>
     </SaliModal>

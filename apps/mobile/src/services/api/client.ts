@@ -124,12 +124,34 @@ export interface Announcement { id: string; kind: 'UPDATE' | 'NEWS'; platform: s
 export interface AccountDevice { publicId: string; platform: string | null; current: boolean; covered: boolean; lastActiveAt: string | null; idleDays: number | null }
 export interface AccountDevices { linked: boolean; subscription: { plan: string; until: string | null; used: number; max: number } | null; devices: AccountDevice[] }
 
+export interface Plan { code: string; name: string; durationDays: number; priceUsd: number; originalPriceUsd: number | null; maxDevices: number; discountedPriceUsd: number | null }
+export interface PlansResponse { telegramLinked: boolean; currency: string; discountPercent: number; plans: Plan[] }
+export interface Invoice { paymentId: string; plan: { code: string; name: string; durationDays: number }; gift: string | null; discountPercent: number; amount: string; asset: string; network: string; address: string; comment: string; expiresAt: string; tonUrl: string | null; tonkeeperUrl: string | null }
+export interface PaymentState { status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; expired: boolean; plan: string; gift: boolean; until: string | null }
+export type PromoResult =
+  | { kind: 'DAYS'; code: string; days: number; until: string | null }
+  | { kind: 'DISCOUNT'; code: string; percent: number }
+  | { kind: 'REFERRAL'; from: string; bonusHours: number; pending: boolean };
+export interface Referrals { code: string; invited: number; rewarded: number; availableDiscounts: number; discountPercent: number; friendBonusHours: number; shareText: string }
+export interface AppDevice { key: string; id: string; name: string | null; platform: string | null; current: boolean; covered: boolean; idleDays: number | null }
+export interface AppDevices { linked: boolean; max: number; used: number; devices: AppDevice[] }
+
+// ---- admin ----
+export interface AdminStats {
+  telegramUsers: number; devices: number; linkedDevices: number; new24h: number; new7d: number; new30d: number; activeDevices7d: number;
+  access: { paid: number; granted: number; trial: number; expired30d: number; expiringPaid3d: number; onlineNow: number | null };
+  revenue: { day: number; dayCount: number; week: number; weekCount: number; month: number; monthCount: number; total: number; totalCount: number; avgCheck30d: number; byMethod30d: Array<{ method: string; sum: number; count: number }>; payers: number; payers30d: number; refunds: number };
+  referrals: { total: number; rewarded: number };
+  servers: Array<{ name: string; online: boolean; premiumOnly: boolean; isActive: boolean; users: number; connectedNow: number | null }>;
+}
+export type PeopleSegment = 'paid' | 'granted' | 'trial' | 'expired';
+export interface AdminPeople { segment: PeopleSegment; page: number; pages: number; counts: { paid: number; granted: number; trial: number; expired: number; online: number | null }; list: Array<{ userId: string; name: string; username: string | null; device: string | null; plan: string; until: string; via: string | null; blocked: boolean }> }
+export interface AdminCard { id: string; kind: 'telegram' | 'device'; title: string; username: string | null; telegramId: string | null; publicId: string; owner: string | null; createdAt: string; isBlocked: boolean; access: string; devices: Array<{ id: string; publicId: string; access: string }>; paidUsd: number; payments: number; invited: number }
+export interface AdminPayment { id: string; at: string; status: string; amountUsd: number; discountPercent: number; method: string; plan: string; account: string; name: string | null; giftTo: string | null }
+export interface AdminPromo { id: string; code: string; kind: 'DAYS' | 'DISCOUNT'; days: number; discountPercent: number; maxUses: number | null; usedCount: number; expiresAt: string | null; isActive: boolean; note: string | null; createdAt: string }
+
 export interface RedeemResult { kind: 'PAID' | 'FREE' | 'GIFT' | 'PROMO'; durationDays: number; planName: string | null; expiresAt: string | null }
 
-/**
- * The store app never sells anything: no prices, no checkout, no billing SDK.
- * Access arrives only as activation codes issued by the Telegram bot.
- */
 /** «Samsung SM-A515F»: tells one phone from another in the account (one device = one Sali ID). */
 function deviceName() {
   const c = (Platform.constants ?? {}) as { Manufacturer?: string; Brand?: string; Model?: string };
@@ -149,5 +171,26 @@ export const api = {
   /** Every installation under this Telegram account (they share one subscription). */
   accountDevices: () => request<AccountDevices>('/devices/account'),
   unlinkDevice: (publicId: string) => request<{ ok: boolean }>('/devices/account/unlink', { method: 'POST', body: JSON.stringify({ publicId }) }),
+  // ---- the app's own shop: plans, USDT (TON) invoices, gifts, promo codes, friends ----
+  plans: () => request<PlansResponse>('/app/plans'),
+  purchase: (planCode: string, options: { giftTo?: string; promo?: string } = {}) => request<Invoice>('/app/purchase', { method: 'POST', body: JSON.stringify({ planCode, ...options }) }),
+  payment: (id: string) => request<PaymentState>(`/app/payments/${id}`),
+  checkGift: (code: string) => request<{ to: string; name: string | null }>('/app/gift/check', { method: 'POST', body: JSON.stringify({ code }) }),
+  promo: (code: string) => request<PromoResult>('/app/promo', { method: 'POST', body: JSON.stringify({ code }) }),
+  referrals: () => request<Referrals>('/app/referrals'),
+  devices: () => request<AppDevices>('/app/devices'),
+  removeDevice: (key: string) => request<{ ok: boolean }>('/app/devices/remove', { method: 'POST', body: JSON.stringify({ key }) }),
+  admin: {
+    stats: () => request<AdminStats>('/app/admin/stats'),
+    people: (segment: PeopleSegment, page = 0) => request<AdminPeople>(`/app/admin/people?segment=${segment}&page=${page}`),
+    lookup: (query: string) => request<AdminCard>('/app/admin/lookup', { method: 'POST', body: JSON.stringify({ query }) }),
+    grant: (userId: string, days: number, kind: 'admin' | 'gift', message?: string) => request<{ until: string; devices: string[]; delivered: boolean }>('/app/admin/grant', { method: 'POST', body: JSON.stringify({ userId, days, kind, ...(message ? { message } : {}) }) }),
+    revoke: (userId: string) => request<unknown>('/app/admin/revoke', { method: 'POST', body: JSON.stringify({ userId }) }),
+    block: (userId: string, isBlocked: boolean) => request<{ isBlocked: boolean }>('/app/admin/block', { method: 'POST', body: JSON.stringify({ userId, isBlocked }) }),
+    payments: () => request<AdminPayment[]>('/app/admin/payments'),
+    promos: () => request<AdminPromo[]>('/app/admin/promos'),
+    createPromo: (input: { code: string; kind: 'DAYS' | 'DISCOUNT'; days?: number; discountPercent?: number; maxUses?: number; expiresInDays?: number; note?: string }) => request<{ id: string; code: string }>('/app/admin/promos', { method: 'POST', body: JSON.stringify(input) }),
+    setPromoActive: (id: string, isActive: boolean) => request<{ ok: boolean }>(`/app/admin/promos/${id}/active`, { method: 'POST', body: JSON.stringify({ isActive }) }),
+  },
   registerCurrentDevice: (deviceKey: string) => request('/devices/current', { method: 'POST', body: JSON.stringify({ deviceKey, name: deviceName(), platform: 'ANDROID' }) }),
 };

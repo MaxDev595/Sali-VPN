@@ -206,10 +206,10 @@ export const api = {
 
   // --- Bot billing & activation codes -------------------------------------
   start: (profile: TelegramProfile, startParam?: string) =>
-    call<{ publicId: string; link: { status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId?: string; share?: LinkShare | null; notes?: LinkNotes } | null; linkedApps: number; freeUsed: boolean; isBlocked: boolean; referred?: boolean; friendBonusHours?: number }>('/bot/start', { profile, startParam }),
+    call<{ publicId: string; link: { status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId?: string; accountId?: string; share?: LinkShare | null; notes?: LinkNotes } | null; linkedApps: number; freeUsed: boolean; isBlocked: boolean; referred?: boolean; friendBonusHours?: number }>('/bot/start', { profile, startParam }),
   referrals: (telegramId: number) => call<ReferralStats>('/bot/referrals', { telegramId }),
   link: (telegramId: number, publicId: string) =>
-    call<{ status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId: string | null; share: LinkShare | null; notes?: LinkNotes }>('/bot/link', { telegramId, publicId }),
+    call<{ status: 'linked' | 'already' | 'not_found' | 'linked_elsewhere'; publicId: string | null; accountId?: string | null; share: LinkShare | null; notes?: LinkNotes }>('/bot/link', { telegramId, publicId }),
   unlink: (telegramId: number, publicId: string) => call<{ ok: boolean; publicId: string }>('/bot/unlink', { telegramId, publicId }, 0),
   devices: (telegramId: number) => call<DevicesOverview>('/bot/devices', { telegramId }),
   plans: (telegramId?: number) => call<BotPlan[]>('/bot/plans', telegramId ? { telegramId } : {}),

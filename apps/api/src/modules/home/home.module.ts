@@ -7,9 +7,10 @@ import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { DevicesModule } from '../devices/devices.module';
 import { AccountsModule } from '../accounts/accounts.module';
+import { ReferralsModule } from '../referrals/referrals.module';
 
 @Module({
-  imports: [VpnModule, TrialsModule, SubscriptionsModule, UsersModule, AuthModule, DevicesModule, AccountsModule],
+  imports: [VpnModule, TrialsModule, SubscriptionsModule, UsersModule, AuthModule, DevicesModule, AccountsModule, ReferralsModule],
   controllers: [HomeController],
 })
 export class HomeModule {}

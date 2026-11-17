@@ -29,6 +29,9 @@ model User {
   /// the customer their devices in the bot.
   linkedTelegramId BigInt?
   linkedAt      DateTime?
+  /// Set once the account's Sali ID is final (it took over its first app's ID, or had a
+  /// device before). From then on the account ID never changes.
+  idLockedAt    DateTime?
   username      String?
   firstName     String?
   lastName      String?
@@ -307,6 +310,10 @@ model Payment {
   /// Bot purchases do not activate anything directly: on success an
   /// ActivationCode is issued and sent to the buyer in Telegram.
   deliverAsCode    Boolean       @default(false)
+  /// Bought in the app as a gift: the days go to this account instead of the buyer's.
+  giftToUserId     String?
+  /// Promo code whose discount priced this payment (counted as used once it is paid).
+  promoCodeId      String?
 
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -574,4 +581,47 @@ model Announcement {
   createdAt   DateTime         @default(now())
 
   @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Promo codes: created by the admin in the app. DAYS adds days to the account
+// right away; DISCOUNT takes a share off the next purchase. One use per account.
+// ---------------------------------------------------------------------------
+
+enum PromoKind {
+  DAYS
+  DISCOUNT
+}
+
+model PromoCode {
+  id              String     @id @default(uuid())
+  /// Upper case, as typed by the customer (letters, digits, dashes).
+  code            String     @unique
+  kind            PromoKind
+  days            Int        @default(0)
+  discountPercent Int        @default(0)
+  /// null = unlimited.
+  maxUses         Int?
+  usedCount       Int        @default(0)
+  expiresAt       DateTime?
+  isActive        Boolean    @default(true)
+  note            String?
+  createdBy       String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  redemptions     PromoRedemption[]
+}
+
+model PromoRedemption {
+  id        String    @id @default(uuid())
+  promoId   String
+  promo     PromoCode @relation(fields: [promoId], references: [id], onDelete: Cascade)
+  /// The account (Telegram user, or an app installation not linked yet).
+  accountId String
+  paymentId String?
+  createdAt DateTime  @default(now())
+
+  @@unique([promoId, accountId])
+  @@index([accountId])
 }

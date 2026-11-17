@@ -123,16 +123,19 @@ export class BotApiController {
     let referred = false;
     const ref = dto.startParam?.match(/^ref_(\d{3,20})$/);
     if (ref && isNew) referred = Boolean(await this.referrals.recordReferralIfNew(user.id, BigInt(ref[1])));
-    let link: { status: string; notes?: { replaced: string[]; freed: string | null; trialStarted: boolean }; publicId?: string; share?: Awaited<ReturnType<BotApiController['shareOf']>> } | null = null;
+    let link: { status: string; notes?: { replaced: string[]; freed: string | null; trialStarted: boolean }; publicId?: string; accountId?: string; share?: Awaited<ReturnType<BotApiController['shareOf']>> } | null = null;
     const match = dto.startParam?.match(/^link_([0-9A-Za-z]{8})$/);
     if (match) {
       const result = await this.accounts.link(match[1], BigInt(dto.profile.telegramId));
       const app = 'app' in result ? result.app : undefined;
       link = { status: result.status, notes: 'notes' in result ? result.notes : undefined, publicId: app ? formatPublicId(app.publicId) : undefined, share: app && result.status !== 'linked_elsewhere' ? await this.shareOf(BigInt(dto.profile.telegramId), app.id) : null };
+      // The account's Sali ID (it may have just taken over the app's number).
+      const account = await this.users.findByTelegramId(BigInt(dto.profile.telegramId));
+      if (account) link.accountId = formatPublicId(account.publicId);
     }
     const apps = await this.users.listLinkedApps(BigInt(dto.profile.telegramId));
     const freeUsed = Boolean(await this.prisma.activationCode.findFirst({ where: { ownerId: user.id, kind: 'FREE' } }));
-    return { publicId: formatPublicId(user.publicId), link, linkedApps: apps.length, freeUsed, isBlocked: user.isBlocked, referred, friendBonusHours: REFERRAL_FRIEND_BONUS_HOURS };
+    return { publicId: formatPublicId((await this.users.findByTelegramId(BigInt(dto.profile.telegramId)))?.publicId ?? user.publicId), link, linkedApps: apps.length, freeUsed, isBlocked: user.isBlocked, referred, friendBonusHours: REFERRAL_FRIEND_BONUS_HOURS };
   }
 
   /** «Пригласить друга»: link, how many friends came, discounts waiting for the next purchase. */
@@ -147,9 +150,11 @@ export class BotApiController {
     await this.requireUser(dto.telegramId);
     const result = await this.accounts.link(dto.publicId, BigInt(dto.telegramId));
     const app = 'app' in result ? result.app : undefined;
+    const account = await this.users.findByTelegramId(BigInt(dto.telegramId));
     return {
       status: result.status,
       notes: 'notes' in result ? result.notes : undefined,
+      accountId: account ? formatPublicId(account.publicId) : null,
       publicId: app ? formatPublicId(app.publicId) : null,
       share: app && result.status !== 'linked_elsewhere' ? await this.shareOf(BigInt(dto.telegramId), app.id) : null,
     };

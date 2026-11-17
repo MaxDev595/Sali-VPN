@@ -12,7 +12,7 @@ export default function LocationsScreen() {
   const access = useAccountStore(state => state.access);
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
     <ServerList
-      onPicked={(server) => { if (server.premiumOnly && access !== 'premium') router.push('/activate'); }}
+      onPicked={(server) => { if (server.premiumOnly && access !== 'premium') router.push('/subscription'); }}
       header={<View style={styles.header}><Text style={styles.title}>{t.locations}</Text><Text style={styles.subtitle}>{t.chooseLocation}</Text></View>}
     />
   </SafeAreaView>;

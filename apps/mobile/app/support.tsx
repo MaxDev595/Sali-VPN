@@ -17,18 +17,19 @@ const FAQ = {
   ru: [
     ['VPN не подключается', 'Проверьте, что тариф активен (Профиль), выключите другие VPN и «Частный DNS» в настройках Android, смените локацию и попробуйте снова.'],
     ['Подключился, но сайты не открываются', 'Отключитесь, выберите другую локацию и подключитесь снова. Если включён Kill Switch, проверьте, что в системе разрешена «Постоянная VPN» для Sali.'],
-    ['Куда вводить код?', 'Кнопка «Код» на главном экране или «Ввести код» в профиле. Регистр и дефисы не важны — код можно просто вставить.'],
-    ['Как получить 24 часа бесплатно?', 'Откройте наш Telegram-бот и нажмите «24 часа бесплатно». Бот пришлёт код — введите его здесь или активируйте кнопкой в боте.'],
-    ['Можно на нескольких устройствах?', 'Да. Один код активирует одно устройство: купите код для каждого и активируйте его кнопкой в боте — он спросит, на какое устройство.'],
-    ['Сменил телефон — что с подпиской?', 'Напишите в поддержку старый и новый Sali ID — поможем перенести оставшиеся дни.'],
+    ['Как получить 24 часа бесплатно?', 'Нажмите «Включить» на главном экране — и всё. Ничего вводить и привязывать не нужно.'],
+    ['Как оплатить?', '«Подписка» → выберите тариф. Оплата в USDT (сеть TON) с любого кошелька: Telegram Wallet, Tonkeeper, биржа. Для оплаты один раз привяжите Telegram — подписка будет на вашем аккаунте.'],
+    ['Можно на нескольких устройствах?', 'Да, одна подписка — до 3 устройств. Установите Sali VPN на другом устройстве и привяжите тот же Telegram — подписка заработает сама.'],
+    ['Сменил телефон — что с подпиской?', 'Ничего не пропадёт: подписка на аккаунте. Установите приложение на новый телефон и привяжите тот же Telegram. Старый телефон можно удалить в «Устройствах».'],
+    ['Где промокод и подарок?', '«Подписка» → «Промокод» или «Подарить подписку». Подарок начисляется на Sali ID друга.'],
   ],
   en: [
     ['VPN won’t connect', 'Check your plan is active (Profile), turn off other VPNs and Android’s “Private DNS”, change the location and try again.'],
     ['Connected, but sites won’t open', 'Disconnect, pick another location and connect again. With Kill Switch on, make sure “Always-on VPN” is allowed for Sali.'],
-    ['Where do I enter the code?', 'The “Code” button on the home screen or “Enter code” in Profile. Case and dashes don’t matter — just paste it.'],
-    ['How do I get 24 hours free?', 'Open our Telegram bot and tap “24 hours free”. It sends a code — enter it here or activate it from the bot.'],
-    ['Can I use several devices?', 'Yes. One code activates one device: get a code for each and activate it from the bot — it asks which device.'],
-    ['New phone — what about my plan?', 'Send support your old and new Sali ID — we’ll help move the remaining days.'],
+    ['How do I get 24 hours free?', 'Tap “Turn on” on the home screen — that’s it. Nothing to enter or link.'],
+    ['How do I pay?', '“Plan” → pick a tariff. Pay in USDT (TON network) from any wallet. Link Telegram once so the plan belongs to your account.'],
+    ['Can I use several devices?', 'Yes, one plan covers up to 3 devices. Install Sali VPN on another device and link the same Telegram.'],
+    ['New phone — what about my plan?', 'Nothing is lost: the plan is on your account. Install the app on the new phone and link the same Telegram.'],
   ],
 } as const;
 

@@ -27,8 +27,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
           ? response
           : (response as any)?.message ?? exception.message;
 
+      // An exception may carry its own machine-readable code (e.g. TELEGRAM_REQUIRED) for the apps.
+      const own = typeof response === 'object' && typeof (response as any)?.code === 'string' ? (response as any).code : null;
       reply.status(status).send({
-        code: HttpStatus[status] ?? 'ERROR',
+        code: own ?? HttpStatus[status] ?? 'ERROR',
         message: Array.isArray(message) ? message[0] : message,
       });
       return;

@@ -14,7 +14,7 @@ export default function ServerModal() {
   return <SafeAreaView style={styles.safe}>
     <View style={styles.grip} />
     <ServerList
-      onPicked={(server) => { if (server.premiumOnly && access !== 'premium') router.replace('/activate'); else router.back(); }}
+      onPicked={(server) => { if (server.premiumOnly && access !== 'premium') router.replace('/subscription'); else router.back(); }}
       header={<View style={styles.header}><View style={{ flex: 1 }}><Text style={styles.title}>{t.locations}</Text><Text style={styles.subtitle}>{t.chooseLocation}</Text></View><Pressable accessibilityLabel="Закрыть" onPress={() => router.back()} style={styles.close}><Text style={styles.closeText}>×</Text></Pressable></View>}
     />
   </SafeAreaView>;

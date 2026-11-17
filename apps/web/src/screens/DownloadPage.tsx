@@ -20,13 +20,13 @@ const t = {
     android: { name: 'Android', sub: 'Телефон или планшет', req: 'Android 7.0 и новее · ~35 МБ', main: 'Скачать APK', alt: 'Как установить' },
     windows: { name: 'Windows', sub: 'Компьютер или ноутбук', req: 'Windows 10 / 11, 64-бит · ~90 МБ', main: 'Скачать установщик', alt: 'Портативная версия' },
     apple: { name: 'iPhone и Mac', sub: 'Пока не поддерживается', text: 'Sali VPN работает на Android и Windows. Одна подписка — до 3 устройств.' },
-    version: 'Версия', free: '24 часа бесплатно', freeText: 'Войдите в приложении через Telegram — 24 часа бесплатно включатся сами.',
+    version: 'Версия', free: '24 часа бесплатно', freeText: 'Установите приложение и нажмите «Включить» — 24 часа бесплатно, без регистрации.',
     guideEyebrow: 'Инструкция', guideTitle: 'Как установить и подключиться', tabs: { android: 'Android', windows: 'Windows' },
     stepsAndroid: [
       { icon: 'download', title: 'Скачайте приложение', text: 'Нажмите «Скачать APK» на этой странице прямо с телефона.' },
       { icon: 'lock', title: 'Разрешите установку', text: 'Откройте скачанный файл sali-vpn.apk. Если Android спросит — разрешите браузеру «Установку неизвестных приложений» и нажмите «Установить».', tip: 'Это стандартный запрос Android для приложений не из Google Play.' },
-      { icon: 'telegram', title: 'Войдите через Telegram', text: 'Откройте Sali VPN и нажмите «Войти». В Telegram нажмите «Запустить» — приложение подключится к вашему аккаунту, и сразу включатся 24 часа бесплатно.', tip: 'Бот не ответил? Отправьте ему номер устройства SL-XXXX-XXXX — приложение уже скопировало его.' },
-      { icon: 'check', title: 'Подключитесь', text: 'Нажмите большую кнопку подключения. Android один раз попросит разрешить VPN — нажмите «ОК». Подписку покупаете в боте — она сама появится в приложении.' },
+      { icon: 'check', title: 'Нажмите «Включить»', text: 'Откройте Sali VPN и нажмите большую кнопку. Android один раз попросит разрешить VPN — нажмите «ОК». Первые 24 часа — бесплатно, без регистрации.' },
+      { icon: 'telegram', title: 'Оформите подписку', text: 'Во вкладке «Подписка» выберите тариф и оплатите в USDT. Для оплаты один раз привяжите Telegram — подписка будет на вашем аккаунте и заработает на всех ваших устройствах.' },
     ] as Step[],
     stepsWindows: [
       { icon: 'download', title: 'Скачайте установщик', text: 'Нажмите «Скачать установщик» — загрузится файл SaliVPN-Setup.exe.' },
@@ -40,7 +40,7 @@ const t = {
       ['key', 'Аккаунт — это Telegram', 'Подписка лежит на аккаунте, а не на устройстве. Покупки и подарки появляются во всех ваших приложениях сами — без кодов.'],
       ['clock', '24 часа бесплатно', 'Один раз на аккаунт Telegram — включаются сами при первом входе в приложение.'],
       ['devices', 'До 3 устройств', 'Телефон, компьютер и ещё одно. У каждого устройства один постоянный номер — переустановка его не меняет. Лишние удаляются во вкладке «Устройства».'],
-      ['star', 'Продление', 'Автосписаний нет. Новая покупка добавляет дни к текущей подписке, бот напомнит за 3 дня до окончания.'],
+      ['star', 'Продление', 'Автосписаний нет. Новая покупка добавляет дни к текущей подписке, мы напомним в Telegram за 3 дня до окончания.'],
       ['globe', 'Серверы', 'Нидерланды, Германия, США — выбирайте страну в приложении. Список растёт каждый месяц.'],
       ['chat', 'Поддержка', 'Что-то не работает — напишите в бот поддержки, отвечает живой человек.'],
     ] as [string, string, string][],
@@ -55,7 +55,7 @@ const t = {
       ['Как удалить Sali VPN?', 'Android — как обычное приложение. Windows — «Параметры → Приложения → Sali VPN → Удалить».'],
     ] as [string, string][],
     safety: 'Загрузки идут с официального GitHub Sali VPN. Версия и контрольные суммы — на странице релизов.',
-    releases: 'Все версии', ctaTitle: 'Готово? Возьмите 24 часа бесплатно', ctaText: 'Установите приложение и нажмите «Войти через Telegram» — бесплатные часы включатся сами.', openBot: 'Открыть бота',
+    releases: 'Все версии', ctaTitle: 'Готово? Возьмите 24 часа бесплатно', ctaText: 'Установите приложение и нажмите «Включить» — бесплатные часы включатся сразу.', openBot: 'Открыть бота',
     channel: 'Скачать в Telegram', channelText: 'Каждая новая версия выходит файлом в нашем канале @SaliVpnNews — удобно, если GitHub грузится медленно. Там же новости и обновления.', openChannel: 'Открыть канал',
   },
   en: {
@@ -65,13 +65,13 @@ const t = {
     android: { name: 'Android', sub: 'Phone or tablet', req: 'Android 7.0+ · ~35 MB', main: 'Download APK', alt: 'How to install' },
     windows: { name: 'Windows', sub: 'Desktop or laptop', req: 'Windows 10 / 11, 64-bit · ~90 MB', main: 'Download installer', alt: 'Portable version' },
     apple: { name: 'iPhone and Mac', sub: 'Not supported yet', text: 'Sali VPN runs on Android and Windows. One plan — up to 3 devices.' },
-    version: 'Version', free: '24 hours free', freeText: 'Sign in with Telegram in the app — your free 24 hours start by themselves.',
+    version: 'Version', free: '24 hours free', freeText: 'Install the app and tap “Turn on” — your free 24 hours start right away.',
     guideEyebrow: 'Guide', guideTitle: 'How to install and connect', tabs: { android: 'Android', windows: 'Windows' },
     stepsAndroid: [
       { icon: 'download', title: 'Download the app', text: 'Tap "Download APK" on this page from your phone.' },
       { icon: 'lock', title: 'Allow the install', text: 'Open sali-vpn.apk. If Android asks, allow your browser to "Install unknown apps", then tap Install.', tip: 'This is the standard Android prompt for apps outside Google Play.' },
-      { icon: 'telegram', title: 'Sign in with Telegram', text: 'Open Sali VPN and tap "Sign in". Tap "Start" in Telegram — the app joins your account and your free 24 hours start right away.', tip: 'Bot silent? Send it your device number SL-XXXX-XXXX — the app has already copied it.' },
-      { icon: 'check', title: 'Connect', text: 'Tap the big connect button. Android asks once to allow the VPN — tap OK. Buy a plan in the bot and it appears in the app by itself.' },
+      { icon: 'check', title: 'Tap “Turn on”', text: 'Open Sali VPN and tap the big button. Android asks once to allow the VPN — tap OK. The first 24 hours are free, no sign-up.' },
+      { icon: 'telegram', title: 'Get a plan', text: 'In the “Plan” tab pick a plan and pay in USDT. Link Telegram once to pay — the plan belongs to your account and works on all your devices.' },
     ] as Step[],
     stepsWindows: [
       { icon: 'download', title: 'Download the installer', text: 'Click "Download installer" to get SaliVPN-Setup.exe.' },
@@ -100,7 +100,7 @@ const t = {
       ['How do I uninstall?', 'Android — like any app. Windows — Settings → Apps → Sali VPN → Uninstall.'],
     ] as [string, string][],
     safety: 'Downloads come from the official Sali VPN GitHub. Versions and checksums are on the releases page.',
-    releases: 'All versions', ctaTitle: 'Ready? Get 24 hours free', ctaText: 'Install the app and tap "Sign in with Telegram" — the free hours start by themselves.', openBot: 'Open the bot',
+    releases: 'All versions', ctaTitle: 'Ready? Get 24 hours free', ctaText: 'Install the app and tap “Turn on” — the free hours start right away.', openBot: 'Open the bot',
     channel: 'Download in Telegram', channelText: 'Every new version is posted as a file in our channel @SaliVpnNews — handy if GitHub is slow. News and updates are there too.', openChannel: 'Open the channel',
   },
 } satisfies Record<LandingLanguage, unknown>;
@@ -158,7 +158,7 @@ export function DownloadPage() {
           </article>
         </div>
         <div className="sv-dl-free sv-dl-channel"><Icon name="telegram" /><div><b>{c.channel}</b><span>{c.channelText}</span></div><a className="sv-btn sv-btn-ghost" href={DOWNLOADS.channel} target="_blank" rel="noreferrer"><Icon name="telegram-glyph" />{c.openChannel}</a></div>
-        <div className="sv-dl-free"><Icon name="gift" /><div><b>{c.free}</b><span>{c.freeText}</span></div><a className="sv-btn sv-btn-ghost" href={`${DOWNLOADS.bot}?start=free`}><Icon name="telegram-glyph" />{c.openBot}</a></div>
+        <div className="sv-dl-free"><Icon name="gift" /><div><b>{c.free}</b><span>{c.freeText}</span></div></div>
       </div>
     </section>
 
@@ -184,6 +184,6 @@ export function DownloadPage() {
       </div>
     </section>
 
-    <section className="sv-cta"><div className="sv-wrap"><h2>{c.ctaTitle}</h2><p>{c.ctaText}</p><div className="sv-actions sv-actions-center"><a className="sv-btn sv-btn-peach" href={`${DOWNLOADS.bot}?start=free`}><Icon name="telegram-glyph-dark" />{c.openBot}</a></div></div></section>
+    <section className="sv-cta"><div className="sv-wrap"><h2>{c.ctaTitle}</h2><p>{c.ctaText}</p><div className="sv-actions sv-actions-center"><a className="sv-btn sv-btn-peach" href={DOWNLOADS.apk}><Icon name="download-glyph-dark" />{c.android.main}</a></div></div></section>
   </main>;
 }

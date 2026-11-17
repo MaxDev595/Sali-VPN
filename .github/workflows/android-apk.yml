@@ -7,7 +7,7 @@ name: Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main, staging]
+    branches: [main, staging, app-only]
     paths:
       - 'apps/mobile/**'
       - 'packages/types/**'
@@ -24,6 +24,8 @@ concurrency:
 # that talks only to the test backend (repository variable STAGING_API_URL).
 env:
   STAGING: ${{ github.ref_name == 'staging' }}
+  # Only main publishes the public download (apk-latest). Other branches: a workflow artifact only.
+  PUBLISH: ${{ github.ref_name == 'main' }}
 
 jobs:
   apk:
@@ -147,8 +149,20 @@ jobs:
           prerelease: true
           files: sali-vpn-test.apk
 
+      # Feature branches: a separate pre-release (apk-<branch>) to try the build; apk-latest is untouched.
+      - name: Publish branch build
+        if: env.STAGING != 'true' && env.PUBLISH != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.ref_name }}
+          name: Sali VPN — сборка из ветки ${{ github.ref_name }}
+          body: |
+            Тестовая сборка из ветки ${{ github.ref_name }} (${{ github.sha }}). Не для клиентов: публичная ссылка apk-latest не меняется.
+          prerelease: true
+          files: sali-vpn.apk
+
       - name: Publish download link
-        if: env.STAGING != 'true'
+        if: env.STAGING != 'true' && env.PUBLISH == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-latest

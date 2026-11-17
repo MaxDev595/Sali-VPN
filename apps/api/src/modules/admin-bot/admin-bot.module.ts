@@ -10,5 +10,6 @@ import { AdminBotService } from './admin-bot.service';
   imports: [VpnModule, CodesModule, SubscriptionsModule, NotificationsModule],
   controllers: [AdminBotController],
   providers: [AdminBotService],
+  exports: [AdminBotService],
 })
 export class AdminBotModule {}

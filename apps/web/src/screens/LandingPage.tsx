@@ -60,7 +60,7 @@ export function LandingPage() {
         <button className="sv-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><LogoBadge className="sv-brand-mark" /><LogoWordmark vpn={false} className="sv-brand-word" /></button>
         <nav>{c.nav.map(([id, label]) => <button key={id} onClick={() => go(id)}>{label}</button>)}<Link to="/help">{c.help}</Link><Link to="/download">{c.downloadNav}</Link></nav>
         <LanguageSwitch language={language} onChange={setLanguage} />
-        <a className="sv-btn sv-btn-dark sv-nav-cta" href={BOT_URL}>{c.openBot}</a>
+        <Link className="sv-btn sv-btn-dark sv-nav-cta" to="/download">{c.downloadNav}</Link>
       </div>
     </header>
 
@@ -74,7 +74,6 @@ export function LandingPage() {
           <p className="sv-lead">{c.heroText}</p>
           <div className="sv-actions">
             <Link className="sv-btn sv-btn-peach" to="/download"><Icon name="download-glyph-dark" />{c.download}</Link>
-            <a className="sv-btn sv-btn-ghost" href={`${BOT_URL}?start=free`}><Icon name="telegram-glyph" />{c.openBot}</a>
           </div>
           <ul className="sv-trust">{c.trust.map((item) => <li key={item}>{item}</li>)}</ul>
         </div>
@@ -93,9 +92,9 @@ export function LandingPage() {
       <div className="sv-wrap">
         <div className="sv-head sv-reveal"><p className="sv-eyebrow">{c.plansEyebrow}</p><h2>{c.plansTitle}</h2><p>{c.plansText}</p></div>
         <div className="sv-plans">
-          <article className="sv-plan sv-reveal"><h3>{c.free}</h3><p className="sv-price"><strong>{PRICES.freeDays}</strong><s style={{ textDecoration: "none" }}>{c.dayWord}</s><span>{c.freeText}</span></p><a className="sv-btn sv-btn-ghost-dark" href={`${BOT_URL}?start=free`}>{c.freeCta}</a></article>
-          <article className="sv-plan sv-reveal"><h3>{c.month}</h3><p className="sv-price"><strong>${PRICES.month}</strong><s>${PRICES.monthOld}</s></p><ul>{c.benefits.map((b) => <li key={b}>{b}</li>)}</ul><a className="sv-btn sv-btn-dark" href={`${BOT_URL}?start=buy`}>{c.buyCta}</a></article>
-          <article className="sv-plan sv-plan-best sv-reveal"><em>{c.best} · −{saving}%</em><h3>{c.year}</h3><p className="sv-price"><strong>${PRICES.year}</strong><s>${PRICES.yearOld}</s><span>${monthlyOfYear}{c.perMonth}</span></p><ul>{c.benefits.map((b) => <li key={b}>{b}</li>)}</ul><a className="sv-btn sv-btn-peach" href={`${BOT_URL}?start=buy`}>{c.buyCta}</a></article>
+          <article className="sv-plan sv-reveal"><h3>{c.free}</h3><p className="sv-price"><strong>{PRICES.freeDays}</strong><s style={{ textDecoration: "none" }}>{c.dayWord}</s><span>{c.freeText}</span></p><Link className="sv-btn sv-btn-ghost-dark" to="/download">{c.freeCta}</Link></article>
+          <article className="sv-plan sv-reveal"><h3>{c.month}</h3><p className="sv-price"><strong>${PRICES.month}</strong><s>${PRICES.monthOld}</s></p><ul>{c.benefits.map((b) => <li key={b}>{b}</li>)}</ul><Link className="sv-btn sv-btn-dark" to="/download">{c.buyCta}</Link></article>
+          <article className="sv-plan sv-plan-best sv-reveal"><em>{c.best} · −{saving}%</em><h3>{c.year}</h3><p className="sv-price"><strong>${PRICES.year}</strong><s>${PRICES.yearOld}</s><span>${monthlyOfYear}{c.perMonth}</span></p><ul>{c.benefits.map((b) => <li key={b}>{b}</li>)}</ul><Link className="sv-btn sv-btn-peach" to="/download">{c.buyCta}</Link></article>
         </div>
         <p className="sv-pay">{c.payMethods}</p>
       </div>
@@ -127,10 +126,10 @@ export function LandingPage() {
       <div className="sv-wrap sv-reveal">
         <div className="sv-cta-card"><AnimatedLogo className="sv-cta-logo" replayKey={replay} /></div>
         <h2>{c.ctaTitle}</h2><p>{c.ctaText}</p>
-        <div className="sv-actions sv-actions-center"><Link className="sv-btn sv-btn-peach" to="/download"><Icon name="download-glyph-dark" />{c.download}</Link><a className="sv-btn sv-btn-ghost" href={`${BOT_URL}?start=free`}><Icon name="telegram-glyph" />{c.openBot}</a></div>
+        <div className="sv-actions sv-actions-center"><Link className="sv-btn sv-btn-peach" to="/download"><Icon name="download-glyph-dark" />{c.download}</Link></div>
       </div>
     </section>
 
-    <footer className="sv-footer"><div className="sv-wrap sv-footer-inner"><div className="sv-brand"><LogoBadge className="sv-brand-mark" /><LogoWordmark vpn={false} className="sv-brand-word" /></div><p>{c.footer}</p><nav><Link to="/download">{c.downloadNav}</Link><Link to="/help">{c.help}</Link><a href={SUPPORT_URL}>{c.support}</a><Link to="/privacy">{c.privacy}</Link><Link to="/terms">{c.terms}</Link><a href={BOT_URL}>Telegram</a></nav><small>© {new Date().getFullYear()} Sali VPN</small></div></footer>
+    <footer className="sv-footer"><div className="sv-wrap sv-footer-inner"><div className="sv-brand"><LogoBadge className="sv-brand-mark" /><LogoWordmark vpn={false} className="sv-brand-word" /></div><p>{c.footer}</p><nav><Link to="/download">{c.downloadNav}</Link><Link to="/help">{c.help}</Link><a href={SUPPORT_URL}>{c.support}</a><Link to="/privacy">{c.privacy}</Link><Link to="/terms">{c.terms}</Link></nav><small>© {new Date().getFullYear()} Sali VPN</small></div></footer>
   </main>;
 }

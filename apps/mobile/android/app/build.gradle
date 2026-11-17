@@ -131,8 +131,8 @@ android {
         applicationId 'app.sali.vpn'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 22
-        versionName "0.5.7"
+        versionCode 23
+        versionName "0.6.0"
         // -PsaliStaging=true: the TEST app («Sali VPN Test», app.sali.vpn.staging) — installs next to
         // the real one and talks to the test backend, so experiments never touch customers.
         manifestPlaceholders = [appLabel: findProperty('saliStaging') == 'true' ? 'Sali VPN Test' : '@string/app_name']

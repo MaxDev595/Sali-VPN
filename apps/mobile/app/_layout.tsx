@@ -27,7 +27,7 @@ function AppBootstrap() {
   const refreshAccount = useAccountStore(state => state.refresh);
   // A VPN left running while the app was closed shows up as connected again, with its timer.
   useEffect(() => useVpnStore.getState().init(), []);
-  // Back from Telegram (linked, bought a code…): fresh access and what's new.
+  // Back from Telegram (just linked) or a wallet (just paid): fresh access and what's new.
   useEffect(() => {
     void useNewsStore.getState().load();
     const sub = AppState.addEventListener('change', state => { if (state === 'active') { void useNewsStore.getState().load(); void useAccountStore.getState().refresh(); } });
@@ -64,6 +64,10 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
         <Stack.Screen name="support" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="news" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="checkout" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="gift" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="invite" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="devices" options={{ animation: 'slide_from_right' }} />
       </Stack>
       {ready && !introDone && <LogoIntro onFinish={finishIntro} />}
     </QueryClientProvider>

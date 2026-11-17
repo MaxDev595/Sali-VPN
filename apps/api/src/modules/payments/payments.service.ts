@@ -10,6 +10,7 @@ import { PaddlePaymentProvider } from './providers/paddle.provider';
 import { CryptoPaymentProvider } from './providers/crypto.provider';
 import { GooglePlayService } from './google-play.service';
 import { CodesService, IssuedCode } from '../codes/codes.service';
+import { formatPublicId } from '../codes/code-format';
 
 @Injectable()
 export class PaymentsService {
@@ -52,17 +53,25 @@ export class PaymentsService {
     return provider;
   }
 
-  async initiatePurchase(userId: string, planId: string, providerName?: string, options: { deliverAsCode?: boolean } = {}) {
+  /**
+   * options.giftToUserId — bought in the app as a gift: the days go to that account.
+   * options.promo — a DISCOUNT promo code (replaces the referral discount; the better one wins).
+   * options.rewardOwnerIds — rows whose referral discounts this buyer may spend (the account and its apps).
+   */
+  async initiatePurchase(userId: string, planId: string, providerName?: string, options: { deliverAsCode?: boolean; giftToUserId?: string; promo?: { id: string; percent: number }; rewardOwnerIds?: string[] } = {}) {
     const deliverAsCode = Boolean(options.deliverAsCode);
+    const rewardOwners = options.rewardOwnerIds?.length ? options.rewardOwnerIds : [userId];
     const provider = this.selectProvider(providerName);
     const plan = await this.prisma.plan.findUniqueOrThrow({ where: { id: planId } });
     const fullAmount = Number(plan.priceUsd);
 
     const reserved = await this.prisma.$transaction(async (tx) => {
       const reward = await tx.referralReward.findFirst({
-        where: { userId, kind: 'discount_percent', paymentId: null, consumedAt: null },
+        where: { userId: { in: rewardOwners }, kind: 'discount_percent', paymentId: null, consumedAt: null },
         orderBy: { grantedAt: 'asc' },
       });
+      // A promo code that gives more than the referral discount is used instead of it.
+      const usePromo = Boolean(options.promo && options.promo.percent > (reward?.amount ?? 0));
       // Bot purchases produce a code instead of a subscription on this account.
       const subscription = deliverAsCode ? null : await tx.subscription.create({
         data: { userId, planId, status: SubscriptionStatus.PENDING_PAYMENT },
@@ -76,11 +85,13 @@ export class PaymentsService {
           provider: provider.name,
           amountUsd: plan.priceUsd,
           status: PaymentStatus.PENDING,
+          giftToUserId: options.giftToUserId ?? null,
+          promoCodeId: usePromo ? options.promo!.id : null,
         },
       });
 
-      let discountPercent = 0;
-      if (reward) {
+      let discountPercent = usePromo ? Math.min(90, Math.max(0, options.promo!.percent)) : 0;
+      if (reward && !usePromo) {
         const claimed = await tx.referralReward.updateMany({
           where: { id: reward.id, paymentId: null, consumedAt: null },
           data: { paymentId: payment.id },
@@ -193,7 +204,7 @@ export class PaymentsService {
     const row = await this.prisma.activationCode.findUnique({ where: { code: code.code } });
     if (row?.status !== 'ISSUED') return;
     const payment = await this.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
-    await this.codes.redeem(payment.userId, code.code, { silent: true });
+    await this.codes.redeem(payment.giftToUserId ?? payment.userId, code.code, { silent: true });
   }
 
   /** Plan, until and linked devices of a Telegram account — for «оплачено» messages. */
@@ -213,9 +224,22 @@ export class PaymentsService {
       // No code for the customer to type: the purchase goes straight onto their account
       // (the code stays as the internal receipt).
       await this.activateOnAccount(payment.id);
+      if (payment.promoCodeId) {
+        await this.prisma.promoRedemption.create({ data: { promoId: payment.promoCodeId, accountId: payment.userId, paymentId: payment.id } })
+          .then(() => this.prisma.promoCode.update({ where: { id: payment.promoCodeId! }, data: { usedCount: { increment: 1 } } }))
+          .catch(() => undefined); // already counted for this account
+      }
       if (!options.silent) {
-        const info = await this.accountInfo(payment.userId);
-        await this.notifications.sendHtml(payment.userId, paidMessage(payment.plan.name, info), paidKeyboard(info)).catch(() => false);
+        if (payment.giftToUserId) {
+          const to = await this.prisma.user.findUnique({ where: { id: payment.giftToUserId } });
+          const info = await this.accountInfo(payment.giftToUserId);
+          const until = untilText(info.until);
+          await this.notifications.sendHtml(payment.userId, `🎁 <b>Подарок оплачен!</b>\n\nПодписка <b>${payment.plan.name}</b> начислена на аккаунт <b>${to ? formatPublicId(to.publicId) : '—'}</b>.`).catch(() => false);
+          await this.notifications.sendHtml(payment.giftToUserId, `🎁 <b>Вам подарили Sali VPN!</b>\n\nПодписка <b>${payment.plan.name}</b> активна ${until}. Откройте приложение Sali VPN и нажмите «Включить».`).catch(() => false);
+        } else {
+          const info = await this.accountInfo(payment.userId);
+          await this.notifications.sendHtml(payment.userId, paidMessage(payment.plan.name, info)).catch(() => false);
+        }
       }
     } else if (payment.subscriptionId) {
       await this.subscriptions.activate(payment.subscriptionId, payment.plan.durationDays);
@@ -354,9 +378,7 @@ const untilText = (iso: string | null) => (!iso ? '' : new Date(iso).getFullYear
 /** «Оплачено»: the subscription is already on the account — nothing to type. */
 export function paidMessage(planName: string, info: AccountInfo) {
   const head = `✅ <b>Оплата прошла!</b>\n\nПодписка <b>${planName}</b> активна ${untilText(info.until)}.\nОна на вашем аккаунте и работает на всех ваших устройствах — до ${info.maxDevices}.`;
-  return info.devices
-    ? `${head}\n\nОткройте приложение Sali VPN и нажмите «Подключить».`
-    : `${head}\n\nОсталось подключиться — кнопка ниже 👇`;
+  return `${head}\n\nОткройте приложение Sali VPN и нажмите «Включить».`;
 }
 
 export function paidKeyboard(info: AccountInfo) {
