@@ -29,7 +29,7 @@ servers. $5/month (officially $8), 3 days free.
   (`apps/api/src/modules/vpn/providers/vpn-provider.interface.ts`). Production uses
   `nodes` — see `docs/vpn-nodes.md`.
 - **The server is the source of truth** for trial expiry, subscriptions and VPN access.
-- **Referrals:** an invited friend gets +3 hours after their first code, the inviter
+- **Referrals:** an invited friend gets +1 day after their first code, the inviter
   gets 10% off the next purchase (`REFERRAL_FRIEND_BONUS_HOURS`, `REFERRAL_DISCOUNT_PERCENT`).
 - **Help centre:** `apps/web/src/help/articles.ts`. The apps' settings and the bot's
   «📖 Документация» open `https://salivpn.com/help/<slug>`; slugs must stay stable.

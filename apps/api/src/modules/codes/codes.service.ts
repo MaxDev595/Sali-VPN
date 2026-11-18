@@ -157,7 +157,7 @@ export class CodesService {
         const subscription = await this.subscriptions.grantDays(account?.id ?? userId, plan.id, row.durationDays, 'code');
         expiresAt = subscription.expiresAt;
       }
-      // Invited friend: the first activated code brings +3 hours here and 10% to the inviter.
+      // Invited friend: the first activated code brings +1 day here and 10% to the inviter.
       const bonus = row.ownerId
         ? await this.referrals.rewardIfEligible(row.ownerId, userId).catch((error) => {
             this.logger.warn(`Referral reward failed owner=${row.ownerId}`, error as Error);

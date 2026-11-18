@@ -102,7 +102,7 @@ export function createBillingHandlers(config: BotConfig) {
             : '<b>Sali VPN</b> — быстрый VPN без журналов.\n\nПервые <b>3 дня бесплатно</b>, без карты.',
           mainReplyKeyboard,
         );
-        if (result.referred) await ctx.replyWithHTML(referredWelcome(result.friendBonusHours ?? 3));
+        if (result.referred) await ctx.replyWithHTML(referredWelcome(result.friendBonusHours ?? 24));
         await ctx.reply(result.freeUsed ? 'Подключиться 👇' : 'Начните здесь 👇', welcomeKeyboard(result.freeUsed));
       } catch (error) {
         await fail(ctx, error, 'start');

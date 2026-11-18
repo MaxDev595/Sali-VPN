@@ -20,7 +20,7 @@ Required for the bot:
 Read by the API:
 
 - `TRIAL_DURATION_HOURS` (default 24) — the free tariff, counted from activation of the FREE code;
-- `REFERRAL_FRIEND_BONUS_HOURS` (default 3) — extra time for an invited friend;
+- `REFERRAL_FRIEND_BONUS_HOURS` (default 24 = 1 day) — extra time for an invited friend;
 - `REFERRAL_DISCOUNT_PERCENT` (default 10) — discount for the inviter's next purchase.
 
 ## Referrals
@@ -28,7 +28,7 @@ Read by the API:
 1. The inviter shares `https://t.me/SaliVPNOfficialBot?start=ref_<telegramId>` from «👥 Пригласить друга».
 2. A **new** Telegram account opens the bot with it → the referral is recorded.
 3. When the friend activates their first code on a device, the friend's device gets
-   +3 hours and the inviter gets a 10% discount (one per friend), applied automatically
+   +1 day and the inviter gets a 10% discount (one per friend), applied automatically
    to the next purchase — Stars and USDT alike.
 
 ## BotFather

@@ -346,13 +346,13 @@ export const ARTICLES: Article[] = [
     slug: 'referrals',
     group: 'account',
     title: { ru: 'Приглашения', en: 'Invites' },
-    lead: { ru: 'Другу — 3 часа VPN, вам — скидка 10% на следующую оплату.', en: 'Your friend gets 3 hours of VPN, you get 10% off your next payment.' },
+    lead: { ru: 'Другу — 1 день VPN, вам — скидка 10% на следующую оплату.', en: 'Your friend gets 1 day of VPN, you get 10% off your next payment.' },
     body: {
       ru: [
         { steps: [
           'В боте откройте «💎 Подписка» → «👥 Пригласить друга» и отправьте ссылку.',
           'Друг открывает бота по ссылке и входит через Telegram в приложении.',
-          'Друг сразу получает +3 часа VPN, а вам приходит скидка 10%.',
+          'Друг сразу получает +1 день VPN, а вам приходит скидка 10%.',
         ] },
         { list: ['Скидка применяется к следующей покупке автоматически.', 'За каждого друга — отдельная скидка.', 'Бонус работает только для новых аккаунтов Telegram.'] },
       ],
@@ -360,7 +360,7 @@ export const ARTICLES: Article[] = [
         { steps: [
           'Open "Invite a friend" in the bot and send the link.',
           'Your friend opens the bot from the link and signs in to the app with Telegram.',
-          'They get +3 hours of VPN right away; you get a 10% discount.',
+          'They get +1 day of VPN right away; you get a 10% discount.',
         ] },
         { list: ['The discount applies to your next purchase automatically.', 'Every friend brings a separate discount.', 'Only new Telegram accounts count.'] },
       ],

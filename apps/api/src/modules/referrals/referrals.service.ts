@@ -7,7 +7,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 /** Referrer: one 10% discount per friend, spent on the next purchase. */
 export const REFERRAL_DISCOUNT_PERCENT = Number(process.env.REFERRAL_DISCOUNT_PERCENT ?? 10);
 /** Friend: extra free VPN time on top of the free tariff (or the first paid code). */
-export const REFERRAL_FRIEND_BONUS_HOURS = Number(process.env.REFERRAL_FRIEND_BONUS_HOURS ?? 3);
+export const REFERRAL_FRIEND_BONUS_HOURS = Number(process.env.REFERRAL_FRIEND_BONUS_HOURS ?? 24);
 const FRIEND_BONUS_SECONDS = Math.round(REFERRAL_FRIEND_BONUS_HOURS * 3600);
 
 @Injectable()
@@ -49,7 +49,7 @@ export class ReferralsService {
 
   /**
    * Fires once, when the invited friend activates their first code on a device.
-   * Friend: +3 hours on that device (free tariff or subscription).
+   * Friend: +1 day (24 hours) on that device (free tariff or subscription).
    * Referrer: a 10% discount for the next purchase.
    */
   async rewardIfEligible(referredUserId: string, deviceUserId: string = referredUserId) {
