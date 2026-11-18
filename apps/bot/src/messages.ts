@@ -158,7 +158,7 @@ export function referralMessage(stats: ReferralStats) {
   return [
     '<b>Пригласите друга</b>',
     '',
-    `Друг получит <b>+${stats.friendBonusHours} часа</b> бесплатно, а вы — <b>скидку ${stats.discountPercent}%</b> на следующую оплату.`,
+    `Друг получит <b>+${bonusLabel(stats.friendBonusHours)}</b> бесплатно, а вы — <b>скидку ${stats.discountPercent}%</b> на следующую оплату.`,
     '',
     `Приглашено: <b>${stats.totalInvited}</b>${stats.availableDiscounts ? ` · скидок ждёт оплаты: <b>${stats.availableDiscounts}</b>` : ''}`,
     '',
@@ -166,8 +166,20 @@ export function referralMessage(stats: ReferralStats) {
   ].join('\n');
 }
 
+/** Bonus length in words: 24 → «1 день», 48 → «2 дня», 3 → «3 часа». */
+export function bonusLabel(hours: number) {
+  const plural = (n: number, one: string, few: string, many: string) => {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+  };
+  if (hours > 0 && hours % 24 === 0) { const d = hours / 24; return `${d} ${plural(d, 'день', 'дня', 'дней')}`; }
+  return `${hours} ${plural(hours, 'час', 'часа', 'часов')}`;
+}
+
 export function referredWelcome(hours: number) {
-  return `🎁 <b>Вы пришли по приглашению друга</b>\n\nВам <b>+${hours} часа</b> VPN бесплатно — они добавятся, когда подключитесь.`;
+  return `🎁 <b>Вы пришли по приглашению друга</b>\n\nВам <b>+${bonusLabel(hours)}</b> VPN бесплатно — добавится, когда подключитесь.`;
 }
 
 /** Bot purchase finished: it is already on the account. */

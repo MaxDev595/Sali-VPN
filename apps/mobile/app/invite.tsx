@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 import { Text } from '../src/components/Text';
 import { SaliButton } from '../src/components/SaliButton';
-import { Card, CopyBox, ErrorNote, Loading, Screen, Stat, ui } from '../src/components/ui';
+import { Card, CopyBox, ErrorNote, Loading, Screen, Stat, bonusLabel, ui } from '../src/components/ui';
 import { api, type Referrals } from '../src/services/api/client';
 import { theme } from '../src/theme';
 
@@ -17,7 +17,7 @@ export default function InviteScreen() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  return <Screen title="Пригласить друга" subtitle={data ? `Друг получит +${data.friendBonusHours} ч бесплатно, а вы — скидку ${data.discountPercent}% на следующую оплату за каждого друга.` : undefined} onRefresh={() => void load()} refreshing={loading}>
+  return <Screen title="Пригласить друга" subtitle={data ? `Друг получит +${bonusLabel(data.friendBonusHours)} бесплатно, а вы — скидку ${data.discountPercent}% на следующую оплату за каждого друга.` : undefined} onRefresh={() => void load()} refreshing={loading}>
     {!data && !error && <Loading />}
     {error && <ErrorNote text={error} onRetry={() => void load()} />}
     {data && <>
@@ -30,7 +30,7 @@ export default function InviteScreen() {
       </View>
       <Card style={{ marginTop: 14 }}>
         <Text style={styles.howTitle}>Как это работает</Text>
-        <Text style={styles.how}>1. Друг скачивает Sali VPN и нажимает «Включить» — 3 дня бесплатно.{'\n'}2. Вводит ваш код в «Промокод» — получает ещё +{data.friendBonusHours} ч.{'\n'}3. Вам начисляется скидка {data.discountPercent}% на следующую оплату.</Text>
+        <Text style={styles.how}>1. Друг скачивает Sali VPN и нажимает «Включить» — 3 дня бесплатно.{'\n'}2. Вводит ваш код в «Промокод» — получает ещё +{bonusLabel(data.friendBonusHours)}.{'\n'}3. Вам начисляется скидка {data.discountPercent}% на следующую оплату.</Text>
       </Card>
     </>}
   </Screen>;

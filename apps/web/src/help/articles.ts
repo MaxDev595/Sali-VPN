@@ -346,13 +346,13 @@ export const ARTICLES: Article[] = [
     slug: 'referrals',
     group: 'account',
     title: { ru: 'Приглашения', en: 'Invites' },
-    lead: { ru: 'Другу — 3 часа VPN, вам — скидка 10% на следующую оплату.', en: 'Your friend gets 3 hours of VPN, you get 10% off your next payment.' },
+    lead: { ru: 'Другу — 1 день VPN, вам — скидка 10% на следующую оплату.', en: 'Your friend gets 1 day of VPN, you get 10% off your next payment.' },
     body: {
       ru: [
         { steps: [
           'В приложении: «Подписка» → «Пригласить друга» → «Отправить другу».',
           'Друг ставит Sali VPN и вводит ваш Sali ID в «Подписка» → «Промокод».',
-          'Друг получает +3 часа VPN, а вам — скидка 10% на следующую оплату.',
+          'Друг получает +1 день VPN, а вам — скидка 10% на следующую оплату.',
         ] },
         { list: ['Скидка применяется к следующей покупке автоматически.', 'За каждого друга — отдельная скидка.', 'Бонус работает только для новых пользователей.'] },
       ],
@@ -360,7 +360,7 @@ export const ARTICLES: Article[] = [
         { steps: [
           'In the app: “Plan” → “Invite a friend” → “Send”.',
           'Your friend installs Sali VPN and enters your Sali ID in “Plan” → “Promo code”.',
-          'They get +3 hours of VPN; you get 10% off your next payment.',
+          'They get +1 day of VPN; you get 10% off your next payment.',
         ] },
         { list: ['The discount applies to your next purchase automatically.', 'Every friend brings a separate discount.', 'Only new users count.'] },
       ],

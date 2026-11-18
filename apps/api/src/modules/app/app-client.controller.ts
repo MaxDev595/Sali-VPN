@@ -195,7 +195,7 @@ export class AppClientController {
       availableDiscounts: rewards.filter((r) => !r.paymentId && !r.consumedAt).length,
       discountPercent: REFERRAL_DISCOUNT_PERCENT,
       friendBonusHours: REFERRAL_FRIEND_BONUS_HOURS,
-      shareText: `Пользуюсь Sali VPN — быстрый и надёжный. Скачай приложение: ${SITE} и введи мой код ${code} в «Подписка → Промокод» — получишь +${REFERRAL_FRIEND_BONUS_HOURS} ч бесплатно.`,
+      shareText: `Пользуюсь Sali VPN — быстрый и надёжный. Скачай приложение: ${SITE} и введи мой код ${code} в «Подписка → Промокод» — получишь +${REFERRAL_FRIEND_BONUS_HOURS % 24 === 0 && REFERRAL_FRIEND_BONUS_HOURS / 24 === 1 ? '1 день' : `${REFERRAL_FRIEND_BONUS_HOURS} ч`} бесплатно.`,
     };
   }
 

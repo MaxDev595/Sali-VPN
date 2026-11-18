@@ -68,7 +68,7 @@ test('first screen has exactly one button', () => {
 
 test('referral message names both rewards', () => {
   const { referralMessage } = require('../dist/messages');
-  const text = referralMessage({ link: 'x', totalInvited: 2, totalRewarded: 1, availableDiscounts: 1, discountPercent: 10, friendBonusHours: 3 });
-  assert.match(text, /\+3 часа/);
+  const text = referralMessage({ link: 'x', totalInvited: 2, totalRewarded: 1, availableDiscounts: 1, discountPercent: 10, friendBonusHours: 24 });
+  assert.match(text, /\+1 день/);
   assert.match(text, /скидку 10%/);
 });

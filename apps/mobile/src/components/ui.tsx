@@ -89,6 +89,18 @@ export function Stat({ label, value, hint }: { label: string; value: string | nu
 }
 
 export const money = (usd: number) => `$${usd.toFixed(usd % 1 ? 2 : 0)}`;
+/** Bonus length in words: 24 → «1 день», 48 → «2 дня», 3 → «3 часа». */
+export function bonusLabel(hours: number) {
+  const plural = (n: number, one: string, few: string, many: string) => {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+  };
+  if (hours > 0 && hours % 24 === 0) { const d = hours / 24; return `${d} ${plural(d, 'день', 'дня', 'дней')}`; }
+  return `${hours} ${plural(hours, 'час', 'часа', 'часов')}`;
+}
+
 export const period = (days: number) => (days >= 36_000 ? 'бессрочно' : days >= 360 ? `${Math.round(days / 365)} год` : days >= 28 ? `${Math.round(days / 30)} мес.` : `${days} дн.`);
 export const dateRu = (iso: string | null | undefined, withYear = true) => (iso ? new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', ...(withYear ? { year: 'numeric' } : {}) }) : '—');
 

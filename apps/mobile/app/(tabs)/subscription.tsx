@@ -10,7 +10,7 @@ import { SaliModal } from '../../src/components/SaliModal';
 import { SaliButton } from '../../src/components/SaliButton';
 import { Group, Row, SectionLabel } from '../../src/components/List';
 import { TelegramLinkCard } from '../../src/components/TelegramLinkCard';
-import { ErrorNote, Field, Loading, dateRu, money, period, toast } from '../../src/components/ui';
+import { ErrorNote, Field, Loading, bonusLabel, dateRu, money, period, toast } from '../../src/components/ui';
 import { api, ApiError, type PlansResponse } from '../../src/services/api/client';
 import { linkCodeOf, linkTelegram } from '../../src/services/session';
 import { useAccountStore } from '../../src/store/accountStore';
@@ -57,7 +57,7 @@ export default function SubscriptionScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (result.kind === 'DISCOUNT') { setPromo({ code: result.code, percent: result.percent }); toast(`Скидка ${result.percent}% — на следующую оплату`); }
       else if (result.kind === 'DAYS') { toast(`Начислено ${period(result.days)} подписки 🎉`); void refresh(); }
-      else { toast(result.pending ? `Приглашение принято: +${result.bonusHours} ч добавятся, когда включите VPN` : `Приглашение принято: +${result.bonusHours} ч 🎉`); void refresh(); }
+      else { toast(result.pending ? `Приглашение принято: +${bonusLabel(result.bonusHours)} — добавится, когда включите VPN` : `Приглашение принято: +${bonusLabel(result.bonusHours)} 🎉`); void refresh(); }
     } catch (e) {
       setPromoError(e instanceof ApiError ? e.message : 'Не получилось. Проверьте интернет');
     } finally { setPromoBusy(false); }
@@ -129,7 +129,7 @@ export default function SubscriptionScreen() {
       <Group>
         <Row title="🎁  Подарить подписку" hint="Другу по его Sali ID" onPress={() => (linked ? router.push('/gift') : home && void linkTelegram(linkCodeOf(home), refresh))} />
         <Row title="🏷  Промокод" hint="Или Sali ID друга, который вас пригласил" value={promo ? `−${promo.percent}%` : undefined} onPress={() => { setPromoError(null); setPromoOpen(true); }} />
-        <Row title="👥  Пригласить друга" hint="Другу +3 часа, вам скидка на оплату" onPress={() => router.push('/invite')} />
+        <Row title="👥  Пригласить друга" hint="Другу +1 день, вам скидка на оплату" onPress={() => router.push('/invite')} />
         <Row title="📱  Устройства" value={home?.account ? `${home.account.used} из ${home.account.max}` : '1 из 3'} onPress={() => router.push('/devices')} last />
       </Group>
     </ScrollView>

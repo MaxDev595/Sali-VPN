@@ -1,7 +1,7 @@
 import { Context } from 'telegraf';
 import { BotConfig } from '../config';
 import { api } from '../services/api-client';
-import { genericError, referralMessage } from '../messages';
+import { bonusLabel, genericError, referralMessage } from '../messages';
 import { docBySlug } from '../docs';
 import { docTopicKeyboard, helpKeyboard, mainInlineKeyboard, mainReplyKeyboard, referralShareKeyboard } from '../keyboards';
 
@@ -20,7 +20,7 @@ export function createHandlers(config: BotConfig) {
       if (!ctx.from) return;
       try {
         const stats = await api.referrals(ctx.from.id);
-        const shareText = `Попробуй Sali VPN — быстрый и приватный VPN. По моей ссылке ты получишь +${stats.friendBonusHours} часа бесплатно.`;
+        const shareText = `Попробуй Sali VPN — быстрый и приватный VPN. По моей ссылке ты получишь +${bonusLabel(stats.friendBonusHours)} бесплатно.`;
         await ctx.replyWithHTML(referralMessage(stats));
         await ctx.reply(
           `${shareText}\n\n${stats.link}`,
