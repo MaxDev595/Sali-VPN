@@ -63,7 +63,7 @@ export class HappService {
   }
 
   /**
-   * Access of the Telegram account: a subscription (all servers), or the free 24 hours —
+   * Access of the Telegram account: a subscription (all servers), or the free 3 days —
    * started in the bot or in a linked app — on the free servers only.
    */
   private async access(telegramId: bigint): Promise<{ ok: boolean; paid: boolean; sub: { expiresAt: Date | null } | null }> {
@@ -78,7 +78,7 @@ export class HappService {
     return trial ? { ok: true, paid: false, sub: { expiresAt: trial.expiresAt } } : { ok: false, paid: false, sub: null };
   }
 
-  /** Servers the link lists: active, healthy nodes with Xray (free servers only on the free 24 hours). */
+  /** Servers the link lists: active, healthy nodes with Xray (free servers only on the free 3 days). */
   private servers(paid = true) {
     return this.prisma.vpnServer.findMany({
       where: { isActive: true, online: true, agentUrl: { not: null }, xrayPublicKey: { not: null }, ...(paid ? {} : { premiumOnly: false }) },
@@ -88,7 +88,7 @@ export class HappService {
 
   /**
    * Puts the account's UUID on (or switches it off on) every node with Xray. On the free
-   * 24 hours it is switched on only on the free servers. Best effort.
+   * 3 days it is switched on only on the free servers. Best effort.
    */
   private async push(row: HappAccess, enabled: boolean, paid = true) {
     const list = await this.prisma.vpnServer.findMany({ where: { agentUrl: { not: null }, xrayPublicKey: { not: null } } });
@@ -123,7 +123,7 @@ export class HappService {
     this.assertEnabled();
     const tg = BigInt(telegramId);
     const access = await this.access(tg);
-    if (!access.ok) throw new ForbiddenException('Сейчас нет активного доступа. Возьмите 24 часа бесплатно или оформите подписку — ссылка для Happ появится здесь.');
+    if (!access.ok) throw new ForbiddenException('Сейчас нет активного доступа. Возьмите 3 дня бесплатно или оформите подписку — ссылка для Happ появится здесь.');
     let row = await this.prisma.happAccess.findUnique({ where: { telegramId: tg } });
     if (!row) {
       const token = randomBytes(24).toString('base64url');
@@ -210,7 +210,7 @@ export class HappService {
         'support-url': this.config.get<string>('SUPPORT_URL') || 'https://t.me/SaliVPNHelpBot',
         'profile-web-page-url': site,
         // Happ: shown under the profile name.
-        announce: `base64:${Buffer.from(access.ok ? (access.paid ? 'Sali VPN — приватно и без журналов' : 'Бесплатные 24 часа · подписка — в боте Sali VPN') : 'Доступ закончился — продлите в боте Sali VPN').toString('base64')}`,
+        announce: `base64:${Buffer.from(access.ok ? (access.paid ? 'Sali VPN — приватно и без журналов' : 'Бесплатные 3 дня · подписка — в боте Sali VPN') : 'Доступ закончился — продлите в боте Sali VPN').toString('base64')}`,
       },
     };
   }

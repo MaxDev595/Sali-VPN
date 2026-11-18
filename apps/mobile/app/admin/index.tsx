@@ -41,7 +41,7 @@ export default function AdminHome() {
       <View style={ui.grid}>
         <Stat label="Платная подписка" value={stats.access.paid} hint={stats.access.expiringPaid3d ? `${stats.access.expiringPaid3d} кончаются за 3 дня` : undefined} />
         <Stat label="От администрации" value={stats.access.granted} />
-        <Stat label="Бесплатные 24 ч" value={stats.access.trial} />
+        <Stat label="Бесплатные 3 дня" value={stats.access.trial} />
         <Stat label="Онлайн" value={stats.access.onlineNow ?? '—'} />
       </View>
 

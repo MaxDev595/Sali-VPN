@@ -29,7 +29,7 @@ const days = (d: Date | null) => (d ? Math.max(0, Math.floor((Date.now() - d.get
 /**
  * Everything a customer does lives in the app now: tariffs, paying (USDT on TON), gifts,
  * promo codes, inviting friends, devices. The Telegram bot is only where an account is
- * linked (one tap) — paying needs that link, the free 24 hours do not.
+ * linked (one tap) — paying needs that link, the free 3 days do not.
  *
  * Account = the Telegram user once linked, otherwise the installation itself. It has one
  * Sali ID for life; devices only carry a technical label (D-XXXXXX).
@@ -173,7 +173,7 @@ export class AppClientController {
     if (await this.prisma.referral.findFirst({ where: { referredUserId: { in: family } } })) throw new ConflictException('Приглашение уже было использовано на этом аккаунте');
     if (await this.prisma.payment.count({ where: { userId: { in: family }, status: PaymentStatus.SUCCEEDED } })) throw new ConflictException('Приглашение работает только для новых пользователей');
     await this.prisma.referral.create({ data: { referrerId: referrer.id, referredUserId: account.id } });
-    // The bonus needs time to land on: the subscription, or the free 24 hours already running.
+    // The bonus needs time to land on: the subscription, or the free 3 days already running.
     const holder = (await this.subscriptions.getOwnActive(account.id)) ? account.id : (await this.trials.getTrial(me.id)) ? me.id : null;
     if (holder) await this.referrals.rewardIfEligible(account.id, holder).catch(() => undefined);
     return { kind: 'REFERRAL' as const, from: formatPublicId(referrer.publicId), bonusHours: REFERRAL_FRIEND_BONUS_HOURS, pending: !holder };

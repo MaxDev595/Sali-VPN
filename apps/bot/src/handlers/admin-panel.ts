@@ -252,7 +252,7 @@ export async function funnel(ctx: Context, days = 7) {
       '<i>Новые люди в боте и как далеко они дошли</i>',
       '',
       step('👋', 'Нажали /start', t.start, 0),
-      step('🎁', 'Взяли 24 часа бесплатно', t.free, t.start),
+      step('🎁', 'Взяли 3 дня бесплатно', t.free, t.start),
       step('📲', 'Начали подключение', t.started, t.free || t.start),
       step('⚡', 'Подключились (VPN работал)', t.connected, t.started),
       step('💎', 'Оплатили', t.paid, t.connected),

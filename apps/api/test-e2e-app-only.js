@@ -45,7 +45,7 @@ async function pay(paymentId) {
 (async () => {
   await db.connect();
 
-  // --- free 24 hours: just «Включить», no Telegram ---
+  // --- free 3 days: just «Включить», no Telegram ---
   const A = await device('A');
   let hA = await A.home();
   assert.match(hA.user.publicId, /^SL-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
@@ -58,8 +58,8 @@ async function pay(paymentId) {
   await A.connect();
   hA = await A.home();
   assert.equal(hA.trial.status, 'ACTIVE');
-  assert.ok(hA.trial.secondsRemaining > 23 * 3600);
-  ok('«Включить» without Telegram → free 24 hours started, VPN config returned');
+  assert.ok(hA.trial.secondsRemaining > 71 * 3600);
+  ok('«Включить» without Telegram → free 3 days started, VPN config returned');
 
   const noTg = await call('/app/purchase', { token: A.token, method: 'POST', body: { planCode: 'pro_monthly' }, expect: 403 });
   assert.equal(noTg.code, 'TELEGRAM_REQUIRED');
@@ -113,19 +113,19 @@ async function pay(paymentId) {
   assert.ok(devs.devices.every((d) => /^D-[0-9A-F]{6}$/.test(d.id) && d.covered));
   ok(`second phone linked: shows the same ${idA}, devices ${devs.devices.map((d) => d.id).join(', ')} share the subscription`);
 
-  // A free 24h already used by the account: a new linked device does not get another one.
+  // A free 3 days already used by the account: a new linked device does not get another one.
   const B2 = await device('B2');
   const hB2 = await B2.home();
   await linkTo(B2, hB2, 333, 'bob');           // bob: account whose first app already used its trial
-  await B2.connect();                            // bob starts nothing yet… (B2 is bob's first app → it gets the 24h on connect)
+  await B2.connect();                            // bob starts nothing yet… (B2 is bob's first app → it gets the 3 days on connect)
   const B3 = await device('B3');
-  await B3.connect();                            // B3 used its own free 24h before linking
+  await B3.connect();                            // B3 used its own free 3 days before linking
   await linkTo(B3, await B3.home(), 333, 'bob');
   const B4 = await device('B4');
   await linkTo(B4, await B4.home(), 333, 'bob');
   const denied = await B4.connect(403);
-  assert.match(denied.message, /Бесплатные 24 часа уже использованы/);
-  ok('free 24 hours: once per account — a third phone of the same Telegram is asked to subscribe');
+  assert.match(denied.message, /Бесплатные 3 дня уже использованы/);
+  ok('free 3 days: once per account — a third phone of the same Telegram is asked to subscribe');
 
   // --- admin ---
   const ADM = await device('ADM');
@@ -213,7 +213,7 @@ async function pay(paymentId) {
   await H.connect();
   const tH = (await H.home()).trial;
   assert.ok(tH.secondsRemaining > 24 * 3600 + 2.9 * 3600);
-  ok('invite entered before the first connect: bonus added when the free 24 hours start');
+  ok('invite entered before the first connect: bonus added when the free 3 days start');
 
   // --- devices: remove an old phone ---
   const hB0 = await B.home();

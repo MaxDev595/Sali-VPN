@@ -19,7 +19,12 @@ import { FLAGS } from '../../src/data/fallbackServers';
 import { theme } from '../../src/theme';
 
 const pad = (n: number) => String(n).padStart(2, '0');
-function clock(seconds: number) { const s = Math.max(0, Math.floor(seconds)); return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`; }
+function clock(seconds: number) {
+  const s = Math.max(0, Math.floor(seconds));
+  const d = Math.floor(s / 86400);
+  const hms = `${pad(Math.floor(s / 3600) % 24)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+  return d > 0 ? `${d} д ${hms}` : hms;
+}
 
 /** Tariff half of the ticket: subscription date, free-time countdown or "enter a code". */
 function TariffStub() {
@@ -37,7 +42,7 @@ function TariffStub() {
     return <><Text style={[styles.stubMain, styles.mono]}>{clock(left)}</Text><Text style={styles.stubSub}>Бесплатно</Text></>;
   }
   if (access === 'expired') return <><Text style={[styles.stubMain, { color: theme.colors.accent }]}>Подписка</Text><Text style={styles.stubSub}>Бесплатное время вышло</Text></>;
-  return <><Text style={[styles.stubMain, { color: theme.colors.accent }]}>24 часа</Text><Text style={styles.stubSub}>Бесплатно — «Включить»</Text></>;
+  return <><Text style={[styles.stubMain, { color: theme.colors.accent }]}>3 дня</Text><Text style={styles.stubSub}>Бесплатно — «Включить»</Text></>;
 }
 
 export default function VpnScreen() {
@@ -121,7 +126,7 @@ export default function VpnScreen() {
     </ScrollView>
 
     <SaliModal visible={needsCode} title="Нужна подписка" onClose={clearError}>
-      <Text style={styles.modalText}>{error ?? 'Бесплатные 24 часа закончились.'}{'\n\n'}Подписка работает на всех ваших устройствах (до 3). Оплата — USDT, прямо в приложении.</Text>
+      <Text style={styles.modalText}>{error ?? 'Бесплатные 3 дня закончились.'}{'\n\n'}Подписка работает на всех ваших устройствах (до 3). Оплата — USDT, прямо в приложении.</Text>
       <View style={{ gap: 10, marginTop: 20 }}>
         <SaliButton title="Выбрать тариф" onPress={() => { clearError(); toPlans(); }} />
         <SaliButton secondary title="Не подключается? Поддержка" onPress={() => { clearError(); openSupport(); }} />

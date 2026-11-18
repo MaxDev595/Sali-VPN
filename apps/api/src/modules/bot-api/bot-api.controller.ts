@@ -105,7 +105,7 @@ export class BotApiController {
     if (sub) return { tariff: sub.plan.name, until: sub.expiresAt?.toISOString() ?? null, active: true };
     if (trial) {
       const left = trialSecondsLeft(trial);
-      return { tariff: 'Бесплатный (24 часа)', until: trial.expiresAt.toISOString(), active: left > 0, secondsLeft: left };
+      return { tariff: 'Бесплатный (3 дня)', until: trial.expiresAt.toISOString(), active: left > 0, secondsLeft: left };
     }
     return { tariff: null, until: null, active: false };
   }

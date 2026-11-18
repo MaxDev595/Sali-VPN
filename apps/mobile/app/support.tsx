@@ -17,7 +17,7 @@ const FAQ = {
   ru: [
     ['VPN не подключается', 'Проверьте, что тариф активен (Профиль), выключите другие VPN и «Частный DNS» в настройках Android, смените локацию и попробуйте снова.'],
     ['Подключился, но сайты не открываются', 'Отключитесь, выберите другую локацию и подключитесь снова. Если включён Kill Switch, проверьте, что в системе разрешена «Постоянная VPN» для Sali.'],
-    ['Как получить 24 часа бесплатно?', 'Нажмите «Включить» на главном экране — и всё. Ничего вводить и привязывать не нужно.'],
+    ['Как получить 3 дня бесплатно?', 'Нажмите «Включить» на главном экране — и всё. Ничего вводить и привязывать не нужно.'],
     ['Как оплатить?', '«Подписка» → выберите тариф. Оплата в USDT (сеть TON) с любого кошелька: Telegram Wallet, Tonkeeper, биржа. Для оплаты один раз привяжите Telegram — подписка будет на вашем аккаунте.'],
     ['Можно на нескольких устройствах?', 'Да, одна подписка — до 3 устройств. Установите Sali VPN на другом устройстве и привяжите тот же Telegram — подписка заработает сама.'],
     ['Сменил телефон — что с подпиской?', 'Ничего не пропадёт: подписка на аккаунте. Установите приложение на новый телефон и привяжите тот же Telegram. Старый телефон можно удалить в «Устройствах».'],
@@ -26,7 +26,7 @@ const FAQ = {
   en: [
     ['VPN won’t connect', 'Check your plan is active (Profile), turn off other VPNs and Android’s “Private DNS”, change the location and try again.'],
     ['Connected, but sites won’t open', 'Disconnect, pick another location and connect again. With Kill Switch on, make sure “Always-on VPN” is allowed for Sali.'],
-    ['How do I get 24 hours free?', 'Tap “Turn on” on the home screen — that’s it. Nothing to enter or link.'],
+    ['How do I get 3 days free?', 'Tap “Turn on” on the home screen — that’s it. Nothing to enter or link.'],
     ['How do I pay?', '“Plan” → pick a tariff. Pay in USDT (TON network) from any wallet. Link Telegram once so the plan belongs to your account.'],
     ['Can I use several devices?', 'Yes, one plan covers up to 3 devices. Install Sali VPN on another device and link the same Telegram.'],
     ['New phone — what about my plan?', 'Nothing is lost: the plan is on your account. Install the app on the new phone and link the same Telegram.'],

@@ -30,7 +30,7 @@ export default function InviteScreen() {
       </View>
       <Card style={{ marginTop: 14 }}>
         <Text style={styles.howTitle}>Как это работает</Text>
-        <Text style={styles.how}>1. Друг скачивает Sali VPN и нажимает «Включить» — 24 часа бесплатно.{'\n'}2. Вводит ваш код в «Промокод» — получает ещё +{data.friendBonusHours} ч.{'\n'}3. Вам начисляется скидка {data.discountPercent}% на следующую оплату.</Text>
+        <Text style={styles.how}>1. Друг скачивает Sali VPN и нажимает «Включить» — 3 дня бесплатно.{'\n'}2. Вводит ваш код в «Промокод» — получает ещё +{data.friendBonusHours} ч.{'\n'}3. Вам начисляется скидка {data.discountPercent}% на следующую оплату.</Text>
       </Card>
     </>}
   </Screen>;

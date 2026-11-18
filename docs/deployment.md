@@ -56,7 +56,7 @@ Follow `docs/telegram-bot-setup.md` — set `TELEGRAM_MODE=webhook`,
 ## 6. Verify
 
 - `curl https://your-domain.example/api/v1/plans` → returns the seeded plan.
-- Open the bot in Telegram, send `/start`, tap «🎁 24 часа бесплатно».
+- Open the bot in Telegram, send `/start`, tap «🎁 3 дня бесплатно».
 - Check `docker compose logs -f api bot` for errors.
 
 ## 7. Ongoing operations

@@ -16,7 +16,7 @@ export const menuLabels = {
 export const legacyLabels = {
   connect: ['📲 Скачать приложение', 'Подключить VPN'],
   plan: ['💎 Купить подписку', '💎 Моя подписка', '🔑 Мои коды', '⚙️ Аккаунт', 'Моя подписка', 'Тарифы', 'Настройки'],
-  free: ['🎁 24 часа бесплатно', '🎁 Бесплатный день', '🎁 Бесплатный тариф'],
+  free: ['🎁 24 часа бесплатно', '🎁 Попробовать бесплатно — 24 часа', '🎁 Бесплатный день', '🎁 Бесплатный тариф'],
   devices: ['📱 Мои устройства'],
   invite: ['👥 Пригласить друга', 'Пригласить друга'],
   help: ['💬 Поддержка', '📖 Документация', 'Поддержка', 'Серверы'],
@@ -34,7 +34,7 @@ export const mainInlineKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback(menuLabels.plan, 'menu_plan'), Markup.button.callback(menuLabels.help, 'menu_help')],
 ]);
 
-export const FREE_BUTTON = '🎁 Попробовать бесплатно — 24 часа';
+export const FREE_BUTTON = '🎁 Попробовать бесплатно — 3 дня';
 
 /** First screen: exactly one button — try for free, or connect if the free day is used. */
 export function welcomeKeyboard(freeUsed: boolean) {

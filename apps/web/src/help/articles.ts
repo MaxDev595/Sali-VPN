@@ -37,7 +37,7 @@ export const ARTICLES: Article[] = [
       ru: [
         { steps: [
           'Скачайте Sali VPN для Android на странице «Скачать».',
-          'Откройте приложение и нажмите «Включить» — 24 часа бесплатно, без регистрации.',
+          'Откройте приложение и нажмите «Включить» — 3 дня бесплатно, без регистрации.',
           'Разрешите системе создать VPN-профиль (Android спрашивает один раз).',
           'Понравилось — оформите подписку во вкладке «Подписка» и оплатите в USDT.',
           'Для оплаты один раз привяжите Telegram: «Привязать Telegram», в Telegram — «Запустить». Подписка будет на вашем аккаунте.',
@@ -47,7 +47,7 @@ export const ARTICLES: Article[] = [
       en: [
         { steps: [
           'Download Sali VPN for Android from the Download page.',
-          'Open the app and tap “Turn on” — 24 hours free, no sign-up.',
+          'Open the app and tap “Turn on” — 3 days free, no sign-up.',
           'Allow the system to create a VPN profile (Android asks once).',
           'Like it? Get a plan in the “Plan” tab and pay in USDT.',
           'To pay, link Telegram once: “Link Telegram”, then “Start” in Telegram. The plan belongs to your account.',
@@ -374,7 +374,7 @@ export const ARTICLES: Article[] = [
     body: {
       ru: [
         { steps: [
-          'Проверьте доступ: в приложении во вкладке «Подписка» должна быть активная подписка или бесплатные 24 часа.',
+          'Проверьте доступ: в приложении во вкладке «Подписка» должна быть активная подписка или бесплатные 3 дня.',
           'Выключите другие VPN, блокировщики рекламы и «Частный DNS».',
           'Переключитесь между Wi-Fi и мобильной сетью.',
           'Выберите другой сервер.',
@@ -384,7 +384,7 @@ export const ARTICLES: Article[] = [
       ],
       en: [
         { steps: [
-          'Check your access: the app’s “Plan” tab should show an active plan or the free 24 hours.',
+          'Check your access: the app’s “Plan” tab should show an active plan or the free 3 days.',
           'Turn off other VPNs, ad blockers and "Private DNS".',
           'Switch between Wi-Fi and mobile data.',
           'Pick another server.',

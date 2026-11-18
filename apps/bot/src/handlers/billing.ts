@@ -99,7 +99,7 @@ export function createBillingHandlers(config: BotConfig) {
         await ctx.replyWithHTML(
           result.freeUsed
             ? '<b>Sali VPN</b> — с возвращением!\n\nВсё управление — в трёх кнопках внизу.'
-            : '<b>Sali VPN</b> — быстрый VPN без журналов.\n\nПервые <b>24 часа бесплатно</b>, без карты.',
+            : '<b>Sali VPN</b> — быстрый VPN без журналов.\n\nПервые <b>3 дня бесплатно</b>, без карты.',
           mainReplyKeyboard,
         );
         if (result.referred) await ctx.replyWithHTML(referredWelcome(result.friendBonusHours ?? 3));
@@ -249,7 +249,7 @@ export function createBillingHandlers(config: BotConfig) {
       try {
         await api.freeCode(ctx.from.id);
         // Straight to the ways to connect: no extra «Подключиться» tap.
-        await connect(ctx, '✅ <b>24 часа бесплатно включены!</b>');
+        await connect(ctx, '✅ <b>3 дня бесплатно включены!</b>');
       } catch (error) {
         if (error instanceof ApiRejection && error.status === 404) {
           await api.start(profile(ctx)!).catch(() => undefined);

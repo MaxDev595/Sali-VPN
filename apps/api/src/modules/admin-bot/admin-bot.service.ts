@@ -253,7 +253,7 @@ export class AdminBotService {
         const owner = owners.get(s.userId)!;
         return { id: s.id, where: owner.telegramId ? 'Telegram-аккаунт' : formatPublicId(owner.publicId), plan: s.plan.name, until: until(s.expiresAt) };
       }),
-      codes: codes.map((c) => ({ id: c.id, code: formatCode(c.code), what: c.kind === ActivationCodeKind.FREE ? '24 часа бесплатно' : `${c.plan?.name ?? 'Sali Pro'} · ${durationText(c.durationDays)}` })),
+      codes: codes.map((c) => ({ id: c.id, code: formatCode(c.code), what: c.kind === ActivationCodeKind.FREE ? '3 дня бесплатно' : `${c.plan?.name ?? 'Sali Pro'} · ${durationText(c.durationDays)}` })),
     };
   }
 
@@ -413,7 +413,7 @@ export class AdminBotService {
    * «👥 Пользователи»: who has access right now, split into segments, 10 per page.
    *   paid    — active paid subscription (Stars, USDT, card, paid code)
    *   granted — active subscription from the admin (🛡 or 🎁)
-   *   trial   — free 24 h tariff, no subscription
+   *   trial   — free 3 days tariff, no subscription
    *   expired — access ended in the last 30 days (who to win back)
    * Only account data — no traffic, sites or connection history (there is none).
    */
@@ -473,7 +473,7 @@ export class AdminBotService {
   /** «📊 Статистика»: audience, access, money, conversion, codes, referrals, servers. Counts only. */
   /**
    * «📉 Воронка»: Telegram accounts that pressed /start in the last `days` days, and how far
-   * each got — free 24 hours → started connecting (app linked / Happ page opened) →
+   * each got — free 3 days → started connecting (app linked / Happ page opened) →
    * actually connected (VPN used in the app / Happ downloaded the servers) → paid.
    * Built from the data the service keeps anyway; nothing extra is tracked about people.
    */

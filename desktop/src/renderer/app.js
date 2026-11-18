@@ -22,7 +22,7 @@ const flagFor = (location) => (FLAGS.find(([re]) => re.test(location || '')) || 
 const FAQ = [
   ['VPN не подключается', 'Проверьте, что тариф активен (карточка «Тариф»), выключите другие VPN и прокси, затем попробуйте снова. Windows может спросить разрешение для службы WireGuard — его нужно подтвердить. Подписка есть, а VPN всё равно не подключается — напишите в поддержку (кнопка «Поддержка»), разберёмся.'],
   ['Подключился, но сайты не открываются', 'Отключитесь и подключитесь снова — Sali перенесёт вас на рабочий сервер. Если используете свой DNS или прокси в браузере, выключите их.'],
-  ['Как начать?', 'Нажмите «Войти через Telegram», в Telegram — «Запустить». Компьютер подключится к вашему аккаунту, и сразу включатся 24 часа бесплатно.'],
+  ['Как начать?', 'Нажмите «Войти через Telegram», в Telegram — «Запустить». Компьютер подключится к вашему аккаунту, и сразу включатся 3 дня бесплатно.'],
   ['Где купить подписку?', 'В нашем Telegram-боте. После оплаты она сама появится здесь и на всех ваших устройствах — ничего вводить не нужно.'],
   ['Можно на нескольких устройствах?', 'Да, до 3: компьютер, телефон и ещё одно. Подписка на аккаунте, поэтому работает на всех сразу. Ненужные устройства удаляются на вкладке «Устройства».'],
   ['VPN работает, когда окно закрыто?', 'Да. Закрытие окна сворачивает Sali в область уведомлений, VPN остаётся включённым. Отключить его можно там же, правой кнопкой по значку.'],
@@ -38,7 +38,9 @@ function toast(text, kind = '') {
 
 function hms(seconds) {
   const s = Math.max(0, Math.floor(seconds));
-  return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((v) => String(v).padStart(2, '0')).join(':');
+  const d = Math.floor(s / 86400);
+  const t = [Math.floor(s / 3600) % 24, Math.floor(s / 60) % 60, s % 60].map((v) => String(v).padStart(2, '0')).join(':');
+  return d > 0 ? `${d} д ${t}` : t;
 }
 
 function access() {
@@ -61,7 +63,7 @@ function render() {
   el.power.disabled = busy;
 
   el.statusTitle.textContent = on ? 'Соединение защищено' : vpn.state === 'connecting' ? 'Рисуем туннель…' : vpn.state === 'disconnecting' ? 'Отключаемся…' : 'VPN выключен';
-  el.statusSub.textContent = vpn.detail || (on ? 'Весь трафик компьютера идёт через Sali' : busy ? ' ' : a.kind === 'none' ? (linkedNow() ? 'Купите подписку в Telegram-боте' : 'Войдите через Telegram — 24 часа бесплатно') : 'Нажмите на знак, чтобы подключиться');
+  el.statusSub.textContent = vpn.detail || (on ? 'Весь трафик компьютера идёт через Sali' : busy ? ' ' : a.kind === 'none' ? (linkedNow() ? 'Купите подписку в Telegram-боте' : 'Войдите через Telegram — 3 дня бесплатно') : 'Нажмите на знак, чтобы подключиться');
   el.power.setAttribute('aria-label', on ? 'Отключить VPN' : 'Подключить VPN');
   el.timer.textContent = on && vpn.connectedAt ? hms((Date.now() - vpn.connectedAt) / 1000) : ' ';
 
@@ -83,7 +85,7 @@ function render() {
   el.devTariff.textContent = a.kind === 'paid' ? 'подписка' : a.kind === 'trial' ? 'бесплатный' : a.kind === 'none' ? 'нет' : '—';
   el.devTg.textContent = home ? (linked ? 'привязан' : 'не привязан') : '—';
   el.tgValue.textContent = home ? (linked ? 'Привязан' : 'Привязать') : '—';
-  el.tgHint.textContent = linked ? 'Подписка на аккаунте — работает на всех ваших устройствах' : 'Войдите, чтобы получить 24 часа бесплатно';
+  el.tgHint.textContent = linked ? 'Подписка на аккаунте — работает на всех ваших устройствах' : 'Войдите, чтобы получить 3 дня бесплатно';
 }
 
 function escapeHtml(text) { return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
@@ -200,7 +202,7 @@ el.form.addEventListener('submit', async (event) => {
   if (!response.ok) { el.error.textContent = response.error; el.error.hidden = false; return; }
   closeSheet();
   const r = response.result;
-  toast(r.kind === 'FREE' ? 'Бесплатные 24 часа включены. Можно подключаться!' : `Промокод применён${r.expiresAt ? ` — подписка до ${new Date(r.expiresAt).toLocaleDateString('ru-RU')}` : ''}.`, 'ok');
+  toast(r.kind === 'FREE' ? 'Бесплатные 3 дня включены. Можно подключаться!' : `Промокод применён${r.expiresAt ? ` — подписка до ${new Date(r.expiresAt).toLocaleDateString('ru-RU')}` : ''}.`, 'ok');
   await loadHome({ quiet: true });
 });
 

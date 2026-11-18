@@ -7,7 +7,7 @@ import { theme } from '../theme';
 
 /**
  * Linking Telegram is needed only to pay: the subscription then belongs to the account, works on
- * all its devices (up to 3) and survives reinstalling. The free 24 hours never need it.
+ * all its devices (up to 3) and survives reinstalling. The free 3 days never need it.
  */
 export function TelegramLinkCard() {
   const home = useAccountStore(state => state.home);

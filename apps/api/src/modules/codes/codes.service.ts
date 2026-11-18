@@ -173,7 +173,7 @@ export class CodesService {
         referralBonusHours: bonus?.friendBonusHours ?? 0,
         kind: row.kind,
         durationDays: row.kind === ActivationCodeKind.FREE ? 1 : row.durationDays,
-        planName: row.plan?.name ?? (row.kind === ActivationCodeKind.FREE ? '24 часа бесплатно' : null),
+        planName: row.plan?.name ?? (row.kind === ActivationCodeKind.FREE ? '3 дня бесплатно' : null),
         expiresAt: expiresAt?.toISOString() ?? null,
       };
     } catch (error) {

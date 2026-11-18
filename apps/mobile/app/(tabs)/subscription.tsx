@@ -19,7 +19,7 @@ import { theme } from '../../src/theme';
 
 /**
  * «Подписка»: status, tariffs (USDT on TON), gift, promo code, inviting friends, devices.
- * Paying needs a linked Telegram (one tap); the free 24 hours never do.
+ * Paying needs a linked Telegram (one tap); the free 3 days never do.
  */
 export default function SubscriptionScreen() {
   const home = useAccountStore((s) => s.home);
@@ -68,10 +68,10 @@ export default function SubscriptionScreen() {
   const status = access === 'premium'
     ? { title: forever ? 'Подписка бессрочная' : `Подписка до ${dateRu(until, false)}`, hint: 'Работает на всех устройствах аккаунта', tone: theme.colors.success }
     : access === 'trial'
-      ? { title: 'Бесплатные 24 часа', hint: `До ${home?.trial ? new Date(home.trial.expiresAt).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}`, tone: theme.colors.accent }
+      ? { title: 'Бесплатные 3 дня', hint: `До ${home?.trial ? new Date(home.trial.expiresAt).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}`, tone: theme.colors.accent }
       : access === 'expired'
         ? { title: 'Бесплатное время закончилось', hint: 'Выберите тариф — VPN заработает сразу', tone: theme.colors.warning }
-        : { title: 'Нет подписки', hint: 'Первые 24 часа — бесплатно: нажмите «Включить» на главной', tone: theme.colors.textSecondary };
+        : { title: 'Нет подписки', hint: 'Первые 3 дня — бесплатно: нажмите «Включить» на главной', tone: theme.colors.textSecondary };
 
   const price = (p: PlansResponse['plans'][number]) => {
     const percent = Math.max(promo?.percent ?? 0, plans?.discountPercent ?? 0);

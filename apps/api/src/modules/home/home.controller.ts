@@ -132,13 +132,13 @@ export class HomeController {
 
     const activeSub = access.activeSub;
     if (!activeSub) {
-      // Free 24 hours: just press «Включить». No Telegram needed; once per device (the device
+      // Free 3 days: just press «Включить». No Telegram needed; once per device (the device
       // claim is checked above) and once per account (a linked app shares the account's).
       const user = await this.users.findById(authUser.sub);
       if (!user.telegramId && !(await this.trials.getTrial(authUser.sub))) {
         const owner = await this.accounts.accountFor(authUser.sub);
         if (owner && !(await this.accounts.startFreeOn(owner.id, authUser.sub))) {
-          throw new ForbiddenException('Бесплатные 24 часа уже использованы. Оформите подписку во вкладке «Подписка» — она заработает на всех ваших устройствах');
+          throw new ForbiddenException('Бесплатные 3 дня уже использованы. Оформите подписку во вкладке «Подписка» — она заработает на всех ваших устройствах');
         }
       }
       await this.trials.assertAvailable(authUser.sub);
