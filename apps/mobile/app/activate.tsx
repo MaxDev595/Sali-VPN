@@ -24,7 +24,7 @@ function formatInput(raw: string) {
 const isComplete = (value: string) => value.replace(ALPHABET, '').length === 16;
 
 function describe(result: RedeemResult) {
-  if (result.kind === 'FREE') return { title: 'Бесплатные 24 часа включены', text: 'Можно подключаться: 24 часа VPN без ограничений с этого момента.' };
+  if (result.kind === 'FREE') return { title: 'Бесплатные 3 дня включены', text: 'Можно подключаться: 3 дня VPN без ограничений с этого момента.' };
   const until = result.expiresAt ? new Date(result.expiresAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   return { title: 'Подписка активирована', text: until ? `Доступ открыт до ${until}. Все серверы уже ваши.` : 'Все серверы уже ваши.' };
 }
@@ -81,7 +81,7 @@ export default function ActivateScreen() {
           <Text style={styles.title}>{access === 'premium' ? 'Подписка активна' : linked ? 'Нужна подписка' : 'Войдите через Telegram'}</Text>
           <Text style={styles.subtitle}>{linked
             ? 'Подписка покупается в Telegram-боте и сама появляется здесь и на всех ваших устройствах (до 3). Ничего вводить не нужно.'
-            : 'Один вход — и сразу 24 часа бесплатно. Подписка из бота будет работать на всех ваших устройствах (до 3).'}</Text>
+            : 'Один вход — и сразу 3 дня бесплатно. Подписка из бота будет работать на всех ваших устройствах (до 3).'}</Text>
           {access !== 'premium' && <SaliButton title={linked ? 'Купить подписку в боте' : 'Войти через Telegram'} onPress={() => (linked ? openBot() : home && void linkTelegram(home.user.publicId, refresh))} />}
 
           <Text style={styles.promoTitle}>Промокод</Text>

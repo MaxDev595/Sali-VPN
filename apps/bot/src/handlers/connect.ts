@@ -45,7 +45,7 @@ export async function connect(ctx: Context, headline?: string) {
       await ctx.replyWithHTML(
         freeLeft
           ? 'Сначала включите бесплатный доступ — одна кнопка, без карты 👇'
-          : 'Бесплатные 24 часа уже использованы. Оформите подписку — и сразу подключайтесь 👇',
+          : 'Бесплатные 3 дня уже использованы. Оформите подписку — и сразу подключайтесь 👇',
         Markup.inlineKeyboard([[freeLeft ? Markup.button.callback(FREE_BUTTON, 'menu_free') : Markup.button.callback('💎 Купить подписку', 'menu_plan')]]),
       );
       return;

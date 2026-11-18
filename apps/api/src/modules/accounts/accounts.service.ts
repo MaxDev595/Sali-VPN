@@ -7,14 +7,14 @@ import { formatPublicId } from '../codes/code-format';
 
 /**
  * The account is the Telegram user. Everything is given to the account — a purchase,
- * a gift, the free 24 hours — and works on every device linked to it (up to the plan's
+ * a gift, the free 3 days — and works on every device linked to it (up to the plan's
  * maxDevices). A device is one app installation with one stable Sali ID.
  *
  * Linking a device does all the bookkeeping by itself:
  *  - a subscription the device held moves to the account;
  *  - an older installation of the same phone/PC (reinstall) is replaced, not duplicated;
  *  - when the account is full, the device unused the longest makes room;
- *  - a new account gets its free 24 hours on that device right away.
+ *  - a new account gets its free 3 days on that device right away.
  */
 @Injectable()
 export class AccountsService {
@@ -67,7 +67,7 @@ export class AccountsService {
       }
     }
 
-    // 4. A new account: the free 24 hours start on this device, nothing to request.
+    // 4. A new account: the free 3 days start on this device, nothing to request.
     if (account && !(await this.subscriptions.getActiveForUser(app.id))) {
       notes.trialStarted = await this.startFreeOn(account.id, app.id);
     }
@@ -96,7 +96,7 @@ export class AccountsService {
   }
 
   /**
-   * The free 24 hours — once per Telegram account and once per device. Recorded as the
+   * The free 3 days — once per Telegram account and once per device. Recorded as the
    * account's FREE code (redeemed by the device) so the bot and admin stats stay right.
    */
   async startFreeOn(accountId: string, deviceId: string) {
@@ -105,7 +105,7 @@ export class AccountsService {
     if (trial) return false;
     if (used && used.status !== 'ISSUED') {
       // Started in the bot before any app (Happ, or «Подключиться» first): an app linked
-      // during those 24 hours shares the same window — it does not get a second one.
+      // during those 3 days shares the same window — it does not get a second one.
       if (used.redeemedById !== accountId || deviceId === accountId) return false;
       const own = await this.prisma.trial.findUnique({ where: { userId: accountId } });
       if (!own || own.status !== 'ACTIVE' || own.expiresAt <= new Date()) return false;
@@ -119,23 +119,23 @@ export class AccountsService {
       await this.codes.redeem(deviceId, code.code, { silent: true });
       return true;
     } catch (error) {
-      this.logger.warn(`Free 24h not started account=${accountId} device=${deviceId}: ${(error as Error).message}`);
+      this.logger.warn(`Free 3 days not started account=${accountId} device=${deviceId}: ${(error as Error).message}`);
       return false;
     }
   }
 
-  /** «🎁 24 часа бесплатно» in the bot: starts on the account's most recent device. */
+  /** «🎁 3 дня бесплатно» in the bot: starts on the account's most recent device. */
   async freeFromBot(telegramId: bigint) {
     const account = await this.prisma.user.findUnique({ where: { telegramId } });
     if (!account) throw new ConflictException('Сначала нажмите /start');
     if ((await this.subscriptions.sharing(telegramId)).sub) throw new ConflictException('У вас уже есть подписка — бесплатный период не нужен 🙂');
     const device = await this.prisma.user.findFirst({ where: { linkedTelegramId: telegramId, appDeviceKey: { not: null } }, orderBy: { linkedAt: 'desc' } });
-    // No app yet: the 24 hours start on the account itself, so the customer can connect
-    // right away (Happ), and an app linked later shares the same 24 hours.
+    // No app yet: the 3 days start on the account itself, so the customer can connect
+    // right away (Happ), and an app linked later shares the same 3 days.
     const target = device ?? account;
     if (device && await this.subscriptions.getActiveForUser(device.id)) throw new ConflictException('У вас уже есть подписка — бесплатный период не нужен 🙂');
     const started = await this.startFreeOn(account.id, target.id);
-    if (!started) throw new ConflictException('Бесплатные 24 часа уже были использованы на этом аккаунте или устройстве.');
+    if (!started) throw new ConflictException('Бесплатные 3 дня уже были использованы на этом аккаунте или устройстве.');
     const trial = await this.prisma.trial.findUniqueOrThrow({ where: { userId: target.id } });
     return { device: device ? formatPublicId(device.publicId) : null, expiresAt: trial.expiresAt.toISOString() };
   }

@@ -20,12 +20,12 @@ const t = {
     android: { name: 'Android', sub: 'Телефон или планшет', req: 'Android 7.0 и новее · ~35 МБ', main: 'Скачать APK', alt: 'Как установить' },
     windows: { name: 'Windows', sub: 'Компьютер или ноутбук', req: 'Windows 10 / 11, 64-бит · ~90 МБ', main: 'Скачать установщик', alt: 'Портативная версия' },
     apple: { name: 'iPhone и Mac', sub: 'Пока не поддерживается', text: 'Sali VPN работает на Android и Windows. Одна подписка — до 3 устройств.' },
-    version: 'Версия', free: '24 часа бесплатно', freeText: 'Войдите в приложении через Telegram — 24 часа бесплатно включатся сами.',
+    version: 'Версия', free: '3 дня бесплатно', freeText: 'Войдите в приложении через Telegram — 3 дня бесплатно включатся сами.',
     guideEyebrow: 'Инструкция', guideTitle: 'Как установить и подключиться', tabs: { android: 'Android', windows: 'Windows' },
     stepsAndroid: [
       { icon: 'download', title: 'Скачайте приложение', text: 'Нажмите «Скачать APK» на этой странице прямо с телефона.' },
       { icon: 'lock', title: 'Разрешите установку', text: 'Откройте скачанный файл sali-vpn.apk. Если Android спросит — разрешите браузеру «Установку неизвестных приложений» и нажмите «Установить».', tip: 'Это стандартный запрос Android для приложений не из Google Play.' },
-      { icon: 'telegram', title: 'Войдите через Telegram', text: 'Откройте Sali VPN и нажмите «Войти». В Telegram нажмите «Запустить» — приложение подключится к вашему аккаунту, и сразу включатся 24 часа бесплатно.', tip: 'Бот не ответил? Отправьте ему номер устройства SL-XXXX-XXXX — приложение уже скопировало его.' },
+      { icon: 'telegram', title: 'Войдите через Telegram', text: 'Откройте Sali VPN и нажмите «Войти». В Telegram нажмите «Запустить» — приложение подключится к вашему аккаунту, и сразу включатся 3 дня бесплатно.', tip: 'Бот не ответил? Отправьте ему номер устройства SL-XXXX-XXXX — приложение уже скопировало его.' },
       { icon: 'check', title: 'Подключитесь', text: 'Нажмите большую кнопку подключения. Android один раз попросит разрешить VPN — нажмите «ОК». Подписку покупаете в боте — она сама появится в приложении.' },
     ] as Step[],
     stepsWindows: [
@@ -38,7 +38,7 @@ const t = {
     infoEyebrow: 'Полезно знать', infoTitle: 'Аккаунт и устройства',
     info: [
       ['key', 'Аккаунт — это Telegram', 'Подписка лежит на аккаунте, а не на устройстве. Покупки и подарки появляются во всех ваших приложениях сами — без кодов.'],
-      ['clock', '24 часа бесплатно', 'Один раз на аккаунт Telegram — включаются сами при первом входе в приложение.'],
+      ['clock', '3 дня бесплатно', 'Один раз на аккаунт Telegram — включаются сами при первом входе в приложение.'],
       ['devices', 'До 3 устройств', 'Телефон, компьютер и ещё одно. У каждого устройства один постоянный номер — переустановка его не меняет. Лишние удаляются во вкладке «Устройства».'],
       ['star', 'Продление', 'Автосписаний нет. Новая покупка добавляет дни к текущей подписке, бот напомнит за 3 дня до окончания.'],
       ['globe', 'Серверы', 'Нидерланды, Германия, США — выбирайте страну в приложении. Список растёт каждый месяц.'],
@@ -55,7 +55,7 @@ const t = {
       ['Как удалить Sali VPN?', 'Android — как обычное приложение. Windows — «Параметры → Приложения → Sali VPN → Удалить».'],
     ] as [string, string][],
     safety: 'Загрузки идут с официального GitHub Sali VPN. Версия и контрольные суммы — на странице релизов.',
-    releases: 'Все версии', ctaTitle: 'Готово? Возьмите 24 часа бесплатно', ctaText: 'Установите приложение и нажмите «Войти через Telegram» — бесплатные часы включатся сами.', openBot: 'Открыть бота',
+    releases: 'Все версии', ctaTitle: 'Готово? Возьмите 3 дня бесплатно', ctaText: 'Установите приложение и нажмите «Войти через Telegram» — бесплатные часы включатся сами.', openBot: 'Открыть бота',
     channel: 'Скачать в Telegram', channelText: 'Каждая новая версия выходит файлом в нашем канале @SaliVpnNews — удобно, если GitHub грузится медленно. Там же новости и обновления.', openChannel: 'Открыть канал',
   },
   en: {
@@ -65,12 +65,12 @@ const t = {
     android: { name: 'Android', sub: 'Phone or tablet', req: 'Android 7.0+ · ~35 MB', main: 'Download APK', alt: 'How to install' },
     windows: { name: 'Windows', sub: 'Desktop or laptop', req: 'Windows 10 / 11, 64-bit · ~90 MB', main: 'Download installer', alt: 'Portable version' },
     apple: { name: 'iPhone and Mac', sub: 'Not supported yet', text: 'Sali VPN runs on Android and Windows. One plan — up to 3 devices.' },
-    version: 'Version', free: '24 hours free', freeText: 'Sign in with Telegram in the app — your free 24 hours start by themselves.',
+    version: 'Version', free: '3 days free', freeText: 'Sign in with Telegram in the app — your free 3 days start by themselves.',
     guideEyebrow: 'Guide', guideTitle: 'How to install and connect', tabs: { android: 'Android', windows: 'Windows' },
     stepsAndroid: [
       { icon: 'download', title: 'Download the app', text: 'Tap "Download APK" on this page from your phone.' },
       { icon: 'lock', title: 'Allow the install', text: 'Open sali-vpn.apk. If Android asks, allow your browser to "Install unknown apps", then tap Install.', tip: 'This is the standard Android prompt for apps outside Google Play.' },
-      { icon: 'telegram', title: 'Sign in with Telegram', text: 'Open Sali VPN and tap "Sign in". Tap "Start" in Telegram — the app joins your account and your free 24 hours start right away.', tip: 'Bot silent? Send it your device number SL-XXXX-XXXX — the app has already copied it.' },
+      { icon: 'telegram', title: 'Sign in with Telegram', text: 'Open Sali VPN and tap "Sign in". Tap "Start" in Telegram — the app joins your account and your free 3 days start right away.', tip: 'Bot silent? Send it your device number SL-XXXX-XXXX — the app has already copied it.' },
       { icon: 'check', title: 'Connect', text: 'Tap the big connect button. Android asks once to allow the VPN — tap OK. Buy a plan in the bot and it appears in the app by itself.' },
     ] as Step[],
     stepsWindows: [
@@ -83,7 +83,7 @@ const t = {
     infoEyebrow: 'Good to know', infoTitle: 'Account and devices',
     info: [
       ['key', 'Your account is Telegram', 'The plan lives on the account, not on a device. Purchases and gifts appear in all your apps by themselves — no codes.'],
-      ['clock', '24 hours free', 'Once per Telegram account — they start by themselves the first time you sign in.'],
+      ['clock', '3 days free', 'Once per Telegram account — they start by themselves the first time you sign in.'],
       ['devices', 'Up to 3 devices', 'Phone, computer and one more. Each device keeps one number — reinstalling does not change it. Remove extras in the Devices tab.'],
       ['star', 'Renewal', 'No auto-charges. A new purchase adds days on top, and the bot reminds you 3 days before the end.'],
       ['globe', 'Servers', 'Netherlands, Germany, USA — pick a country in the app. New locations every month.'],
@@ -100,7 +100,7 @@ const t = {
       ['How do I uninstall?', 'Android — like any app. Windows — Settings → Apps → Sali VPN → Uninstall.'],
     ] as [string, string][],
     safety: 'Downloads come from the official Sali VPN GitHub. Versions and checksums are on the releases page.',
-    releases: 'All versions', ctaTitle: 'Ready? Get 24 hours free', ctaText: 'Install the app and tap "Sign in with Telegram" — the free hours start by themselves.', openBot: 'Open the bot',
+    releases: 'All versions', ctaTitle: 'Ready? Get 3 days free', ctaText: 'Install the app and tap "Sign in with Telegram" — the free days start by themselves.', openBot: 'Open the bot',
     channel: 'Download in Telegram', channelText: 'Every new version is posted as a file in our channel @SaliVpnNews — handy if GitHub is slow. News and updates are there too.', openChannel: 'Open the channel',
   },
 } satisfies Record<LandingLanguage, unknown>;

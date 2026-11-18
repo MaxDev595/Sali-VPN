@@ -51,7 +51,7 @@ export function period(days: number) {
 export const howItWorks = [
   '<b>Как это работает</b>',
   '',
-  '1. «🎁 Попробовать бесплатно» — 24 часа без карты и оплаты.',
+  '1. «🎁 Попробовать бесплатно» — 3 дня без карты и оплаты.',
   '2. Выберите, где пользоваться: Android, Windows, iPhone или Mac.',
   '3. Понравилось — «💎 Подписка». Она сразу работает во всех ваших приложениях, до 3 устройств.',
 ].join('\n');
@@ -74,14 +74,14 @@ export function freeCodeMessage(code: IssuedCode, again: boolean) {
     '',
     `<code>${code.display}</code>`,
     '',
-    'Даёт <b>24 часа</b> VPN без ограничений, чтобы всё проверить. 24 часа отсчитываются с момента активации кода.',
+    'Даёт <b>3 дня</b> VPN без ограничений, чтобы всё проверить. 3 дня отсчитываются с момента активации кода.',
     'Введите код в приложении Sali VPN → «Ввести код».',
   ].join('\n');
 }
 
 export function redeemedMessage(result: { publicId?: string; expiresAt?: string | null; kind?: string; referralBonusHours?: number }) {
   const until = result.expiresAt ? `\nДоступ до: <b>${date(result.expiresAt)}</b>` : '';
-  const what = result.kind === 'FREE' ? 'Бесплатные 24 часа включены' : 'Подписка активирована';
+  const what = result.kind === 'FREE' ? 'Бесплатные 3 дня включены' : 'Подписка активирована';
   const bonus = result.referralBonusHours ? `\n🎁 +${result.referralBonusHours} часа от друга уже добавлены.` : '';
   return `✅ <b>${what}</b> на устройстве <b>${result.publicId ?? ''}</b>.${until}${bonus}\n\nОткройте приложение и нажмите кнопку подключения.`;
 }
@@ -89,7 +89,7 @@ export function redeemedMessage(result: { publicId?: string; expiresAt?: string 
 export function codesListMessage(codes: OwnedCode[]) {
   if (!codes.length) return '<b>Мои коды</b>\n\nКодов пока нет. Получите бесплатный тариф или купите подписку.';
   const lines = codes.map((code) => {
-    const what = code.kind === 'FREE' ? '24 часа бесплатно' : period(code.durationDays);
+    const what = code.kind === 'FREE' ? '3 дня бесплатно' : period(code.durationDays);
     if (code.status === 'REDEEMED') return `✅ <s>${code.display}</s> · ${what}\n     активирован на ${code.redeemedOn ?? '—'} ${date(code.redeemedAt)}`;
     return `🟢 <code>${code.display}</code> · ${what}\n     не активирован, действует до ${date(code.expiresAt)}`;
   });
@@ -122,11 +122,11 @@ export function devicesMessage({ devices, subscription }: DevicesOverview) {
 
 export type LinkNotes = { replaced: string[]; freed: string | null; trialStarted: boolean };
 
-/** After linking: what the account did by itself (free 24h, replaced old install, made room). */
+/** After linking: what the account did by itself (free 3 days, replaced old install, made room). */
 export function linkNotesText(notes?: LinkNotes | null) {
   if (!notes) return '';
   const lines = [
-    notes.trialStarted ? '🎁 <b>24 часа бесплатно уже включены</b> — нажмите «Подключить» в приложении.' : null,
+    notes.trialStarted ? '🎁 <b>3 дня бесплатно уже включены</b> — нажмите «Подключить» в приложении.' : null,
     notes.replaced.length ? `♻️ Старая установка ${notes.replaced.join(', ')} на этом же устройстве убрана — одно устройство, один номер.` : null,
     notes.freed ? `📱 На аккаунте было 3 устройства — отключили ${notes.freed}, им дольше всех не пользовались. Вернуть можно в «💎 Подписка» → «📱 Устройства».` : null,
   ].filter(Boolean);

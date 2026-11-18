@@ -2,7 +2,7 @@
 
 A fast, private VPN: apps for Android and Windows, a Telegram bot for buying codes and
 support, a site with the help centre, and a backend that drives WireGuard / AmneziaWG
-servers. $5/month (officially $8), 24 hours free.
+servers. $5/month (officially $8), 3 days free.
 
 ## Architecture
 

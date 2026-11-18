@@ -17,7 +17,7 @@ export function TelegramLinkCard() {
     <View style={styles.icon}><Icon name="telegram" size={20} color="#fff" /></View>
     <View style={styles.copy}>
       <Text style={styles.title}>Войти через Telegram</Text>
-      <Text style={styles.text}>Сразу 24 часа бесплатно. Подписка — на аккаунт, работает на всех ваших устройствах (до 3) и не пропадёт при переустановке.</Text>
+      <Text style={styles.text}>Сразу 3 дня бесплатно. Подписка — на аккаунт, работает на всех ваших устройствах (до 3) и не пропадёт при переустановке.</Text>
     </View>
     <Icon name="chevron" size={18} color={theme.colors.textSecondary} />
   </Pressable>;

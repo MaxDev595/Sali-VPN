@@ -79,7 +79,7 @@ services:
 
       # Tariffs
       - key: TRIAL_DURATION_HOURS
-        value: "24"
+        value: "72"
       - key: BOT_PAYMENT_METHODS
         value: crypto           # Stars switched off 2026-11-15: USDT (TON) only
       - key: STARS_PER_USD
@@ -174,7 +174,7 @@ services:
       - key: CORS_ORIGINS
         value: https://salivpn.com
       - key: TRIAL_DURATION_HOURS
-        value: "24"
+        value: "72"
       - key: BOT_PAYMENT_METHODS
         value: crypto
       - key: STARS_PER_USD

@@ -172,7 +172,7 @@ model HappAccess {
   uuid        String    @unique
   /// What the nodes were last told (follows the account's access).
   enabled     Boolean   @default(false)
-  /// false on the free 24 hours: the UUID is switched on only on the free servers.
+  /// false on the free 3 days: the UUID is switched on only on the free servers.
   paid        Boolean   @default(true)
   syncedAt    DateTime?
   lastFetchAt DateTime?

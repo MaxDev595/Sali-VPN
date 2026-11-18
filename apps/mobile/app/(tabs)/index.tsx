@@ -21,7 +21,12 @@ import { FLAGS } from '../../src/data/fallbackServers';
 import { theme } from '../../src/theme';
 
 const pad = (n: number) => String(n).padStart(2, '0');
-function clock(seconds: number) { const s = Math.max(0, Math.floor(seconds)); return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`; }
+function clock(seconds: number) {
+  const s = Math.max(0, Math.floor(seconds));
+  const d = Math.floor(s / 86400);
+  const hms = `${pad(Math.floor(s / 3600) % 24)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+  return d > 0 ? `${d} д ${hms}` : hms;
+}
 
 /** Tariff half of the ticket: subscription date, free-time countdown or "enter a code". */
 function TariffStub() {
@@ -130,7 +135,7 @@ export default function VpnScreen() {
     <SaliModal visible={needsCode} title={linked ? 'Нужна подписка' : 'Войдите через Telegram'} onClose={clearError}>
       <Text style={styles.modalText}>{linked
         ? 'Купите подписку в нашем Telegram-боте — она сразу заработает здесь и на всех ваших устройствах (до 3).'
-        : 'Один вход — и сразу 24 часа бесплатно. Подписка из бота работает на всех ваших устройствах (до 3).'}</Text>
+        : 'Один вход — и сразу 3 дня бесплатно. Подписка из бота работает на всех ваших устройствах (до 3).'}</Text>
       <View style={{ gap: 10, marginTop: 20 }}>
         {linked
           ? <SaliButton title="Купить подписку" onPress={() => { clearError(); openBot(); }} />

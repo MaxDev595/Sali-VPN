@@ -38,7 +38,7 @@ export const ARTICLES: Article[] = [
         { steps: [
           'Скачайте Sali VPN для Android или Windows на странице «Скачать».',
           'Откройте приложение и нажмите «Войти через Telegram».',
-          'В Telegram нажмите «Запустить». Устройство подключится к вашему аккаунту, и сразу включатся 24 часа бесплатно.',
+          'В Telegram нажмите «Запустить». Устройство подключится к вашему аккаунту, и сразу включатся 3 дня бесплатно.',
           'Нажмите кнопку подключения и разрешите системе создать VPN-профиль.',
           'Понравилось — купите подписку в боте. Она сама появится во всех ваших приложениях, ничего вводить не нужно.',
         ] },
@@ -48,7 +48,7 @@ export const ARTICLES: Article[] = [
         { steps: [
           'Download Sali VPN for Android or Windows from the Download page.',
           'Open the app and tap "Sign in with Telegram".',
-          'Tap "Start" in Telegram. The device joins your account and your free 24 hours start right away.',
+          'Tap "Start" in Telegram. The device joins your account and your free 3 days start right away.',
           'Tap the connect button and allow the system to create a VPN profile.',
           'Like it? Buy a plan in the bot — it appears in all your apps by itself, nothing to type.',
         ] },

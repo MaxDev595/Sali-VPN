@@ -1,10 +1,10 @@
 /**
- * The free tariff is 24 hours of access: it starts when the FREE code is
+ * The free tariff is 3 days (72 hours) of access: it starts when the FREE code is
  * activated and runs on the wall clock (not only while the VPN is on).
- * TRIAL_DURATION_HOURS overrides the length (default 24).
+ * TRIAL_DURATION_HOURS overrides the length (default 72 = 3 days).
  */
 export function trialDurationSeconds() {
-  const hours = Number(process.env.TRIAL_DURATION_HOURS ?? 24);
+  const hours = Number(process.env.TRIAL_DURATION_HOURS ?? 72);
   if (!Number.isFinite(hours) || hours <= 0) throw new Error('TRIAL_DURATION_HOURS must be a positive number');
   return Math.round(hours * 3600);
 }

@@ -49,6 +49,6 @@ Open `@BotFather`, choose `@SaliVPNOfficialBot`, then configure:
 - never expose `/api/v1/internal` publicly;
 - run one polling instance or one webhook deployment (not both — Telegram answers 409);
 - migrations and the seed run automatically on Render;
-- verify `/start` for a new Telegram account, «🎁 24 часа бесплатно», «💎 Купить подписку»
+- verify `/start` for a new Telegram account, «🎁 3 дня бесплатно», «💎 Купить подписку»
   (the official price is crossed out), «📖 Документация» → a topic → «Подробнее на сайте»;
 - rotate the bot token and internal API key immediately if either is leaked.

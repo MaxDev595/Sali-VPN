@@ -120,13 +120,13 @@ export class HomeController {
       // Store-app accounts get the free tariff only through a FREE code from the bot.
       const user = await this.users.findById(authUser.sub);
       if (!user.telegramId && !(await this.trials.getTrial(authUser.sub))) {
-        // The free 24 hours come with the account: linked device → they start right here.
+        // The free 3 days come with the account: linked device → they start right here.
         const owner = await this.accounts.accountFor(authUser.sub);
         const started = owner ? await this.accounts.startFreeOn(owner.id, authUser.sub) : false;
         if (!started) {
           throw new ForbiddenException(owner
             ? 'Нет активной подписки. Купите её в Telegram-боте — она сразу заработает здесь'
-            : 'Войдите через Telegram — получите 24 часа бесплатно, а подписка будет работать на всех ваших устройствах');
+            : 'Войдите через Telegram — получите 3 дня бесплатно, а подписка будет работать на всех ваших устройствах');
         }
       }
       await this.trials.assertAvailable(authUser.sub);
