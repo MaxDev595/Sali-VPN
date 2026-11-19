@@ -18,6 +18,18 @@ const ICONS = {
   close: require('../../assets/icons/close.png'),
   plus: require('../../assets/icons/plus.png'),
   power: require('../../assets/icons/power.png'),
+  gift: require('../../assets/icons/gift.png'),
+  tag: require('../../assets/icons/tag.png'),
+  users: require('../../assets/icons/users.png'),
+  search: require('../../assets/icons/search.png'),
+  cash: require('../../assets/icons/cash.png'),
+  ban: require('../../assets/icons/ban.png'),
+  link: require('../../assets/icons/link.png'),
+  copy: require('../../assets/icons/copy.png'),
+  lifebuoy: require('../../assets/icons/lifebuoy.png'),
+  apps: require('../../assets/icons/apps.png'),
+  dot: require('../../assets/icons/dot.png'),
+  megaphone: require('../../assets/icons/megaphone.png'),
 } as const;
 
 export type IconName = keyof typeof ICONS;

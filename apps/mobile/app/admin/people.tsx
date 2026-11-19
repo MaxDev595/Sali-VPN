@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Text } from '../../src/components/Text';
+import { Icon } from '../../src/components/Icon';
 import { Chip, ErrorNote, Loading, Screen, ui } from '../../src/components/ui';
 import { api, type AdminPeople, type PeopleSegment } from '../../src/services/api/client';
 import { theme } from '../../src/theme';
@@ -34,7 +35,10 @@ export default function AdminPeopleScreen() {
     {data?.list.length === 0 && <Text style={ui.muted}>Пусто</Text>}
     {data?.list.map((p) => <Pressable key={p.userId} onPress={() => router.push({ pathname: '/admin/user', params: { query: p.userId } })} style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.colors.surfaceElevated }]}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.name} numberOfLines={1}>{p.blocked ? '⛔ ' : ''}{p.name}{p.username ? ` · @${p.username}` : ''}</Text>
+        <View style={ui.row}>
+          {p.blocked && <Icon name="ban" size={16} color={theme.colors.error} />}
+          <Text style={[styles.name, { flex: 1 }]} numberOfLines={1}>{p.name}{p.username ? ` · @${p.username}` : ''}</Text>
+        </View>
         <Text style={styles.meta} numberOfLines={1}>{p.plan}{p.via ? ` · ${p.via}` : ''}{p.device ? ` · ${p.device}` : ''}</Text>
       </View>
       <Text style={styles.until}>{p.until}</Text>

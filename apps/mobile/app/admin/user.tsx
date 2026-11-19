@@ -3,6 +3,7 @@ import { Alert, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Text } from '../../src/components/Text';
+import { Icon } from '../../src/components/Icon';
 import { SaliButton } from '../../src/components/SaliButton';
 import { Card, Chip, ErrorNote, Field, Screen, copy, dateRu, money, toast, ui } from '../../src/components/ui';
 import { api, ApiError, type AdminCard } from '../../src/services/api/client';
@@ -53,7 +54,7 @@ export default function AdminUserScreen() {
 
     {card && <Animated.View entering={FadeInDown.duration(300)} style={{ marginTop: 16 }}>
       <Card accent>
-        <Text style={styles.title}>{card.isBlocked ? '⛔ ' : ''}{card.title}</Text>
+        <View style={[ui.row, { marginBottom: 8 }]}>{card.isBlocked && <Icon name="ban" size={20} color={theme.colors.error} />}<Text style={[styles.title, { marginBottom: 0, flex: 1 }]}>{card.title}</Text></View>
         <Text style={styles.line} onPress={() => void copy(card.publicId, 'Sali ID скопирован')}>Sali ID: <Text style={styles.strong}>{card.publicId}</Text></Text>
         {card.username && <Text style={styles.line}>Telegram: @{card.username}</Text>}
         {card.telegramId && <Text style={styles.line}>Telegram ID: {card.telegramId}</Text>}
@@ -70,8 +71,8 @@ export default function AdminUserScreen() {
       <Text style={styles.section}>Выдать подписку</Text>
       <View style={[ui.wrap, { marginBottom: 10 }]}>{DAYS.map((d) => <Chip key={d} label={daysLabel(d)} active={days === d} onPress={() => setDays(d)} />)}</View>
       <View style={[ui.wrap, { marginBottom: 10 }]}>
-        <Chip label="🎁 Подарок" active={kind === 'gift'} onPress={() => setKind('gift')} />
-        <Chip label="🛡 От администрации" active={kind === 'admin'} onPress={() => setKind('admin')} />
+        <Chip label="Подарок" active={kind === 'gift'} onPress={() => setKind('gift')} />
+        <Chip label="От администрации" active={kind === 'admin'} onPress={() => setKind('admin')} />
       </View>
       <Field value={message} onChangeText={setMessage} placeholder="Сообщение (необязательно)" multiline style={{ minHeight: 70, paddingTop: 14 }} />
       <SaliButton title="Выдать" loading={busy} onPress={grant} />

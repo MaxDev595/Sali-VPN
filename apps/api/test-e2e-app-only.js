@@ -1,5 +1,5 @@
 // Run against a TEST API + its database (never production):
-//   API_URL=http://localhost:3999 DATABASE_URL=… INTERNAL_API_KEY=… ADMIN_TELEGRAM_IDS=111 VPN_PROVIDER=mock node apps/api/test-e2e-app-only.js
+//   API_URL=http://localhost:3999 DATABASE_URL=… INTERNAL_API_KEY=… ADMIN_TELEGRAM_IDS=111 VPN_PROVIDER=mock HAPP_ENABLED=true node apps/api/test-e2e-app-only.js
 // The API must be started with ADMIN_TELEGRAM_IDS=111, VPN_PROVIDER=mock and CRYPTO_TON_RECEIVE_ADDRESS set; seed plans first (prisma/seed).
 // End-to-end: the app-only flow against a real API + Postgres (VPN_PROVIDER=mock).
 const assert = require('node:assert/strict');
@@ -45,7 +45,7 @@ async function pay(paymentId) {
 (async () => {
   await db.connect();
 
-  // --- free 3 days: just «Включить», no Telegram ---
+  // --- free 24 hours: just «Включить», no Telegram ---
   const A = await device('A');
   let hA = await A.home();
   assert.match(hA.user.publicId, /^SL-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
@@ -58,8 +58,8 @@ async function pay(paymentId) {
   await A.connect();
   hA = await A.home();
   assert.equal(hA.trial.status, 'ACTIVE');
-  assert.ok(hA.trial.secondsRemaining > 71 * 3600);
-  ok('«Включить» without Telegram → free 3 days started, VPN config returned');
+  assert.ok(hA.trial.secondsRemaining > 23 * 3600);
+  ok('«Включить» without Telegram → free 24 hours started, VPN config returned');
 
   const noTg = await call('/app/purchase', { token: A.token, method: 'POST', body: { planCode: 'pro_monthly' }, expect: 403 });
   assert.equal(noTg.code, 'TELEGRAM_REQUIRED');
@@ -113,19 +113,19 @@ async function pay(paymentId) {
   assert.ok(devs.devices.every((d) => /^D-[0-9A-F]{6}$/.test(d.id) && d.covered));
   ok(`second phone linked: shows the same ${idA}, devices ${devs.devices.map((d) => d.id).join(', ')} share the subscription`);
 
-  // A free 3 days already used by the account: a new linked device does not get another one.
+  // A free 24h already used by the account: a new linked device does not get another one.
   const B2 = await device('B2');
   const hB2 = await B2.home();
   await linkTo(B2, hB2, 333, 'bob');           // bob: account whose first app already used its trial
-  await B2.connect();                            // bob starts nothing yet… (B2 is bob's first app → it gets the 3 days on connect)
+  await B2.connect();                            // bob starts nothing yet… (B2 is bob's first app → it gets the 24h on connect)
   const B3 = await device('B3');
-  await B3.connect();                            // B3 used its own free 3 days before linking
+  await B3.connect();                            // B3 used its own free 24h before linking
   await linkTo(B3, await B3.home(), 333, 'bob');
   const B4 = await device('B4');
   await linkTo(B4, await B4.home(), 333, 'bob');
   const denied = await B4.connect(403);
-  assert.match(denied.message, /Бесплатные 3 дня уже использованы/);
-  ok('free 3 days: once per account — a third phone of the same Telegram is asked to subscribe');
+  assert.match(denied.message, /уже использованы/);
+  ok('free 24 hours: once per account — a third phone of the same Telegram is asked to subscribe');
 
   // --- admin ---
   const ADM = await device('ADM');
@@ -213,7 +213,7 @@ async function pay(paymentId) {
   await H.connect();
   const tH = (await H.home()).trial;
   assert.ok(tH.secondsRemaining > 24 * 3600 + 2.9 * 3600);
-  ok('invite entered before the first connect: bonus added when the free 3 days start');
+  ok('invite entered before the first connect: bonus added when the free 24 hours start');
 
   // --- devices: remove an old phone ---
   const hB0 = await B.home();
@@ -259,6 +259,24 @@ async function pay(paymentId) {
   await pay(inv3.paymentId);
   assert.equal((await call('/app/referrals', { token: A.token })).availableDiscounts, 0);
   ok('referral discount: 4.5 USDT instead of 5, then used up');
+
+  // --- backup connection (Happ / v2RayTun / Hiddify) ---
+  const bNo = await call('/app/backup', { token: D.token });
+  assert.deepEqual(bNo, { enabled: true, linked: false });
+  const bA = await call('/app/backup', { token: A.token });
+  assert.equal(bA.access, true);
+  assert.match(bA.url, /\/api\/v1\/sub\/[A-Za-z0-9_-]{20,}$/);
+  assert.equal(bA.open.happ, `happ://add/${bA.url}`);
+  assert.equal(bA.open.v2raytun, `v2raytun://import/${bA.url}`);
+  assert.match(bA.open.hiddify, /^hiddify:\/\/import\/.+#Sali%20VPN$/);
+  const bB = await call('/app/backup', { token: B.token });
+  assert.equal(bB.url, bA.url);
+  const bR = await call('/app/backup/reset', { token: A.token, method: 'POST', expect: [200, 201] });
+  assert.notEqual(bR.url, bA.url);
+  const refsText = (await call('/app/referrals', { token: A.token })).shareText;
+  assert.match(refsText, /@SaliVpnNews/);
+  assert.match(refsText, new RegExp(idA));
+  ok(`backup: one link per account (both phones), deep links for Happ / v2RayTun / Hiddify, reset gives a new link; invite text has ${idA} and @SaliVpnNews`);
 
   // --- old app versions keep working (codes endpoint, home fields) ---
   await call('/codes/redeem', { token: A.token, method: 'POST', body: { code: 'SALI-AAAA-BBBB-CCCC' }, expect: 404 });

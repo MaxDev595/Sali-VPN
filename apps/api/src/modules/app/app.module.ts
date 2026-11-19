@@ -5,13 +5,14 @@ import { TrialsModule } from '../trials/trials.module';
 import { ReferralsModule } from '../referrals/referrals.module';
 import { VpnModule } from '../vpn/vpn.module';
 import { AdminBotModule } from '../admin-bot/admin-bot.module';
+import { HappModule } from '../happ/happ.module';
 import { AppClientController } from './app-client.controller';
 import { AppAdminController } from './app-admin.controller';
 import { PromoService } from './promo.service';
 
 /** The customer app's own API: payments, gifts, promo codes, referrals, devices, admin. */
 @Module({
-  imports: [PaymentsModule, SubscriptionsModule, TrialsModule, ReferralsModule, VpnModule, AdminBotModule],
+  imports: [PaymentsModule, SubscriptionsModule, TrialsModule, ReferralsModule, VpnModule, AdminBotModule, HappModule],
   controllers: [AppClientController, AppAdminController],
   providers: [PromoService],
 })

@@ -7,7 +7,8 @@ import { Icon } from './Icon';
 import type { VPNServer } from '../types';
 import { api } from '../services/api/client';
 import { ensureSession } from '../services/session';
-import { fallbackServers, FLAGS } from '../data/fallbackServers';
+import { fallbackServers } from '../data/fallbackServers';
+import { Flag } from './Flag';
 import { useVpnStore } from '../store/vpnStore';
 import { useAccountStore } from '../store/accountStore';
 import { theme } from '../theme';
@@ -63,7 +64,7 @@ export function ServerList({ onPicked, header }: { onPicked?(server: VPNServer):
       const locked = item.premiumOnly && !hasPlan;
       return <Animated.View entering={FadeInDown.delay(index * 45).duration(360)}>
         <Pressable accessibilityRole="radio" accessibilityState={{ checked: isSelected }} onPress={() => pick(item)} style={({ pressed }) => [styles.row, isSelected && styles.selected, pressed && styles.pressed]}>
-          <Text style={styles.flag}>{FLAGS[item.countryCode] ?? '🌐'}</Text>
+          <Flag code={item.countryCode} size={30} />
           <View style={styles.info}>
             <View style={styles.nameLine}>
               <Text style={styles.name}>{item.country}</Text>

@@ -79,6 +79,7 @@ export default function ProfileScreen() {
       <Group>
         <Row title={t.autoConnect} hint={t.autoConnectHint} toggle={prefs.autoConnect} onToggle={value => void prefs.set('autoConnect', value)} onInfo={() => openHelp('auto-connect')} />
         <Row title={t.killSwitch} hint={t.killSwitchHint} toggle={prefs.killSwitch} onToggle={toggleKillSwitch} onInfo={() => openHelp('kill-switch')} />
+        <Row icon="lifebuoy" title="Запасное подключение" hint="Happ, v2RayTun, Hiddify — если в какой-то сети не подключается" onPress={() => router.push('/backup')} />
         <Row title={t.protocol} value="WireGuard" kind="external" onPress={() => openHelp('protocol')} />
         <Row title={t.dns} value="1.1.1.1" kind="external" onPress={() => openHelp('dns')} last />
       </Group>
@@ -100,7 +101,7 @@ export default function ProfileScreen() {
       </Group>
     </ScrollView>
 
-    <SaliModal visible={languageOpen} title={t.selectLanguage} onClose={() => setLanguageOpen(false)}>
+    <SaliModal visible={languageOpen} title={t.selectLanguage} icon="globe" onClose={() => setLanguageOpen(false)}>
       {(['ru', 'en'] as const).map(language => <Pressable key={language} style={styles.option} onPress={() => chooseLanguage(language)}>
         <Text style={styles.optionText}>{language === 'ru' ? 'Русский' : 'English'}</Text>
         <View style={[styles.radio, prefs.language === language && styles.radioOn]}>{prefs.language === language && <Icon name="check" size={14} color={theme.colors.onPrimary} />}</View>

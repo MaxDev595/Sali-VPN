@@ -26,10 +26,15 @@ type RowProps = {
   /** For toggle rows: a small "?" that opens the article about this setting. */
   onInfo?(): void;
   last?: boolean;
+  /** PNG glyph in a soft tile on the left. */
+  icon?: IconName;
+  /** Tint of the icon (default: the peach accent). */
+  iconColor?: string;
 };
 
-export function Row({ title, hint, value, kind = 'nav', toggle, onToggle, onPress, onInfo, last }: RowProps) {
+export function Row({ title, hint, value, kind = 'nav', toggle, onToggle, onPress, onInfo, last, icon, iconColor }: RowProps) {
   const body = <>
+    {icon && <View style={styles.iconTile}><Icon name={icon} size={19} color={iconColor ?? theme.colors.accent} /></View>}
     <View style={styles.copy}>
       <View style={styles.titleLine}>
         <Text style={styles.title}>{title}</Text>
@@ -53,6 +58,7 @@ const styles = StyleSheet.create({
   rowLast: { borderBottomWidth: 0 },
   pressed: { backgroundColor: theme.colors.surfaceElevated },
   copy: { flex: 1 },
+  iconTile: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.glow },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { color: theme.colors.textPrimary, fontSize: 16, fontFamily: 'SaliSans-Medium' },
   hint: { color: theme.colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3 },

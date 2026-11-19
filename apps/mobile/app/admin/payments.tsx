@@ -25,7 +25,7 @@ export default function AdminPaymentsScreen() {
     {rows?.map((p) => <View key={p.id} style={styles.row}>
       <View style={{ flex: 1 }}>
         <Text style={styles.title} onPress={() => router.push({ pathname: '/admin/user', params: { query: p.account } })}>{p.name ?? p.account}</Text>
-        <Text style={styles.meta}>{p.plan} · {METHOD[p.method] ?? p.method}{p.discountPercent ? ` · −${p.discountPercent}%` : ''}{p.giftTo ? ` · 🎁 → ${p.giftTo}` : ''}</Text>
+        <Text style={styles.meta}>{p.plan} · {METHOD[p.method] ?? p.method}{p.discountPercent ? ` · −${p.discountPercent}%` : ''}{p.giftTo ? ` · подарок → ${p.giftTo}` : ''}</Text>
         <Text style={styles.meta}>{new Date(p.at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
       </View>
       <Text style={[styles.sum, p.status === 'REFUNDED' && { color: theme.colors.error, textDecorationLine: 'line-through' }]}>{money(p.amountUsd)}</Text>

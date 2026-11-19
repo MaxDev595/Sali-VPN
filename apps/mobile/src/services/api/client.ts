@@ -132,7 +132,12 @@ export type PromoResult =
   | { kind: 'DAYS'; code: string; days: number; until: string | null }
   | { kind: 'DISCOUNT'; code: string; percent: number }
   | { kind: 'REFERRAL'; from: string; bonusHours: number; pending: boolean };
-export interface Referrals { code: string; invited: number; rewarded: number; availableDiscounts: number; discountPercent: number; friendBonusHours: number; shareText: string }
+export type Backup =
+  | { enabled: false }
+  | { enabled: true; linked: false }
+  | { enabled: true; linked: true; access: false; message: string }
+  | { enabled: true; linked: true; access: true; url: string; servers: number; expiresAt: string | null; open: { happ: string; v2raytun: string; hiddify: string } };
+export interface Referrals { channel?: string; channelTag?: string; code: string; invited: number; rewarded: number; availableDiscounts: number; discountPercent: number; friendBonusHours: number; shareText: string }
 export interface AppDevice { key: string; id: string; name: string | null; platform: string | null; current: boolean; covered: boolean; idleDays: number | null }
 export interface AppDevices { linked: boolean; max: number; used: number; devices: AppDevice[] }
 
@@ -179,6 +184,8 @@ export const api = {
   promo: (code: string) => request<PromoResult>('/app/promo', { method: 'POST', body: JSON.stringify({ code }) }),
   referrals: () => request<Referrals>('/app/referrals'),
   devices: () => request<AppDevices>('/app/devices'),
+  backup: () => request<Backup>('/app/backup'),
+  resetBackup: () => request<Backup>('/app/backup/reset', { method: 'POST' }),
   removeDevice: (key: string) => request<{ ok: boolean }>('/app/devices/remove', { method: 'POST', body: JSON.stringify({ key }) }),
   admin: {
     stats: () => request<AdminStats>('/app/admin/stats'),

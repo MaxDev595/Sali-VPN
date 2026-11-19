@@ -56,8 +56,8 @@ export default function SubscriptionScreen() {
       setPromoOpen(false); setPromoValue('');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (result.kind === 'DISCOUNT') { setPromo({ code: result.code, percent: result.percent }); toast(`Скидка ${result.percent}% — на следующую оплату`); }
-      else if (result.kind === 'DAYS') { toast(`Начислено ${period(result.days)} подписки 🎉`); void refresh(); }
-      else { toast(result.pending ? `Приглашение принято: +${bonusLabel(result.bonusHours)} — добавится, когда включите VPN` : `Приглашение принято: +${bonusLabel(result.bonusHours)} 🎉`); void refresh(); }
+      else if (result.kind === 'DAYS') { toast(`Начислено ${period(result.days)} подписки`); void refresh(); }
+      else { toast(result.pending ? `Приглашение принято: +${bonusLabel(result.bonusHours)} — добавится, когда включите VPN` : `Приглашение принято: +${bonusLabel(result.bonusHours)}`); void refresh(); }
     } catch (e) {
       setPromoError(e instanceof ApiError ? e.message : 'Не получилось. Проверьте интернет');
     } finally { setPromoBusy(false); }
@@ -127,14 +127,14 @@ export default function SubscriptionScreen() {
 
       <SectionLabel icon="plus">ЕЩЁ</SectionLabel>
       <Group>
-        <Row title="🎁  Подарить подписку" hint="Другу по его Sali ID" onPress={() => (linked ? router.push('/gift') : home && void linkTelegram(linkCodeOf(home), refresh))} />
-        <Row title="🏷  Промокод" hint="Или Sali ID друга, который вас пригласил" value={promo ? `−${promo.percent}%` : undefined} onPress={() => { setPromoError(null); setPromoOpen(true); }} />
-        <Row title="👥  Пригласить друга" hint="Другу +1 день, вам скидка на оплату" onPress={() => router.push('/invite')} />
-        <Row title="📱  Устройства" value={home?.account ? `${home.account.used} из ${home.account.max}` : '1 из 3'} onPress={() => router.push('/devices')} last />
+        <Row icon="gift" title="Подарить подписку" hint="Другу по его Sali ID" onPress={() => (linked ? router.push('/gift') : home && void linkTelegram(linkCodeOf(home), refresh))} />
+        <Row icon="tag" title="Промокод" hint="Или Sali ID друга, который вас пригласил" value={promo ? `−${promo.percent}%` : undefined} onPress={() => { setPromoError(null); setPromoOpen(true); }} />
+        <Row icon="users" title="Пригласить друга" hint="Другу +1 день, вам скидка на оплату" onPress={() => router.push('/invite')} />
+        <Row icon="devices" title="Устройства" value={home?.account ? `${home.account.used} из ${home.account.max}` : '1 из 3'} onPress={() => router.push('/devices')} last />
       </Group>
     </ScrollView>
 
-    <SaliModal visible={promoOpen} title="Промокод" onClose={() => setPromoOpen(false)}>
+    <SaliModal visible={promoOpen} title="Промокод" icon="tag" onClose={() => setPromoOpen(false)}>
       <Field value={promoValue} onChangeText={(v) => setPromoValue(v.toUpperCase())} placeholder="Например, SALI2026" autoCapitalize="characters" autoCorrect={false} autoFocus onSubmitEditing={() => void applyPromo()} returnKeyType="done" />
       {promoError && <Text style={styles.modalError}>{promoError}</Text>}
       <SaliButton title="Применить" loading={promoBusy} disabled={promoValue.trim().length < 3} onPress={() => void applyPromo()} />

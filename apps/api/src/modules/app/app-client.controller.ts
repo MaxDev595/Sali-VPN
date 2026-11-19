@@ -12,6 +12,7 @@ import { TrialsService } from '../trials/trials.service';
 import { ReferralsService, REFERRAL_DISCOUNT_PERCENT, REFERRAL_FRIEND_BONUS_HOURS } from '../referrals/referrals.service';
 import { formatDeviceId, formatPublicId, normalizePublicId } from '../codes/code-format';
 import { PromoService } from './promo.service';
+import { HappService } from '../happ/happ.service';
 
 class PurchaseDto {
   @IsString() @MaxLength(32) planCode!: string;
@@ -24,6 +25,14 @@ class PromoDto { @IsString() @Length(3, 40) code!: string; }
 class RemoveDeviceDto { @IsString() @Length(36, 36) key!: string; }
 
 const SITE = (process.env.PUBLIC_SITE_URL ?? 'https://salivpn.com').replace(/\/$/, '');
+const CHANNEL = (process.env.NEWS_CHANNEL_URL || 'https://t.me/SaliVpnNews').replace(/\/$/, '');
+const CHANNEL_TAG = `@${CHANNEL.split('/').pop()}`;
+/** 24 → «1 день», 48 → «2 дня», 3 → «3 часа». */
+const bonusWords = (hours: number) => {
+  const plural = (n: number, one: string, few: string, many: string) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many);
+  if (hours % 24 === 0) { const d = hours / 24; return `${d} ${plural(d, 'день', 'дня', 'дней')}`; }
+  return `${hours} ${plural(hours, 'час', 'часа', 'часов')}`;
+};
 const days = (d: Date | null) => (d ? Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000)) : null);
 
 /**
@@ -44,6 +53,7 @@ export class AppClientController {
     private readonly trials: TrialsService,
     private readonly referrals: ReferralsService,
     private readonly promos: PromoService,
+    private readonly happ: HappService,
   ) {}
 
   /** This installation, its account and every row of that account. */
@@ -195,8 +205,66 @@ export class AppClientController {
       availableDiscounts: rewards.filter((r) => !r.paymentId && !r.consumedAt).length,
       discountPercent: REFERRAL_DISCOUNT_PERCENT,
       friendBonusHours: REFERRAL_FRIEND_BONUS_HOURS,
-      shareText: `Пользуюсь Sali VPN — быстрый и надёжный. Скачай приложение: ${SITE} и введи мой код ${code} в «Подписка → Промокод» — получишь +${REFERRAL_FRIEND_BONUS_HOURS % 24 === 0 && REFERRAL_FRIEND_BONUS_HOURS / 24 === 1 ? '1 день' : `${REFERRAL_FRIEND_BONUS_HOURS} ч`} бесплатно.`,
+      channel: CHANNEL,
+      channelTag: CHANNEL_TAG,
+      // Plain text for any messenger: short lines, numbered steps, the code on its own line.
+      shareText: [
+        'Sali VPN — быстрый VPN без рекламы и логов',
+        '',
+        `Дарю тебе +${bonusWords(REFERRAL_FRIEND_BONUS_HOURS)} к бесплатным 3 дням:`,
+        '',
+        `1. Скачай приложение: ${SITE}/download`,
+        '2. Нажми «Включить» — 3 дня бесплатно',
+        '3. Введи мой код в «Подписка → Промокод»:',
+        '',
+        code,
+        '',
+        `Наш канал: ${CHANNEL_TAG} — ${CHANNEL.replace(/^https:\/\//, '')}`,
+      ].join('\n'),
     };
+  }
+
+  /**
+   * «Запасное подключение»: the account's personal VLESS (Reality) subscription — for Happ and
+   * for any other Xray client (v2RayTun, Hiddify). Works when the Sali app's own tunnel is
+   * blocked. Needs a linked Telegram (the link belongs to the account) and an active access.
+   */
+  @Get('backup')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  async backup(@CurrentUser() user: AuthTokenPayload) {
+    const { tg } = await this.context(user.sub);
+    if (!this.happ.enabled) return { enabled: false as const };
+    if (!tg) return { enabled: true as const, linked: false as const };
+    try {
+      const link = await this.happ.link(Number(tg));
+      const name = encodeURIComponent('Sali VPN');
+      return {
+        enabled: true as const,
+        linked: true as const,
+        access: true as const,
+        url: link.url,
+        servers: link.servers,
+        expiresAt: link.expiresAt ? new Date(link.expiresAt).toISOString() : null,
+        open: {
+          happ: `happ://add/${link.url}`,
+          v2raytun: `v2raytun://import/${link.url}`,
+          hiddify: `hiddify://import/${link.url}#${name}`,
+        },
+      };
+    } catch (error) {
+      if (error instanceof ForbiddenException) return { enabled: true as const, linked: true as const, access: false as const, message: (error.getResponse() as { message?: string }).message ?? 'Нет активного доступа' };
+      throw error;
+    }
+  }
+
+  /** New backup link: the old one stops working at once (if it leaked). */
+  @Post('backup/reset')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  async backupReset(@CurrentUser() user: AuthTokenPayload) {
+    const { tg } = await this.context(user.sub);
+    if (!tg) throw new BadRequestException('Сначала привяжите Telegram');
+    await this.happ.rotate(Number(tg));
+    return this.backup(user);
   }
 
   /** Devices of the account: a label each (not an ID), which share the subscription, removal. */

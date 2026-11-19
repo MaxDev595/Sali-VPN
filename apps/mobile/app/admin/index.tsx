@@ -20,10 +20,10 @@ export default function AdminHome() {
 
   return <Screen title="Админ-панель" onRefresh={() => void load()} refreshing={loading}>
     <Group>
-      <Row title="🔎  Найти пользователя" hint="Sali ID, D-номер, @username или Telegram ID" onPress={() => router.push('/admin/user')} />
-      <Row title="👥  Пользователи" hint="Платные, от администрации, бесплатные, ушедшие" onPress={() => router.push('/admin/people')} />
-      <Row title="💵  Платежи" onPress={() => router.push('/admin/payments')} />
-      <Row title="🏷  Промокоды" hint="Дни или скидка, лимит и срок" onPress={() => router.push('/admin/promos')} last />
+      <Row icon="search" title="Найти пользователя" hint="Sali ID, D-номер, @username или Telegram ID" onPress={() => router.push('/admin/user')} />
+      <Row icon="users" title="Пользователи" hint="Платные, от администрации, бесплатные, ушедшие" onPress={() => router.push('/admin/people')} />
+      <Row icon="cash" title="Платежи" onPress={() => router.push('/admin/payments')} />
+      <Row icon="tag" title="Промокоды" hint="Дни или скидка, лимит и срок" onPress={() => router.push('/admin/promos')} last />
     </Group>
 
     {!stats && !error && <Loading />}
@@ -55,7 +55,7 @@ export default function AdminHome() {
 
       <SectionLabel icon="globe">СЕРВЕРЫ</SectionLabel>
       <Group>
-        {stats.servers.map((s, i) => <Row key={s.name} kind="none" title={`${s.online ? '🟢' : '🔴'}  ${s.name}`} hint={`${s.premiumOnly ? 'платный' : 'бесплатный'}${s.isActive ? '' : ' · выключен'} · ${s.users} ключей`} value={s.connectedNow !== null ? `${s.connectedNow} онлайн` : undefined} last={i === stats.servers.length - 1} />)}
+        {stats.servers.map((s, i) => <Row key={s.name} kind="none" icon="dot" iconColor={s.online ? theme.colors.success : theme.colors.error} title={s.name} hint={`${s.premiumOnly ? 'платный' : 'бесплатный'}${s.isActive ? '' : ' · выключен'} · ${s.users} ключей`} value={s.connectedNow !== null ? `${s.connectedNow} онлайн` : undefined} last={i === stats.servers.length - 1} />)}
       </Group>
       <Text style={styles.note}>Серверы, рассылки и воронка — по-прежнему в боте: /admin</Text>
     </>}

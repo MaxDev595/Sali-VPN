@@ -8,6 +8,7 @@ import { HappService } from './happ.service';
 @Module({
   imports: [VpnModule, SubscriptionsModule],
   providers: [HappService],
+  exports: [HappService],
   controllers: [HappSubscriptionController, HappBotController],
 })
 export class HappModule {}

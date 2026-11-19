@@ -15,7 +15,7 @@ import { useI18n } from '../../src/i18n';
 import { useVpnStore } from '../../src/store/vpnStore';
 import { useAccountStore } from '../../src/store/accountStore';
 import { usePreferencesStore } from '../../src/store/preferencesStore';
-import { FLAGS } from '../../src/data/fallbackServers';
+import { Flag } from '../../src/components/Flag';
 import { theme } from '../../src/theme';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -98,7 +98,7 @@ export default function VpnScreen() {
               <Icon name="info" size={18} color={theme.colors.error} />
               <Text style={styles.errorText}>{error}</Text>
               <Pressable accessibilityRole="button" onPress={() => { clearError(); void toggle(); }} style={({ pressed }) => [styles.retry, pressed && { opacity: .8 }]}><Text style={styles.retryText}>Повторить</Text></Pressable>
-              <Pressable accessibilityRole="button" onPress={openSupport} style={({ pressed }) => [styles.retry, pressed && { opacity: .8 }]}><Text style={styles.retryText}>Поддержка</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={() => router.push('/backup')} style={({ pressed }) => [styles.retry, pressed && { opacity: .8 }]}><Text style={styles.retryText}>Запасной вариант</Text></Pressable>
             </Animated.View>
           : <Text style={styles.subtitle}>{active ? t.tapToDisconnect : status === 'connecting' || status === 'disconnecting' ? ' ' : t.tapToConnect}</Text>}
       </View>
@@ -117,7 +117,7 @@ export default function VpnScreen() {
         <Pressable accessibilityRole="button" onPress={() => router.push('/servers')} style={({ pressed }) => [styles.stub, styles.stubWide, pressed && styles.pressed]}>
           <Text style={styles.stubLabel}>{t.location}</Text>
           <View style={styles.locationLine}>
-            <Text style={styles.flag}>{FLAGS[server?.countryCode ?? ''] ?? '🌐'}</Text>
+            <Flag code={server?.countryCode} size={22} />
             <Text style={styles.stubMain} numberOfLines={1}>{server?.city ?? t.auto}</Text>
           </View>
           <Text style={styles.stubSub} numberOfLines={1}>{server?.ping ? `${server.country} · ${server.ping} мс` : server?.country ?? ''}</Text>
@@ -125,7 +125,7 @@ export default function VpnScreen() {
       </Animated.View>
     </ScrollView>
 
-    <SaliModal visible={needsCode} title="Нужна подписка" onClose={clearError}>
+    <SaliModal visible={needsCode} title="Нужна подписка" icon="key" onClose={clearError}>
       <Text style={styles.modalText}>{error ?? 'Бесплатные 3 дня закончились.'}{'\n\n'}Подписка работает на всех ваших устройствах (до 3). Оплата — USDT, прямо в приложении.</Text>
       <View style={{ gap: 10, marginTop: 20 }}>
         <SaliButton title="Выбрать тариф" onPress={() => { clearError(); toPlans(); }} />
@@ -148,8 +148,8 @@ const styles = StyleSheet.create({
   kicker: { color: theme.colors.textSecondary, fontSize: 15, fontFamily: 'SaliSans-SemiBold', letterSpacing: 1.2, fontVariant: ['tabular-nums'], height: 22 },
   title: { color: theme.colors.textPrimary, fontSize: 28, lineHeight: 34, fontFamily: 'SaliSans-Bold', textAlign: 'center', marginTop: 4 },
   subtitle: { color: theme.colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 6 },
-  errorCard: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, paddingVertical: 10, paddingLeft: 14, paddingRight: 8, borderRadius: 16, backgroundColor: 'rgba(255,122,122,0.08)', borderWidth: 1, borderColor: 'rgba(255,122,122,0.22)', maxWidth: 360 },
-  errorText: { flex: 1, color: '#FFB4B4', fontSize: 13.5, lineHeight: 19 },
+  errorCard: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 14, paddingVertical: 10, paddingLeft: 14, paddingRight: 8, borderRadius: 16, backgroundColor: 'rgba(255,122,122,0.08)', borderWidth: 1, borderColor: 'rgba(255,122,122,0.22)', maxWidth: 360 },
+  errorText: { minWidth: 160,  flex: 1, color: '#FFB4B4', fontSize: 13.5, lineHeight: 19 },
   retry: { paddingHorizontal: 14, height: 34, borderRadius: 17, backgroundColor: theme.colors.surfaceElevated, justifyContent: 'center' },
   retryText: { color: theme.colors.textPrimary, fontSize: 13, fontFamily: 'SaliSans-SemiBold' },
   ticket: { flexDirection: 'row', borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden' },
