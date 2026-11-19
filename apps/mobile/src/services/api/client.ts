@@ -126,8 +126,8 @@ export interface AccountDevices { linked: boolean; subscription: { plan: string;
 
 export interface Plan { code: string; name: string; description: string | null; perMonthUsd: number; durationDays: number; priceUsd: number; originalPriceUsd: number | null; maxDevices: number; discountedPriceUsd: number | null }
 export interface PlansResponse { telegramLinked: boolean; currency: string; discountPercent: number; plans: Plan[] }
-export interface Invoice { paymentId: string; plan: { code: string; name: string; durationDays: number }; gift: string | null; discountPercent: number; amount: string; asset: string; network: string; address: string; comment: string; expiresAt: string; tonUrl: string | null; tonkeeperUrl: string | null }
-export interface PaymentState { status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; expired: boolean; plan: string; gift: boolean; until: string | null }
+export interface Invoice { topup?: boolean; paymentId: string; plan: { code: string; name: string; durationDays: number }; gift: string | null; discountPercent: number; amount: string; asset: string; network: string; address: string; comment: string; expiresAt: string; tonUrl: string | null; tonkeeperUrl: string | null }
+export interface PaymentState { topup?: boolean; balanceUsd?: number | null; amountUsd?: number; status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; expired: boolean; plan: string; gift: boolean; until: string | null }
 export type PromoResult =
   | { kind: 'DAYS'; code: string; days: number; until: string | null }
   | { kind: 'DISCOUNT'; code: string; percent: number }
@@ -137,6 +137,9 @@ export type Backup =
   | { enabled: true; linked: false }
   | { enabled: true; linked: true; access: false; message: string }
   | { enabled: true; linked: true; access: true; url: string; servers: number; expiresAt: string | null; open: { happ: string; v2raytun: string; hiddify: string } };
+export interface BalanceTx { id: string; at: string; kind: 'TOPUP' | 'PURCHASE' | 'GIFT' | 'AUTO_RENEW' | 'REFUND' | 'ADMIN'; label: string; amountUsd: number; balanceAfter: number; note: string | null }
+export interface BalanceInfo { linked: boolean; minTopUpUsd: number; maxTopUpUsd: number; balanceUsd: number; autoRenew: { planCode: string; name: string; durationDays: number; priceUsd: number } | null; nextRenewalAt: string | null; subscriptionUntil: string | null; history: BalanceTx[] }
+export interface BalancePurchase { plan: string; priceUsd: number; discountPercent: number; balanceUsd: number; until: string | null; gift: boolean }
 export interface Referrals { channel?: string; channelTag?: string; code: string; invited: number; rewarded: number; availableDiscounts: number; discountPercent: number; friendBonusHours: number; shareText: string }
 export interface AppDevice { key: string; id: string; name: string | null; platform: string | null; current: boolean; covered: boolean; idleDays: number | null }
 export interface AppDevices { linked: boolean; max: number; used: number; devices: AppDevice[] }
@@ -151,7 +154,7 @@ export interface AdminStats {
 }
 export type PeopleSegment = 'paid' | 'granted' | 'trial' | 'expired';
 export interface AdminPeople { segment: PeopleSegment; page: number; pages: number; counts: { paid: number; granted: number; trial: number; expired: number; online: number | null }; list: Array<{ userId: string; name: string; username: string | null; device: string | null; plan: string; until: string; via: string | null; blocked: boolean }> }
-export interface AdminCard { id: string; kind: 'telegram' | 'device'; title: string; username: string | null; telegramId: string | null; publicId: string; owner: string | null; createdAt: string; isBlocked: boolean; access: string; devices: Array<{ id: string; publicId: string; access: string }>; paidUsd: number; payments: number; invited: number }
+export interface AdminCard { accountId?: string | null; balanceUsd?: number; autoRenew?: boolean; id: string; kind: 'telegram' | 'device'; title: string; username: string | null; telegramId: string | null; publicId: string; owner: string | null; createdAt: string; isBlocked: boolean; access: string; devices: Array<{ id: string; publicId: string; access: string }>; paidUsd: number; payments: number; invited: number }
 export interface AdminPayment { id: string; at: string; status: string; amountUsd: number; discountPercent: number; method: string; plan: string; account: string; name: string | null; giftTo: string | null }
 export interface AdminPromo { id: string; code: string; kind: 'DAYS' | 'DISCOUNT'; days: number; discountPercent: number; maxUses: number | null; usedCount: number; expiresAt: string | null; isActive: boolean; note: string | null; createdAt: string }
 
@@ -185,6 +188,10 @@ export const api = {
   referrals: () => request<Referrals>('/app/referrals'),
   devices: () => request<AppDevices>('/app/devices'),
   backup: () => request<Backup>('/app/backup'),
+  balance: () => request<BalanceInfo>('/app/balance'),
+  topUp: (amountUsd: number) => request<Invoice>('/app/balance/topup', { method: 'POST', body: JSON.stringify({ amountUsd }) }),
+  payFromBalance: (planCode: string, options: { giftTo?: string; promo?: string } = {}) => request<BalancePurchase>('/app/balance/pay', { method: 'POST', body: JSON.stringify({ planCode, ...options }) }),
+  setAutoRenew: (planCode: string | null) => request<BalanceInfo>('/app/balance/auto-renew', { method: 'POST', body: JSON.stringify({ planCode }) }),
   resetBackup: () => request<Backup>('/app/backup/reset', { method: 'POST' }),
   removeDevice: (key: string) => request<{ ok: boolean }>('/app/devices/remove', { method: 'POST', body: JSON.stringify({ key }) }),
   admin: {
@@ -197,6 +204,8 @@ export const api = {
     payments: () => request<AdminPayment[]>('/app/admin/payments'),
     promos: () => request<AdminPromo[]>('/app/admin/promos'),
     createPromo: (input: { code: string; kind: 'DAYS' | 'DISCOUNT'; days?: number; discountPercent?: number; maxUses?: number; expiresInDays?: number; note?: string }) => request<{ id: string; code: string }>('/app/admin/promos', { method: 'POST', body: JSON.stringify(input) }),
+    adjustBalance: (userId: string, amountUsd: number, note: string) => request<{ balanceUsd: number }>('/app/admin/balance', { method: 'POST', body: JSON.stringify({ userId, amountUsd, note }) }),
+    renewNow: () => request<{ renewed: number }>('/app/admin/renew-now', { method: 'POST' }),
     setPromoActive: (id: string, isActive: boolean) => request<{ ok: boolean }>(`/app/admin/promos/${id}/active`, { method: 'POST', body: JSON.stringify({ isActive }) }),
   },
   registerCurrentDevice: (deviceKey: string) => request('/devices/current', { method: 'POST', body: JSON.stringify({ deviceKey, name: deviceName(), platform: 'ANDROID' }) }),

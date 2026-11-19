@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentProvider } from './providers/payment-provider.interface';
 import { PaymentStatus, SubscriptionStatus } from '@prisma/client';
@@ -11,6 +11,7 @@ import { CryptoPaymentProvider } from './providers/crypto.provider';
 import { GooglePlayService } from './google-play.service';
 import { CodesService, IssuedCode } from '../codes/codes.service';
 import { formatPublicId } from '../codes/code-format';
+import { applyBalance, TOPUP_MAX_USD, TOPUP_MIN_USD, TOPUP_PLAN, usd } from './balance';
 
 @Injectable()
 export class PaymentsService {
@@ -215,9 +216,43 @@ export class PaymentsService {
     return { until: sub?.expiresAt?.toISOString() ?? null, maxDevices: sub?.plan.maxDevices ?? 3, devices };
   }
 
+  /** «Пополнить баланс»: a USDT (TON) invoice for any amount; paid → the balance grows. */
+  async initiateTopUp(userId: string, amountUsd: number) {
+    const amount = Math.round(amountUsd * 100) / 100;
+    if (!(amount >= TOPUP_MIN_USD && amount <= TOPUP_MAX_USD)) throw new BadRequestException(`Пополнение — от $${TOPUP_MIN_USD} до $${TOPUP_MAX_USD}`);
+    const plan = await this.prisma.plan.upsert({
+      where: { code: TOPUP_PLAN },
+      update: {},
+      create: { code: TOPUP_PLAN, name: 'Пополнение баланса', durationDays: 0, priceUsd: 0, maxDevices: 3, isActive: false },
+    });
+    const payment = await this.prisma.payment.create({ data: { userId, planId: plan.id, provider: this.crypto.name, amountUsd: amount, status: PaymentStatus.PENDING } });
+    let result;
+    try {
+      result = await this.crypto.createPayment({ userId, planId: plan.id, amountUsd: amount, metadata: { paymentId: payment.id, userId, planId: plan.id } });
+    } catch (error) {
+      await this.markFailed(payment.id, 'Payment provider initialization failed');
+      throw error;
+    }
+    const saved = await this.prisma.payment.update({ where: { id: payment.id }, data: { externalPaymentId: result.externalPaymentId } });
+    return { payment: saved, checkout: result };
+  }
+
   async confirmSucceeded(paymentId: string, options: { silent?: boolean } = {}) {
     const current = await this.prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, include: { plan: true } });
     if (current.status === PaymentStatus.SUCCEEDED) return current;
+
+    // A top-up: the money goes onto the Sali balance. Claimed once, even if confirmed twice at the same moment.
+    if (current.plan.code === TOPUP_PLAN) {
+      const credited = await this.prisma.$transaction(async (tx) => {
+        const claimed = await tx.payment.updateMany({ where: { id: paymentId, status: { not: PaymentStatus.SUCCEEDED } }, data: { status: PaymentStatus.SUCCEEDED } });
+        if (claimed.count !== 1) return null;
+        return applyBalance(tx, current.userId, Number(current.amountUsd), 'TOPUP', { paymentId, note: 'USDT (TON)' });
+      });
+      if (credited && !options.silent) {
+        await this.notifications.sendHtml(current.userId, `✅ <b>Баланс пополнен на $${usd(current.amountUsd)}</b>\n\nНа балансе: <b>$${usd(credited.balanceAfter)}</b>. Оплатить тариф или включить автопродление можно в приложении Sali VPN → «Подписка» → «Баланс».`).catch(() => false);
+      }
+      return this.prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, include: { plan: true } });
+    }
     const payment = await this.prisma.payment.update({ where: { id: paymentId }, data: { status: PaymentStatus.SUCCEEDED }, include: { plan: true } });
 
     if (payment.deliverAsCode) {

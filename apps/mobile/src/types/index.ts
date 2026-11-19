@@ -12,4 +12,6 @@ export interface HomeState { user: User; vpn: { status: 'ACTIVE' | 'DISABLED' | 
   device?: { id: string; linkCode: string; name: string | null; platform: string | null };
   telegram?: { linked: boolean; username: string | null };
   /** The account's Telegram is an admin: the app shows the admin panel. */
-  isAdmin?: boolean }
+  isAdmin?: boolean;
+  /** Sali balance (USDT = USD): spent only on Sali VPN, never paid out. */
+  balanceUsd?: number }

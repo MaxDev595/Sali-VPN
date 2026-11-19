@@ -8,7 +8,7 @@ import { Icon } from '../src/components/Icon';
 import { SaliButton } from '../src/components/SaliButton';
 import { TelegramLinkCard } from '../src/components/TelegramLinkCard';
 import { Card, CopyBox, ErrorNote, Loading, Screen, dateRu, toast } from '../src/components/ui';
-import { api, ApiError, type Invoice, type PaymentState } from '../src/services/api/client';
+import { api, ApiError, type BalancePurchase, type Invoice, type PaymentState } from '../src/services/api/client';
 import { useAccountStore } from '../src/store/accountStore';
 import { useShopStore } from '../src/store/shopStore';
 import { theme } from '../src/theme';
@@ -20,19 +20,25 @@ const pad = (n: number) => String(n).padStart(2, '0');
  * The server watches the wallet and confirms by itself; the app asks every 5 seconds.
  */
 export default function CheckoutScreen() {
-  const params = useLocalSearchParams<{ plan: string; gift?: string }>();
+  const params = useLocalSearchParams<{ plan?: string; gift?: string; topup?: string }>();
+  const topupAmount = params.topup ? Number(params.topup) : null;
   const refresh = useAccountStore((s) => s.refresh);
   const { promo, setPromo } = useShopStore();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [state, setState] = useState<PaymentState | null>(null);
   const [error, setError] = useState<{ text: string; needsTelegram: boolean } | null>(null);
   const [now, setNow] = useState(Date.now());
+  // Enough on the Sali balance: offer paying from it instead of a transfer.
+  const [choice, setChoice] = useState<{ balance: number; price: number } | null>(null);
+  const [paid, setPaid] = useState<BalancePurchase | null>(null);
+  const [paying, setPaying] = useState(false);
   const started = useRef(false);
 
   const create = useCallback(async () => {
-    setError(null); setInvoice(null); setState(null);
+    setError(null); setInvoice(null); setState(null); setChoice(null);
     try {
-      setInvoice(await api.purchase(params.plan, { giftTo: params.gift || undefined, promo: promo?.code }));
+      if (topupAmount) { setInvoice(await api.topUp(topupAmount)); return; }
+      setInvoice(await api.purchase(params.plan!, { giftTo: params.gift || undefined, promo: promo?.code }));
     } catch (e) {
       const needsTelegram = e instanceof ApiError && e.code === 'TELEGRAM_REQUIRED';
       // A promo code that stopped working should not block paying at the normal price.
@@ -41,7 +47,32 @@ export default function CheckoutScreen() {
     }
   }, [params.gift, params.plan, promo, setPromo]);
 
-  useEffect(() => { if (!started.current) { started.current = true; void create(); } }, [create]);
+  // First look at the balance: enough → let the customer choose; otherwise straight to the invoice.
+  const start = useCallback(async () => {
+    if (topupAmount) return create();
+    const [b, p] = await Promise.all([api.balance().catch(() => null), api.plans().catch(() => null)]);
+    const plan = p?.plans.find((x) => x.code === params.plan);
+    if (b?.linked && plan) {
+      const percent = Math.max(promo?.percent ?? 0, p?.discountPercent ?? 0);
+      const price = Math.round(plan.priceUsd * (100 - percent)) / 100;
+      if (b.balanceUsd >= price) { setChoice({ balance: b.balanceUsd, price }); return; }
+    }
+    return create();
+  }, [create, params.plan, promo?.percent, topupAmount]);
+
+  const payFromBalance = async () => {
+    setPaying(true); setError(null);
+    try {
+      const result = await api.payFromBalance(params.plan!, { giftTo: params.gift || undefined, promo: promo?.code });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (promo) setPromo(null);
+      setPaid(result); void refresh();
+    } catch (e) {
+      setError({ text: e instanceof Error ? e.message : 'Не получилось', needsTelegram: e instanceof ApiError && e.code === 'TELEGRAM_REQUIRED' });
+    } finally { setPaying(false); }
+  };
+
+  useEffect(() => { if (!started.current) { started.current = true; void start(); } }, [start]);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
   // Poll while the invoice is open.
@@ -53,7 +84,7 @@ export default function CheckoutScreen() {
       setState(next);
       if (next.status === 'SUCCEEDED') {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        if (promo) setPromo(null);
+        if (promo && !next.topup) setPromo(null);
         void refresh();
       }
     };
@@ -69,6 +100,45 @@ export default function CheckoutScreen() {
     }
     toast('Кошелёк не открылся — скопируйте адрес и комментарий');
   };
+
+  if (paid) {
+    return <Screen title={paid.gift ? 'Подарок оплачен' : 'Оплачено'} back={false}>
+      <Animated.View entering={ZoomIn.duration(420)} style={styles.successIcon}><Icon name="check" size={46} color={theme.colors.onPrimary} /></Animated.View>
+      <Animated.View entering={FadeInDown.delay(150).duration(380)}>
+        <Text style={styles.successTitle}>{paid.gift ? `Подписка начислена другу ${params.gift ?? ''}` : `${paid.plan} активна`}</Text>
+        <Text style={styles.successText}>Списано ${paid.priceUsd.toFixed(2)} с баланса, осталось ${paid.balanceUsd.toFixed(2)}.{paid.gift ? '' : `\nПодписка до ${dateRu(paid.until)}.`}</Text>
+        <View style={{ height: 24 }} />
+        <SaliButton title={paid.gift ? 'Готово' : 'Включить VPN'} onPress={() => { router.dismissAll(); router.replace('/'); }} />
+      </Animated.View>
+    </Screen>;
+  }
+
+  if (state?.status === 'SUCCEEDED' && state.topup) {
+    return <Screen title="Баланс пополнен" back={false}>
+      <Animated.View entering={ZoomIn.duration(420)} style={styles.successIcon}><Icon name="check" size={46} color={theme.colors.onPrimary} /></Animated.View>
+      <Animated.View entering={FadeInDown.delay(150).duration(380)}>
+        <Text style={styles.successTitle}>+${(state.amountUsd ?? 0).toFixed(2)} на балансе</Text>
+        <Text style={styles.successText}>Теперь на балансе ${(state.balanceUsd ?? 0).toFixed(2)}. Оплачивайте тарифы в одно нажатие или включите автопродление.</Text>
+        <View style={{ height: 24 }} />
+        <SaliButton title="К балансу" onPress={() => router.back()} />
+      </Animated.View>
+    </Screen>;
+  }
+
+  if (choice && !invoice) {
+    return <Screen title="Оплата" subtitle={params.gift ? `Подарок для ${params.gift}` : 'Для вашего аккаунта'}>
+      <Card accent>
+        <Text style={styles.label}>С БАЛАНСА</Text>
+        <View style={styles.amountLine}><Text style={styles.amount}>${choice.price.toFixed(2)}</Text></View>
+        <Text style={styles.network}>На балансе ${choice.balance.toFixed(2)} → останется ${(choice.balance - choice.price).toFixed(2)}</Text>
+        <View style={{ height: 16 }} />
+        <SaliButton title="Оплатить с баланса" loading={paying} onPress={() => void payFromBalance()} />
+      </Card>
+      {error && <ErrorNote text={error.text} />}
+      <View style={{ height: 12 }} />
+      <SaliButton secondary title="Перевести USDT" onPress={() => void create()} />
+    </Screen>;
+  }
 
   if (state?.status === 'SUCCEEDED') {
     return <Screen title={state.gift ? 'Подарок оплачен' : 'Оплачено'} back={false}>
@@ -87,7 +157,7 @@ export default function CheckoutScreen() {
   const left = invoice ? Math.max(0, Math.floor((Date.parse(invoice.expiresAt) - now) / 1000)) : 0;
   const expired = Boolean(invoice && (left === 0 || state?.expired));
 
-  return <Screen title="Оплата" subtitle={invoice ? `${invoice.plan.name} · ${invoice.gift ? `подарок для ${invoice.gift}` : 'для вашего аккаунта'}` : undefined}>
+  return <Screen title={topupAmount ? 'Пополнение' : 'Оплата'} subtitle={invoice ? (invoice.topup ? 'Деньги придут на баланс Sali сразу после перевода' : `${invoice.plan.name} · ${invoice.gift ? `подарок для ${invoice.gift}` : 'для вашего аккаунта'}`) : undefined}>
     {!invoice && !error && <Loading text="Выставляем счёт…" />}
     {error && <>
       <ErrorNote text={error.text} onRetry={error.needsTelegram ? undefined : () => void create()} />

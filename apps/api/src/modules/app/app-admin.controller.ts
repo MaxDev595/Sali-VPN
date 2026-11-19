@@ -1,5 +1,5 @@
 import { Body, Controller, ForbiddenException, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaymentStatus, PromoKind } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -10,6 +10,7 @@ import { NodesService } from '../vpn/nodes/nodes.service';
 import { AdminBotService, FOREVER_DAYS, type PeopleSegment } from '../admin-bot/admin-bot.service';
 import { formatPublicId, parseDeviceId } from '../codes/code-format';
 import { PromoService } from './promo.service';
+import { BalanceService } from './balance.service';
 
 class LookupDto { @IsString() @MaxLength(80) query!: string; }
 class UserDto { @IsString() @MaxLength(40) userId!: string; }
@@ -33,6 +34,7 @@ class PromoCreateDto {
   @IsOptional() @IsString() @MaxLength(200) note?: string;
 }
 class ToggleDto { @IsBoolean() isActive!: boolean; }
+class AdjustDto extends UserDto { @IsNumber({ maxDecimalPlaces: 2 }) amountUsd!: number; @IsString() @MaxLength(200) note!: string; }
 
 /**
  * Admin panel inside the app — only for accounts whose Telegram is in ADMIN_TELEGRAM_IDS.
@@ -46,7 +48,15 @@ export class AppAdminController {
     private readonly nodes: NodesService,
     private readonly admin: AdminBotService,
     private readonly promos: PromoService,
+    private readonly balance: BalanceService,
   ) {}
+
+  /** The account a card belongs to (a device card → its Telegram account). */
+  private async accountOf(userId: string) {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, linkedTelegramId: true } });
+    if (!u) return null;
+    return u.linkedTelegramId ? (await this.prisma.user.findUnique({ where: { telegramId: u.linkedTelegramId }, select: { id: true } }))?.id ?? u.id : u.id;
+  }
 
   /** Telegram ID of the admin behind this installation, or 403. */
   private async adminId(userId: string) {
@@ -76,7 +86,26 @@ export class AppAdminController {
       const row = await this.prisma.user.findFirst({ where: { id: { startsWith: device } }, select: { id: true } });
       if (row) query = row.id;
     }
-    return this.admin.lookup(adminId, query);
+    const card = await this.admin.lookup(adminId, query);
+    const accountId = await this.accountOf(card.id);
+    const balance = accountId ? await this.prisma.user.findUnique({ where: { id: accountId }, select: { balanceUsd: true, autoRenewPlanId: true } }) : null;
+    return { ...card, accountId, balanceUsd: balance ? Number(balance.balanceUsd) : 0, autoRenew: Boolean(balance?.autoRenewPlanId) };
+  }
+
+  /** Runs the automatic renewal from balances now (it also runs every hour by itself). */
+  @Post('renew-now')
+  async renewNow(@CurrentUser() user: AuthTokenPayload) {
+    await this.adminId(user.sub);
+    return { renewed: await this.balance.renewDue() };
+  }
+
+  /** Put money on / take it off a balance (refund by hand, compensation). */
+  @Post('balance')
+  async adjustBalance(@CurrentUser() user: AuthTokenPayload, @Body() dto: AdjustDto) {
+    await this.adminId(user.sub);
+    const accountId = await this.accountOf(dto.userId);
+    if (!accountId) throw new ForbiddenException('Пользователь не найден');
+    return this.balance.adjust(accountId, dto.amountUsd, dto.note);
   }
 
   @Post('grant')

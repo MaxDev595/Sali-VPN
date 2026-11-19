@@ -22,6 +22,8 @@ export default function AdminUserScreen() {
   const [days, setDays] = useState(30);
   const [kind, setKind] = useState<'admin' | 'gift'>('gift');
   const [message, setMessage] = useState('');
+  const [adjust, setAdjust] = useState('');
+  const [adjustNote, setAdjustNote] = useState('');
 
   const find = useCallback(async (q = query) => {
     if (!q.trim()) return;
@@ -61,12 +63,23 @@ export default function AdminUserScreen() {
         {card.owner && <Text style={styles.line}>Аккаунт: {card.owner}</Text>}
         <Text style={styles.line}>С нами с {dateRu(card.createdAt)}</Text>
         <Text style={[styles.access, { color: /нет доступа/.test(card.access) ? theme.colors.textSecondary : theme.colors.success }]}>{card.access}</Text>
+        <Text style={styles.line}>Баланс: <Text style={styles.strong}>${(card.balanceUsd ?? 0).toFixed(2)}</Text>{card.autoRenew ? ' · автопродление включено' : ''}</Text>
         <Text style={styles.line}>Оплатил: {money(card.paidUsd)} · {card.payments} раз · пригласил {card.invited}</Text>
         {card.devices.length > 0 && <View style={{ marginTop: 10 }}>
           <Text style={styles.sub}>Устройства</Text>
           {card.devices.map((d) => <Text key={d.id} style={styles.line}>{d.publicId} — {d.access}</Text>)}
         </View>}
       </Card>
+
+      <Text style={styles.section}>Баланс</Text>
+      <View style={ui.row}>
+        <View style={{ flex: 1 }}><Field value={adjust} onChangeText={(v) => setAdjust(v.replace(/[^0-9.,-]/g, ''))} placeholder="+5 или -5" keyboardType="numbers-and-punctuation" /></View>
+        <View style={{ flex: 2 }}><Field value={adjustNote} onChangeText={setAdjustNote} placeholder="Причина (видна в истории)" /></View>
+      </View>
+      <SaliButton title="Изменить баланс" secondary disabled={!Number(adjust.replace(',', '.'))} onPress={() => card && Alert.alert('Изменить баланс?', `${card.title}: ${Number(adjust.replace(',', '.')) > 0 ? '+' : ''}${adjust} $`, [
+        { text: 'Отмена', style: 'cancel' },
+        { text: 'Изменить', onPress: () => void act(() => api.admin.adjustBalance(card.id, Number(adjust.replace(',', '.')), adjustNote.trim() || 'Администратор'), 'Баланс изменён').then(() => { setAdjust(''); setAdjustNote(''); }) },
+      ])} />
 
       <Text style={styles.section}>Выдать подписку</Text>
       <View style={[ui.wrap, { marginBottom: 10 }]}>{DAYS.map((d) => <Chip key={d} label={daysLabel(d)} active={days === d} onPress={() => setDays(d)} />)}</View>

@@ -284,6 +284,67 @@ async function pay(paymentId) {
   assert.match(refsText, new RegExp(idA));
   ok(`backup: one link per account (both phones), deep links for Happ / v2RayTun / Hiddify, reset gives a new link; invite text has ${idA} and @SaliVpnNews`);
 
+  // --- Sali balance: top up, pay, gift, auto-renew; never paid out ---
+  await call('/app/balance/topup', { token: D.token, method: 'POST', body: { amountUsd: 5 }, expect: 403 });
+  await call('/app/balance/topup', { token: A.token, method: 'POST', body: { amountUsd: 0.5 }, expect: 400 });
+  const top = await call('/app/balance/topup', { token: A.token, method: 'POST', body: { amountUsd: 10 }, expect: [200, 201] });
+  assert.equal(top.amount, '10');
+  assert.equal(top.topup, true);
+  await pay(top.paymentId);
+  await pay(top.paymentId); // confirmed twice — credited once
+  const topSt = await call(`/app/payments/${top.paymentId}`, { token: A.token });
+  assert.equal(topSt.topup, true);
+  assert.equal(topSt.balanceUsd, 10);
+  assert.equal((await A.home()).balanceUsd, 10);
+  assert.equal((await B.home()).balanceUsd, 10); // same account on the second phone
+  ok('top-up: 10 USDT invoice, paid (confirmed twice, credited once), balance $10 on both phones; no Telegram → 403; under $1 → 400');
+
+  const subBefore = Date.parse((await A.home()).subscription.expiresAt);
+  const bought = await call('/app/balance/pay', { token: A.token, method: 'POST', body: { planCode: 'pro_7d' }, expect: [200, 201] });
+  assert.equal(bought.priceUsd, 1.2);
+  assert.equal(bought.balanceUsd, 8.8);
+  assert.equal(Date.parse(bought.until) - subBefore, 7 * 86400e3);
+  const G2 = await device('G2');
+  const idG2 = (await G2.home()).user.publicId;
+  const gifted = await call('/app/balance/pay', { token: A.token, method: 'POST', body: { planCode: 'pro_7d', giftTo: idG2 }, expect: [200, 201] });
+  assert.equal(gifted.gift, true);
+  assert.equal(gifted.balanceUsd, 7.6);
+  assert.equal((await G2.home()).subscription?.status, 'ACTIVE');
+  const tooMuch = await call('/app/balance/pay', { token: A.token, method: 'POST', body: { planCode: 'pro_yearly' }, expect: 400 });
+  assert.match(tooMuch.message, /Недостаточно/);
+  assert.equal((await A.home()).balanceUsd, 7.6);
+  ok('pay from balance: 7 days for $1.20 (+7 days), gift to a friend, not enough for the year → refused, nothing charged');
+
+  const on = await call('/app/balance/auto-renew', { token: A.token, method: 'POST', body: { planCode: 'pro_14d' }, expect: [200, 201] });
+  assert.equal(on.autoRenew.planCode, 'pro_14d');
+  const accA = (await db.query('select id from "User" where "telegramId" = 222')).rows[0].id;
+  await db.query(`update "Subscription" set "expiresAt" = now() + interval '12 hours' where "userId" = $1 and status = 'ACTIVE'`, [accA]);
+  const r1 = await call('/app/admin/renew-now', { token: ADM.token, method: 'POST', expect: [200, 201] });
+  assert.equal(r1.renewed, 1);
+  const afterRenew = await call('/app/balance', { token: A.token });
+  assert.equal(afterRenew.balanceUsd, 5.6);
+  assert.ok(Date.parse(afterRenew.subscriptionUntil) > Date.now() + 14 * 86400e3);
+  assert.equal((await call('/app/admin/renew-now', { token: ADM.token, method: 'POST', expect: [200, 201] })).renewed, 0);
+  await call('/app/balance/auto-renew', { token: A.token, method: 'POST', body: { planCode: 'pro_yearly' }, expect: [200, 201] });
+  await db.query(`update "Subscription" set "expiresAt" = now() + interval '6 hours' where "userId" = $1 and status = 'ACTIVE'`, [accA]);
+  assert.equal((await call('/app/admin/renew-now', { token: ADM.token, method: 'POST', expect: [200, 201] })).renewed, 0);
+  const noticed = (await db.query('select "autoRenewNoticeAt" from "User" where id = $1', [accA])).rows[0].autoRenewNoticeAt;
+  assert.ok(noticed);
+  assert.equal((await call('/app/balance', { token: A.token })).balanceUsd, 5.6);
+  await call('/app/balance/auto-renew', { token: A.token, method: 'POST', body: { planCode: null }, expect: [200, 201] });
+  assert.equal((await call('/app/balance', { token: A.token })).autoRenew, null);
+  ok('auto-renew: a day before the end 14 days are bought from the balance (once); not enough for the year → reminder, nothing charged; switched off');
+
+  const cardA = await call('/app/admin/lookup', { token: ADM.token, method: 'POST', body: { query: idA }, expect: [200, 201] });
+  assert.equal(cardA.balanceUsd, 5.6);
+  const adj = await call('/app/admin/balance', { token: ADM.token, method: 'POST', body: { userId: hA.user.id, amountUsd: 4.4, note: 'компенсация' }, expect: [200, 201] });
+  assert.equal(adj.balanceUsd, 10);
+  await call('/app/admin/balance', { token: ADM.token, method: 'POST', body: { userId: cardA.id, amountUsd: -100, note: 'x' }, expect: 400 });
+  await call('/app/admin/balance', { token: A.token, method: 'POST', body: { userId: cardA.id, amountUsd: 5, note: 'x' }, expect: 403 });
+  const hist = (await call('/app/balance', { token: A.token })).history.map((t) => t.kind);
+  assert.deepEqual(hist, ['ADMIN', 'AUTO_RENEW', 'GIFT', 'PURCHASE', 'TOPUP']);
+  ok('admin: balance on the card, +$4.40 from a device card lands on the account; going below zero refused; customers get 403; history complete');
+
   // --- old app versions keep working (codes endpoint, home fields) ---
   await call('/codes/redeem', { token: A.token, method: 'POST', body: { code: 'SALI-AAAA-BBBB-CCCC' }, expect: 404 });
   ok('old app builds: /codes/redeem still answers');

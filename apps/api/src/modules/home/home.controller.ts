@@ -105,6 +105,8 @@ export class HomeController {
       device: { id: formatDeviceId(user.id), linkCode: user.publicId, name: lastDevice?.name ?? null, platform: lastDevice?.platform ?? null },
       telegram: { linked: Boolean(tg), username: owner?.username ?? null },
       isAdmin: Boolean(tg && this.nodes.isAdmin(tg)),
+      // Sali balance of the account (USDT = USD); spent only on Sali VPN.
+      balanceUsd: Number((owner ?? user).balanceUsd ?? 0),
     };
   }
 

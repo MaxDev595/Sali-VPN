@@ -32,6 +32,12 @@ model User {
   /// Set once the account's Sali ID is final (it took over its first app's ID, or had a
   /// device before). From then on the account ID never changes.
   idLockedAt    DateTime?
+  /// Sali balance (USDT = USD). Topped up with USDT, spent only on Sali VPN — never paid out.
+  balanceUsd    Decimal   @default(0) @db.Decimal(12, 2)
+  /// Tariff renewed from the balance when the subscription is about to end (null = off).
+  autoRenewPlanId String?
+  /// Last «not enough on the balance» reminder (one per period).
+  autoRenewNoticeAt DateTime?
   username      String?
   firstName     String?
   lastName      String?
@@ -626,4 +632,32 @@ model PromoRedemption {
 
   @@unique([promoId, accountId])
   @@index([accountId])
+}
+
+// ---------------------------------------------------------------------------
+// Sali balance: every change of User.balanceUsd is one row here.
+// ---------------------------------------------------------------------------
+
+enum BalanceTxKind {
+  TOPUP       // USDT received
+  PURCHASE    // a tariff bought from the balance
+  GIFT        // a tariff gifted to a friend from the balance
+  AUTO_RENEW  // monthly renewal from the balance
+  REFUND      // returned by support (the money goes back to the sending wallet by hand)
+  ADMIN       // corrected by the admin
+}
+
+model BalanceTx {
+  id           String        @id @default(uuid())
+  userId       String
+  /// + credit, − debit.
+  amountUsd    Decimal       @db.Decimal(12, 2)
+  balanceAfter Decimal       @db.Decimal(12, 2)
+  kind         BalanceTxKind
+  note         String?
+  paymentId    String?
+  planId       String?
+  createdAt    DateTime      @default(now())
+
+  @@index([userId, createdAt])
 }

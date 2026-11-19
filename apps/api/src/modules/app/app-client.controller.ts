@@ -1,6 +1,6 @@
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Length, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { PaymentStatus } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -12,6 +12,8 @@ import { TrialsService } from '../trials/trials.service';
 import { ReferralsService, REFERRAL_DISCOUNT_PERCENT, REFERRAL_FRIEND_BONUS_HOURS } from '../referrals/referrals.service';
 import { formatDeviceId, formatPublicId, normalizePublicId } from '../codes/code-format';
 import { PromoService } from './promo.service';
+import { BalanceService } from './balance.service';
+import { TOPUP_MAX_USD, TOPUP_MIN_USD, TOPUP_PLAN } from '../payments/balance';
 import { HappService } from '../happ/happ.service';
 
 class PurchaseDto {
@@ -22,6 +24,8 @@ class PurchaseDto {
   @IsOptional() @IsString() @MaxLength(40) promo?: string;
 }
 class PromoDto { @IsString() @Length(3, 40) code!: string; }
+class TopUpDto { @IsNumber({ maxDecimalPlaces: 2 }) @Min(TOPUP_MIN_USD) @Max(TOPUP_MAX_USD) amountUsd!: number; }
+class AutoRenewDto { @ValidateIf((_, v) => v !== null) @IsString() @MaxLength(32) planCode!: string | null; }
 class RemoveDeviceDto { @IsString() @Length(36, 36) key!: string; }
 
 const SITE = (process.env.PUBLIC_SITE_URL ?? 'https://salivpn.com').replace(/\/$/, '');
@@ -54,6 +58,7 @@ export class AppClientController {
     private readonly referrals: ReferralsService,
     private readonly promos: PromoService,
     private readonly happ: HappService,
+    private readonly balance: BalanceService,
   ) {}
 
   /** This installation, its account and every row of that account. */
@@ -158,13 +163,72 @@ export class AppClientController {
     if (payment.status === PaymentStatus.SUCCEEDED) await this.payments.activateOnAccount(id).catch(() => undefined);
     const full = await this.prisma.payment.findUniqueOrThrow({ where: { id }, include: { plan: true, cryptoInvoice: true } });
     const sub = payment.status === PaymentStatus.SUCCEEDED ? await this.subscriptions.getOwnActive(full.giftToUserId ?? account.id) : null;
+    const topup = full.plan.code === TOPUP_PLAN;
+    const balanceUsd = topup ? Number((await this.prisma.user.findUniqueOrThrow({ where: { id: account.id }, select: { balanceUsd: true } })).balanceUsd) : null;
     return {
+      topup,
+      balanceUsd,
+      amountUsd: Number(full.amountUsd),
       status: payment.status,
       expired: payment.status === PaymentStatus.PENDING && Boolean(full.cryptoInvoice && full.cryptoInvoice.expiresAt <= new Date()),
       plan: full.plan.name,
       gift: Boolean(full.giftToUserId),
       until: sub?.expiresAt?.toISOString() ?? null,
     };
+  }
+
+  // ---- Sali balance: top up with USDT, spend on tariffs, renew monthly. Never paid out. ----
+
+  @Get('balance')
+  async balanceInfo(@CurrentUser() user: AuthTokenPayload) {
+    const { tg, account } = await this.context(user.sub);
+    return { linked: Boolean(tg), minTopUpUsd: TOPUP_MIN_USD, maxTopUpUsd: TOPUP_MAX_USD, ...(await this.balance.info(account.id)) };
+  }
+
+  @Post('balance/topup')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async topUp(@CurrentUser() user: AuthTokenPayload, @Body() dto: TopUpDto) {
+    const { tg, account } = await this.context(user.sub);
+    if (!tg) throw new ForbiddenException({ message: 'Привяжите Telegram, чтобы пополнить баланс: он хранится на вашем аккаунте', code: 'TELEGRAM_REQUIRED' });
+    if (account.isBlocked) throw new ForbiddenException('Аккаунт ограничен. Напишите в поддержку');
+    const result = await this.payments.initiateTopUp(account.id, dto.amountUsd);
+    const invoice = result.checkout.cryptoInvoice;
+    if (!invoice) throw new ConflictException('Не удалось выставить счёт. Попробуйте ещё раз');
+    return {
+      paymentId: result.payment.id,
+      topup: true,
+      plan: { code: TOPUP_PLAN, name: 'Пополнение баланса', durationDays: 0 },
+      gift: null,
+      discountPercent: 0,
+      amount: invoice.amount,
+      asset: invoice.asset,
+      network: invoice.network,
+      address: invoice.address,
+      comment: invoice.reference,
+      expiresAt: invoice.expiresAt,
+      tonUrl: invoice.paymentUrl ?? null,
+      tonkeeperUrl: invoice.paymentUrl ? invoice.paymentUrl.replace(/^ton:\/\/transfer\//, 'https://app.tonkeeper.com/transfer/') : null,
+    };
+  }
+
+  /** Pay a tariff (or a gift) from the balance: instant, no transfer. */
+  @Post('balance/pay')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async payFromBalance(@CurrentUser() user: AuthTokenPayload, @Body() dto: PurchaseDto) {
+    const { tg, account, family } = await this.context(user.sub);
+    if (!tg) throw new ForbiddenException({ message: 'Привяжите Telegram, чтобы оплатить', code: 'TELEGRAM_REQUIRED' });
+    if (account.isBlocked) throw new ForbiddenException('Аккаунт ограничен. Напишите в поддержку');
+    const to = dto.giftTo ? await this.recipient(dto.giftTo, account.id) : null;
+    const promo = dto.promo ? await this.promos.discountFor(dto.promo, account.id) : undefined;
+    return this.balance.buy(account.id, dto.planCode, { giftToUserId: to?.id, giftLabel: to ? formatPublicId(to.publicId) : undefined, promo, rewardOwnerIds: family });
+  }
+
+  /** Monthly renewal from the balance: pick the tariff, or null to switch it off. */
+  @Post('balance/auto-renew')
+  async autoRenew(@CurrentUser() user: AuthTokenPayload, @Body() dto: AutoRenewDto) {
+    const { tg, account } = await this.context(user.sub);
+    if (!tg) throw new ForbiddenException({ message: 'Привяжите Telegram, чтобы включить автопродление', code: 'TELEGRAM_REQUIRED' });
+    return { linked: true, minTopUpUsd: TOPUP_MIN_USD, maxTopUpUsd: TOPUP_MAX_USD, ...(await this.balance.setAutoRenew(account.id, dto.planCode)) };
   }
 
   /**

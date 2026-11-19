@@ -92,7 +92,7 @@ export default function PlansScreen() {
       <Icon name="check" size={16} color={theme.colors.success} />
       <Text style={styles.discountText}>{promo && promo.percent >= (data?.discountPercent ?? 0) ? `Промокод ${promo.code}: −${promo.percent}%` : `Скидка за приглашённого друга: −${data?.discountPercent}%`} — цены уже со скидкой</Text>
     </View>}
-    <Text style={styles.footnote}>Оплата в USDT (сеть TON) с любого кошелька: Telegram Wallet, Tonkeeper, биржа. Новая покупка добавляет дни к текущей подписке. Автосписаний нет.</Text>
+    <Text style={styles.footnote}>Оплата в USDT (сеть TON) с любого кошелька: Telegram Wallet, Tonkeeper, биржа. Новая покупка добавляет дни к текущей подписке. Удобнее всего — пополнить «Баланс» и включить автопродление.</Text>
   </Screen>;
 }
 

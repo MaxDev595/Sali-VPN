@@ -9,11 +9,13 @@ import { HappModule } from '../happ/happ.module';
 import { AppClientController } from './app-client.controller';
 import { AppAdminController } from './app-admin.controller';
 import { PromoService } from './promo.service';
+import { BalanceService } from './balance.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 /** The customer app's own API: payments, gifts, promo codes, referrals, devices, admin. */
 @Module({
-  imports: [PaymentsModule, SubscriptionsModule, TrialsModule, ReferralsModule, VpnModule, AdminBotModule, HappModule],
+  imports: [PaymentsModule, SubscriptionsModule, TrialsModule, ReferralsModule, VpnModule, AdminBotModule, HappModule, NotificationsModule],
   controllers: [AppClientController, AppAdminController],
-  providers: [PromoService],
+  providers: [PromoService, BalanceService],
 })
 export class AppClientModule {}

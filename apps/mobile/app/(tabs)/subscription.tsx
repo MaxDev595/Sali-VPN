@@ -121,6 +121,7 @@ export default function SubscriptionScreen() {
 
       <SectionLabel icon="plus">ЕЩЁ</SectionLabel>
       <Group>
+        <Row icon="cash" title="Баланс" hint="Пополните USDT — оплата в одно нажатие и автопродление" value={`$${(home?.balanceUsd ?? 0).toFixed(2)}`} onPress={() => router.push('/balance')} />
         <Row icon="gift" title="Подарить подписку" hint="Другу по его Sali ID" onPress={() => (linked ? router.push('/gift') : home && void linkTelegram(linkCodeOf(home), refresh))} />
         <Row icon="tag" title="Промокод" hint="Или Sali ID друга, который вас пригласил" value={promo ? `−${promo.percent}%` : undefined} onPress={() => { setPromoError(null); setPromoOpen(true); }} />
         <Row icon="users" title="Пригласить друга" hint="Другу +1 день, вам скидка на оплату" onPress={() => router.push('/invite')} />
