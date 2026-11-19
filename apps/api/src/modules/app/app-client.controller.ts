@@ -84,7 +84,10 @@ export class AppClientController {
       plans: plans.map((p) => ({
         code: p.code,
         name: p.name,
+        description: p.description,
         durationDays: p.durationDays,
+        /** Price per 30 days, to compare tariffs. */
+        perMonthUsd: Math.round(Number(p.priceUsd) / p.durationDays * 30 * 100) / 100,
         priceUsd: Number(p.priceUsd),
         originalPriceUsd: p.originalPriceUsd ? Number(p.originalPriceUsd) : null,
         maxDevices: p.maxDevices,

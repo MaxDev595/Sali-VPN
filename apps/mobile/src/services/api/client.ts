@@ -124,7 +124,7 @@ export interface Announcement { id: string; kind: 'UPDATE' | 'NEWS'; platform: s
 export interface AccountDevice { publicId: string; platform: string | null; current: boolean; covered: boolean; lastActiveAt: string | null; idleDays: number | null }
 export interface AccountDevices { linked: boolean; subscription: { plan: string; until: string | null; used: number; max: number } | null; devices: AccountDevice[] }
 
-export interface Plan { code: string; name: string; durationDays: number; priceUsd: number; originalPriceUsd: number | null; maxDevices: number; discountedPriceUsd: number | null }
+export interface Plan { code: string; name: string; description: string | null; perMonthUsd: number; durationDays: number; priceUsd: number; originalPriceUsd: number | null; maxDevices: number; discountedPriceUsd: number | null }
 export interface PlansResponse { telegramLinked: boolean; currency: string; discountPercent: number; plans: Plan[] }
 export interface Invoice { paymentId: string; plan: { code: string; name: string; durationDays: number }; gift: string | null; discountPercent: number; amount: string; asset: string; network: string; address: string; comment: string; expiresAt: string; tonUrl: string | null; tonkeeperUrl: string | null }
 export interface PaymentState { status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; expired: boolean; plan: string; gift: boolean; until: string | null }

@@ -96,34 +96,28 @@ export default function SubscriptionScreen() {
       {!linked && <View style={{ marginTop: 14 }}><TelegramLinkCard /></View>}
 
       <SectionLabel icon="key">ТАРИФЫ</SectionLabel>
-      {!plans && !error && <Loading />}
       {error && <ErrorNote text={error} onRetry={() => void load()} />}
-      {plans?.plans.map((p, i) => {
-        const now = price(p);
-        const best = p.durationDays >= 360;
-        return <Animated.View key={p.code} entering={FadeInDown.delay(60 * i).duration(340)}>
-          <Pressable accessibilityRole="button" onPress={() => choose(p.code)} style={({ pressed }) => [styles.plan, best && styles.planBest, pressed && styles.pressed]}>
+      <Animated.View entering={FadeInDown.delay(80).duration(360)}>
+        <Pressable accessibilityRole="button" onPress={() => router.push('/plans')} style={({ pressed }) => [styles.plansCard, pressed && styles.pressed]}>
+          <View style={styles.plansTop}>
             <View style={{ flex: 1 }}>
-              <View style={styles.planTop}>
-                <Text style={styles.planName}>{period(p.durationDays)}</Text>
-                {best && <View style={styles.badge}><Text style={styles.badgeText}>ВЫГОДНО</Text></View>}
-              </View>
-              <Text style={styles.planHint}>{p.name} · до {p.maxDevices} устройств</Text>
+              <Text style={styles.plansTitle}>{plans?.plans.length ? `${plans.plans.length} тарифов — от ${money(Math.min(...plans.plans.map((p) => p.priceUsd)))}` : 'Тарифы'}</Text>
+              <Text style={styles.plansHint}>{(() => { const main = plans?.plans.find((p) => p.durationDays === 30); return main ? `Основная подписка — ${money(main.priceUsd)} за 30 дней` : 'От 7 дней до года'; })()}</Text>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.price}>{money(now)}</Text>
-              {now !== p.priceUsd ? <Text style={styles.old}>{money(p.priceUsd)}</Text>
-                : p.originalPriceUsd ? <Text style={styles.old}>{money(p.originalPriceUsd)}</Text> : <Text style={styles.cur}>USDT</Text>}
-            </View>
-          </Pressable>
-        </Animated.View>;
-      })}
+            <Icon name="chevron" size={20} color={theme.colors.accent} />
+          </View>
+          <View style={styles.perks}>
+            <View style={styles.perk}><Icon name="bolt" size={15} color={theme.colors.accent} /><Text style={styles.perkText}>Быстрая сеть</Text></View>
+            <View style={styles.perk}><Icon name="lock" size={15} color={theme.colors.accent} /><Text style={styles.perkText}>Конфиденциальность превыше всего</Text></View>
+          </View>
+          <View style={styles.cta}><Text style={styles.ctaText}>Выбрать тариф</Text></View>
+        </Pressable>
+      </Animated.View>
       {(promo || (plans?.discountPercent ?? 0) > 0) && <View style={styles.discount}>
         <Icon name="check" size={16} color={theme.colors.success} />
         <Text style={styles.discountText}>{promo && promo.percent >= (plans?.discountPercent ?? 0) ? `Промокод ${promo.code}: −${promo.percent}%` : `Скидка за приглашённого друга: −${plans?.discountPercent}%`}</Text>
         {promo && <Pressable hitSlop={10} onPress={() => setPromo(null)}><Icon name="close" size={16} color={theme.colors.textSecondary} /></Pressable>}
       </View>}
-      <Text style={styles.footnote}>Оплата в USDT (сеть TON) с любого кошелька: Telegram Wallet, Tonkeeper, биржа. Подписка начисляется на аккаунт сразу после перевода.</Text>
 
       <SectionLabel icon="plus">ЕЩЁ</SectionLabel>
       <Group>
@@ -155,6 +149,15 @@ const styles = StyleSheet.create({
   plan: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, marginBottom: 10, borderRadius: theme.radius.lg, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
   planBest: { borderColor: 'rgba(255,197,135,.45)', backgroundColor: '#0E1729' },
   pressed: { transform: [{ scale: .985 }], opacity: .92 },
+  plansCard: { padding: 18, borderRadius: theme.radius.lg, backgroundColor: '#0E1729', borderWidth: 1.5, borderColor: 'rgba(255,197,135,.45)', marginBottom: 10 },
+  plansTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  plansTitle: { color: theme.colors.textPrimary, fontSize: 20, fontFamily: 'SaliSans-Bold' },
+  plansHint: { color: theme.colors.textSecondary, fontSize: 13.5, marginTop: 3 },
+  perks: { gap: 8, marginTop: 14 },
+  perk: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  perkText: { color: theme.colors.cream, fontSize: 14, fontFamily: 'SaliSans-Medium' },
+  cta: { marginTop: 16, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.accent },
+  ctaText: { color: theme.colors.onPrimary, fontSize: 16, fontFamily: 'SaliSans-Bold' },
   planTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   planName: { color: theme.colors.textPrimary, fontSize: 20, fontFamily: 'SaliSans-Bold' },
   planHint: { color: theme.colors.textSecondary, fontSize: 13, marginTop: 3 },

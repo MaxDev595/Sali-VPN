@@ -2,10 +2,12 @@ import type { LandingLanguage } from './i18n';
 
 const env = import.meta.env as Record<string, string | undefined>;
 export const PRICES = {
-  month: Number(env.VITE_PRICE_MONTH_USD ?? 5),
-  monthOld: Number(env.VITE_PRICE_MONTH_OLD_USD ?? 8),
-  year: Number(env.VITE_PRICE_YEAR_USD ?? 40),
-  yearOld: Number(env.VITE_PRICE_YEAR_OLD_USD ?? 60),
+  month: Number(env.VITE_PRICE_MONTH_USD ?? 3),
+  monthOld: Number(env.VITE_PRICE_MONTH_OLD_USD ?? 5),
+  year: Number(env.VITE_PRICE_YEAR_USD ?? 30),
+  yearOld: Number(env.VITE_PRICE_YEAR_OLD_USD ?? 40),
+  /** Cheapest tariff in the app (7 days). */
+  from: Number(env.VITE_PRICE_FROM_USD ?? 1.2),
   freeDays: Number(env.VITE_FREE_DAYS ?? 3),
 };
 
@@ -31,14 +33,14 @@ export const copy: Record<LandingLanguage, {
       ['Нажмите «Включить»', 'И всё — 3 дня бесплатно. Ничего вводить и привязывать не нужно.'],
       ['Оформите подписку', 'Прямо в приложении: выберите тариф и оплатите в USDT. Один раз привяжите Telegram — подписка будет на вашем аккаунте.'],
     ],
-    plansEyebrow: 'Тарифы', plansTitle: 'Честные цены', plansText: 'Без автосписаний. Подписка на аккаунт — до 3 устройств. Новая покупка добавляет дни к текущей.',
+    plansEyebrow: 'Тарифы', plansTitle: 'Честные цены', plansText: 'Без автосписаний. Подписка на аккаунт — до 3 устройств. В приложении 6 тарифов: 7, 14, 30, 90 дней, полгода и год — от $1.20.',
     free: 'Бесплатно', freeText: '3 дня VPN без ограничений — проверьте всё сами', freeCta: 'Скачать и включить',
-    month: '1 месяц', year: '1 год', perMonth: '/мес', best: 'Выгоднее всего', buyCta: 'Оформить в приложении',
+    month: '30 дней', year: '1 год', perMonth: '/мес', best: 'Выгоднее всего', buyCta: 'Оформить в приложении',
     benefits: ['Все серверы', 'До 3 устройств', 'Без логов и рекламы'], payMethods: 'USDT (TON)',
     featuresEyebrow: 'Возможности', featuresTitle: 'Всё, что нужно. Ничего лишнего.',
     features: [
-      ['bolt', 'Быстро', 'WireGuard — современный протокол, который не тормозит и бережёт батарею.'],
-      ['shield', 'Приватно', 'Мы не храним историю посещений. Аккаунт — это только Sali ID.'],
+      ['bolt', 'Быстрая сеть', 'Современный протокол и серверы без перегрузки — видео, игры и звонки без задержек.'],
+      ['shield', 'Конфиденциальность превыше всего', 'Не храним историю посещений, не показываем рекламу. Аккаунт — это только Sali ID.'],
       ['globe', 'Несколько стран', 'Нидерланды, Германия, США — и новые локации каждый месяц.'],
       ['devices', 'Телефон и компьютер', 'Android и Windows. Одна подписка — до 3 устройств, переустановка её не сбрасывает.'],
       ['gift', 'Без кодов', 'Купили, получили подарок или бонус — всё само ложится на ваш аккаунт. Ничего копировать и вводить.'],
@@ -81,14 +83,14 @@ export const copy: Record<LandingLanguage, {
       ['Tap “Turn on”', 'That’s it — 3 days free. Nothing to enter or link.'],
       ['Get a plan', 'Right in the app: pick a plan and pay in USDT. Link Telegram once so the plan belongs to your account.'],
     ],
-    plansEyebrow: 'Pricing', plansTitle: 'Honest prices', plansText: 'No auto-renewals. One plan per account — up to 3 devices. A new purchase adds days on top.',
+    plansEyebrow: 'Pricing', plansTitle: 'Honest prices', plansText: 'No auto-renewals. One plan per account — up to 3 devices. Six plans in the app: 7, 14, 30, 90 days, half a year and a year — from $1.20.',
     free: 'Free', freeText: '3 days of unlimited VPN to try everything', freeCta: 'Download and turn on',
-    month: '1 month', year: '1 year', perMonth: '/mo', best: 'Best value', buyCta: 'Get it in the app',
+    month: '30 days', year: '1 year', perMonth: '/mo', best: 'Best value', buyCta: 'Get it in the app',
     benefits: ['All servers', 'Up to 3 devices', 'No logs, no ads'], payMethods: 'USDT (TON)',
     featuresEyebrow: 'Features', featuresTitle: 'Everything you need. Nothing you don’t.',
     features: [
-      ['bolt', 'Fast', 'WireGuard is modern, quick and easy on the battery.'],
-      ['shield', 'Private', 'We keep no browsing history. Your account is just a Sali ID.'],
+      ['bolt', 'Fast network', 'A modern protocol and uncrowded servers — video, games and calls without lag.'],
+      ['shield', 'Privacy above all', 'No browsing history, no ads. Your account is just a Sali ID.'],
       ['globe', 'Several countries', 'Netherlands, Germany, USA — and new locations every month.'],
       ['devices', 'Phone and computer', 'Android and Windows. One plan — up to 3 devices; reinstalling does not reset it.'],
       ['gift', 'No codes', 'Bought a plan, got a gift or a bonus — it lands on your account by itself. Nothing to copy or type.'],

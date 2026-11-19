@@ -30,6 +30,9 @@ const ICONS = {
   apps: require('../../assets/icons/apps.png'),
   dot: require('../../assets/icons/dot.png'),
   megaphone: require('../../assets/icons/megaphone.png'),
+  bolt: require('../../assets/icons/bolt.png'),
+  lock: require('../../assets/icons/lock.png'),
+  star: require('../../assets/icons/star.png'),
 } as const;
 
 export type IconName = keyof typeof ICONS;

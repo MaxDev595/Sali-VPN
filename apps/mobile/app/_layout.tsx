@@ -69,6 +69,7 @@ export default function RootLayout() {
         <Stack.Screen name="invite" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="devices" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="backup" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="plans" options={{ animation: 'slide_from_right' }} />
       </Stack>
       {ready && !introDone && <LogoIntro onFinish={finishIntro} />}
     </QueryClientProvider>

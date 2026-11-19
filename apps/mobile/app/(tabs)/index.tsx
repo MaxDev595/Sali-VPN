@@ -128,7 +128,7 @@ export default function VpnScreen() {
     <SaliModal visible={needsCode} title="Нужна подписка" icon="key" onClose={clearError}>
       <Text style={styles.modalText}>{error ?? 'Бесплатные 3 дня закончились.'}{'\n\n'}Подписка работает на всех ваших устройствах (до 3). Оплата — USDT, прямо в приложении.</Text>
       <View style={{ gap: 10, marginTop: 20 }}>
-        <SaliButton title="Выбрать тариф" onPress={() => { clearError(); toPlans(); }} />
+        <SaliButton title="Выбрать тариф" onPress={() => { clearError(); router.push('/plans'); }} />
         <SaliButton secondary title="Не подключается? Поддержка" onPress={() => { clearError(); openSupport(); }} />
       </View>
     </SaliModal>

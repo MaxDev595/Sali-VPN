@@ -78,9 +78,10 @@ async function pay(paymentId) {
   // --- buy in the app (USDT TON) ---
   const plans = await call('/app/plans', { token: A.token });
   assert.equal(plans.telegramLinked, true);
-  assert.deepEqual(plans.plans.map((p) => p.code), ['pro_monthly', 'pro_yearly']);
+  assert.deepEqual(plans.plans.map((p) => [p.code, p.durationDays, p.priceUsd, p.description]), [['pro_7d', 7, 1.2, 'Недельное использование'], ['pro_14d', 14, 2, 'Две недели'], ['pro_monthly', 30, 3, 'Основная подписка'], ['pro_90d', 90, 8, 'Постоянные пользователи'], ['pro_180d', 180, 15, 'Полгода'], ['pro_yearly', 365, 30, 'Год']]);
+  assert.equal(plans.plans.find((p) => p.code === 'pro_yearly').perMonthUsd, 2.47);
   const inv = await call('/app/purchase', { token: A.token, method: 'POST', body: { planCode: 'pro_monthly' }, expect: [200, 201] });
-  assert.equal(inv.amount, '5');
+  assert.equal(inv.amount, '3');
   assert.equal(inv.asset, 'USDT');
   assert.match(inv.comment, /^SALI-[0-9A-F]{12}$/);
   assert.match(inv.tonUrl, /^ton:\/\/transfer\//);
@@ -134,7 +135,7 @@ async function pay(paymentId) {
   assert.equal(hAdm.isAdmin, true);
   await call('/app/admin/stats', { token: A.token, expect: 403 });
   const stats = await call('/app/admin/stats', { token: ADM.token });
-  assert.equal(stats.revenue.total, 5);
+  assert.equal(stats.revenue.total, 3);
   ok(`admin: isAdmin only for ADMIN_TELEGRAM_IDS; stats revenue $${stats.revenue.total}; others get 403`);
 
   await call('/app/admin/promos', { token: ADM.token, method: 'POST', body: { code: 'week7', kind: 'DAYS', days: 7, maxUses: 1 }, expect: [200, 201] });
@@ -160,7 +161,7 @@ async function pay(paymentId) {
   const half = await call('/app/promo', { token: A.token, method: 'POST', body: { code: 'half' }, expect: [200, 201] });
   assert.deepEqual(half, { kind: 'DISCOUNT', code: 'HALF', percent: 50 });
   const inv2 = await call('/app/purchase', { token: A.token, method: 'POST', body: { planCode: 'pro_yearly', promo: 'HALF' }, expect: [200, 201] });
-  assert.equal(inv2.amount, '20');
+  assert.equal(inv2.amount, '15');
   assert.equal(inv2.discountPercent, 50);
   await pay(inv2.paymentId);
   await call('/app/purchase', { token: A.token, method: 'POST', body: { planCode: 'pro_monthly', promo: 'HALF' }, expect: 409 });
@@ -168,7 +169,7 @@ async function pay(paymentId) {
   assert.equal(used.usedCount, 1);
   hA = await A.home();
   assert.ok(Date.parse(hA.subscription.expiresAt) > Date.now() + 390 * 86400e3);
-  ok('DISCOUNT promo: yearly for 20 USDT instead of 40, days stacked on the subscription, code counted once per account');
+  ok('DISCOUNT promo: yearly for 15 USDT instead of 30, days stacked on the subscription, code counted once per account');
 
   // --- gift to a friend's Sali ID ---
   const F = await device('F');
@@ -236,7 +237,7 @@ async function pay(paymentId) {
   // --- admin lookups and actions ---
   const card = await call('/app/admin/lookup', { token: ADM.token, method: 'POST', body: { query: idA }, expect: [200, 201] });
   assert.equal(card.kind, 'telegram');
-  assert.equal(card.paidUsd, 30); // 5 + 20 (−50%) + 5 (gift)
+  assert.equal(card.paidUsd, 21); // 3 + 15 (−50%) + 3 (gift)
   assert.equal(card.devices.length, 2);
   const byDevice = await call('/app/admin/lookup', { token: ADM.token, method: 'POST', body: { query: hA.device.id }, expect: [200, 201] });
   assert.equal(byDevice.kind, 'device');
@@ -255,10 +256,15 @@ async function pay(paymentId) {
   // --- the inviter's discount is spent on the next purchase ---
   const inv3 = await call('/app/purchase', { token: A.token, method: 'POST', body: { planCode: 'pro_monthly' }, expect: [200, 201] });
   assert.equal(inv3.discountPercent, 10);
-  assert.equal(inv3.amount, '4.5');
+  assert.equal(inv3.amount, '2.7');
   await pay(inv3.paymentId);
   assert.equal((await call('/app/referrals', { token: A.token })).availableDiscounts, 0);
-  ok('referral discount: 4.5 USDT instead of 5, then used up');
+  ok('referral discount: 2.7 USDT instead of 3, then used up');
+
+  const week = await call('/app/purchase', { token: A.token, method: 'POST', body: { planCode: 'pro_7d' }, expect: [200, 201] });
+  assert.equal(week.amount, '1.2');
+  await pay(week.paymentId);
+  ok('7-day tariff: 1.2 USDT invoice, paid, days added');
 
   // --- backup connection (Happ / v2RayTun / Hiddify) ---
   const bNo = await call('/app/backup', { token: D.token });

@@ -231,7 +231,9 @@ model TrialDeviceClaim {
 model Plan {
   id             String   @id @default(uuid())
   code           String   @unique // e.g. "pro_monthly"
-  name           String            // e.g. "Sali Pro"
+  name           String            // e.g. "Sali Pro · 30 дней"
+  /// One line under the tariff in the app («Основная подписка»).
+  description    String?
   durationDays   Int
   priceUsd       Decimal  @db.Decimal(10, 2)
   originalPriceUsd Decimal? @db.Decimal(10, 2)

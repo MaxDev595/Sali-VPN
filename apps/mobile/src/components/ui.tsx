@@ -101,7 +101,7 @@ export function bonusLabel(hours: number) {
   return `${hours} ${plural(hours, 'час', 'часа', 'часов')}`;
 }
 
-export const period = (days: number) => (days >= 36_000 ? 'бессрочно' : days >= 360 ? `${Math.round(days / 365)} год` : days >= 28 ? `${Math.round(days / 30)} мес.` : `${days} дн.`);
+export const period = (days: number) => (days >= 36_000 ? 'бессрочно' : days >= 360 && days <= 370 ? 'Год' : days >= 175 && days <= 185 ? 'Полгода' : days % 365 === 0 ? `${days / 365} года` : `${days} ${days % 10 === 1 && days % 100 !== 11 ? 'день' : days % 10 >= 2 && days % 10 <= 4 && (days % 100 < 10 || days % 100 >= 20) ? 'дня' : 'дней'}`);
 export const dateRu = (iso: string | null | undefined, withYear = true) => (iso ? new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', ...(withYear ? { year: 'numeric' } : {}) }) : '—');
 
 export const ui = StyleSheet.create({
