@@ -10,7 +10,7 @@ import '../landing/landing.css';
 type Platform = 'android' | 'windows';
 type Step = { icon: string; title: string; text: string; tip?: string };
 
-const APP_VERSION: Record<Platform, string> = { android: '0.5.7', windows: '0.5.4' };
+const APP_VERSION: Record<Platform, string> = { android: '0.6.0', windows: '0.5.4' };
 
 const t = {
   ru: {
@@ -37,9 +37,9 @@ const t = {
     ] as Step[],
     infoEyebrow: 'Полезно знать', infoTitle: 'Аккаунт и устройства',
     info: [
-      ['key', 'Аккаунт — это Telegram', 'Подписка лежит на аккаунте, а не на устройстве. Покупки и подарки появляются во всех ваших приложениях сами — без кодов.'],
-      ['clock', '3 дня бесплатно', 'Один раз на аккаунт Telegram — включаются сами при первом входе в приложение.'],
-      ['devices', 'До 3 устройств', 'Телефон, компьютер и ещё одно. У каждого устройства один постоянный номер — переустановка его не меняет. Лишние удаляются во вкладке «Устройства».'],
+      ['key', 'Один Sali ID на аккаунт', 'У аккаунта один номер навсегда. Подписка, баланс и подарки лежат на аккаунте и работают во всех ваших приложениях — без кодов. Для оплаты один раз привяжите Telegram.'],
+      ['clock', '3 дня бесплатно', 'Просто нажмите «Включить» — без регистрации и привязки. Один раз на устройство и на аккаунт.'],
+      ['devices', 'До 3 устройств', 'Телефон, компьютер и ещё одно — привяжите на них тот же Telegram. Лишние удаляются в «Подписка» → «Устройства».'],
       ['star', 'Продление', 'Новая покупка добавляет дни к текущей подписке. Хотите без забот — пополните баланс и включите автопродление; иначе напомним в Telegram за 3 дня до окончания.'],
       ['globe', 'Серверы', 'Нидерланды, Германия, США — выбирайте страну в приложении. Список растёт каждый месяц.'],
       ['chat', 'Поддержка', 'Что-то не работает — напишите в бот поддержки, отвечает живой человек.'],
@@ -50,12 +50,12 @@ const t = {
     trouble: [
       ['Не устанавливается APK', 'Проверьте, что разрешили установку из браузера (Настройки → Приложения → Специальный доступ → Установка неизвестных приложений). Если стоит старая версия из другого источника — удалите её.'],
       ['Windows блокирует файл', 'В окне SmartScreen нажмите «Подробнее» → «Выполнить в любом случае». Антивирус может попросить подтверждение — добавьте Sali VPN в исключения.'],
-      ['Приложение не видит вход через Telegram', 'В Telegram нажмите «Запустить». Если бот молчит — отправьте ему номер устройства SL-XXXX-XXXX (приложение его скопировало). Приложение обновится само за пару секунд.'],
+      ['Не привязывается Telegram', 'В Telegram нажмите «Запустить» — бот ответит «Аккаунт привязан». Если бот молчит — вставьте ему номер, который приложение скопировало перед переходом. Приложение обновится само за пару секунд.'],
       ['VPN подключился, но сайты не открываются', 'Смените сервер в приложении и переподключитесь. На Windows закройте другие VPN-программы.'],
       ['Как удалить Sali VPN?', 'Android — как обычное приложение. Windows — «Параметры → Приложения → Sali VPN → Удалить».'],
     ] as [string, string][],
     safety: 'Загрузки идут с официального GitHub Sali VPN. Версия и контрольные суммы — на странице релизов.',
-    releases: 'Все версии', ctaTitle: 'Готово? Возьмите 3 дня бесплатно', ctaText: 'Установите приложение и нажмите «Включить» — бесплатные часы включатся сразу.', openBot: 'Открыть бота',
+    releases: 'Все версии', ctaTitle: 'Готово? Возьмите 3 дня бесплатно', ctaText: 'Установите приложение и нажмите «Включить» — бесплатные дни включатся сразу.', openBot: 'Открыть бота',
     channel: 'Скачать в Telegram', channelText: 'Каждая новая версия выходит файлом в нашем канале @SaliVpnNews — удобно, если GitHub грузится медленно. Там же новости и обновления.', openChannel: 'Открыть канал',
   },
   en: {
@@ -82,9 +82,9 @@ const t = {
     ] as Step[],
     infoEyebrow: 'Good to know', infoTitle: 'Account and devices',
     info: [
-      ['key', 'Your account is Telegram', 'The plan lives on the account, not on a device. Purchases and gifts appear in all your apps by themselves — no codes.'],
-      ['clock', '3 days free', 'Once per Telegram account — they start by themselves the first time you sign in.'],
-      ['devices', 'Up to 3 devices', 'Phone, computer and one more. Each device keeps one number — reinstalling does not change it. Remove extras in the Devices tab.'],
+      ['key', 'One Sali ID per account', 'Your account has one number for life. The plan, balance and gifts live on the account and work in all your apps — no codes. Link Telegram once to pay.'],
+      ['clock', '3 days free', 'Just tap “Turn on” — no sign-up, no linking. Once per device and per account.'],
+      ['devices', 'Up to 3 devices', 'Phone, computer and one more — link the same Telegram on them. Remove extras in “Plan” → “Devices”.'],
       ['star', 'Renewal', 'No auto-charges. A new purchase adds days on top, and the bot reminds you 3 days before the end.'],
       ['globe', 'Servers', 'Netherlands, Germany, USA — pick a country in the app. New locations every month.'],
       ['chat', 'Support', 'Something not working? Message the support bot — a real person answers.'],
@@ -95,7 +95,7 @@ const t = {
     trouble: [
       ['The APK will not install', 'Make sure your browser may install apps (Settings → Apps → Special access → Install unknown apps). Remove an older version from another source first.'],
       ['Windows blocks the file', 'In SmartScreen click "More info" → "Run anyway". If your antivirus asks, add Sali VPN to its exceptions.'],
-      ['The app does not see the Telegram sign-in', 'Tap "Start" in Telegram. If the bot stays silent, send it your device number SL-XXXX-XXXX (the app copied it). The app updates by itself in a few seconds.'],
+      ['Telegram does not link', 'Tap “Start” in Telegram — the bot replies “Account linked”. If it stays silent, paste the number the app copied before opening Telegram. The app updates by itself in a few seconds.'],
       ['Connected but sites do not open', 'Switch the server in the app and reconnect. On Windows, close other VPN apps.'],
       ['How do I uninstall?', 'Android — like any app. Windows — Settings → Apps → Sali VPN → Uninstall.'],
     ] as [string, string][],
