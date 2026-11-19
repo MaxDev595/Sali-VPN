@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Text } from '../../src/components/Text';
 import { Group, Row, SectionLabel } from '../../src/components/List';
-import { ErrorNote, Loading, Screen, Stat, money, ui } from '../../src/components/ui';
+import { CopyBox, ErrorNote, Loading, Screen, Stat, money, ui } from '../../src/components/ui';
 import { api, type AdminStats } from '../../src/services/api/client';
 import { theme } from '../../src/theme';
 
@@ -37,6 +37,16 @@ export default function AdminHome() {
         <Stat label="Всего" value={money(stats.revenue.total)} hint={`${stats.revenue.payers} платили`} />
       </View>
 
+      {stats.balances && <>
+        <SectionLabel icon="cash">БАЛАНСЫ SALI</SectionLabel>
+        <View style={ui.grid}>
+          <Stat label="На балансах" value={`$${stats.balances.held.toFixed(2)}`} hint="деньги клиентов" />
+          <Stat label="Пополнено всего" value={`$${stats.balances.toppedUp.toFixed(2)}`} />
+          <Stat label="Списано за тарифы" value={`$${stats.balances.spent.toFixed(2)}`} hint="к переводу на основной счёт" />
+        </View>
+        <View style={{ height: 10 }} />
+        <CopyBox label="Кошелёк для пополнений" value={stats.balances.wallet} />
+      </>}
       <SectionLabel icon="shield">ДОСТУП СЕЙЧАС</SectionLabel>
       <View style={ui.grid}>
         <Stat label="Платная подписка" value={stats.access.paid} hint={stats.access.expiringPaid3d ? `${stats.access.expiringPaid3d} кончаются за 3 дня` : undefined} />

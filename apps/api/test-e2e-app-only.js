@@ -290,11 +290,13 @@ async function pay(paymentId) {
   const top = await call('/app/balance/topup', { token: A.token, method: 'POST', body: { amountUsd: 10 }, expect: [200, 201] });
   assert.equal(top.amount, '10');
   assert.equal(top.topup, true);
+  assert.equal(top.address, 'UQA29YKZ0GMWk48WrwLhhB-0-RjsV-ktGTuPTJMotUcb8rcD', 'top-ups go to the balance wallet');
   await pay(top.paymentId);
   await pay(top.paymentId); // confirmed twice — credited once
   const topSt = await call(`/app/payments/${top.paymentId}`, { token: A.token });
   assert.equal(topSt.topup, true);
   assert.equal(topSt.balanceUsd, 10);
+  assert.equal(topSt.autoRenew, false); // the app offers to switch it on
   assert.equal((await A.home()).balanceUsd, 10);
   assert.equal((await B.home()).balanceUsd, 10); // same account on the second phone
   ok('top-up: 10 USDT invoice, paid (confirmed twice, credited once), balance $10 on both phones; no Telegram → 403; under $1 → 400');
@@ -341,6 +343,9 @@ async function pay(paymentId) {
   assert.equal(adj.balanceUsd, 10);
   await call('/app/admin/balance', { token: ADM.token, method: 'POST', body: { userId: cardA.id, amountUsd: -100, note: 'x' }, expect: 400 });
   await call('/app/admin/balance', { token: A.token, method: 'POST', body: { userId: cardA.id, amountUsd: 5, note: 'x' }, expect: 403 });
+  const st2 = await call('/app/admin/stats', { token: ADM.token });
+  assert.equal(st2.balances.wallet, 'UQA29YKZ0GMWk48WrwLhhB-0-RjsV-ktGTuPTJMotUcb8rcD');
+  assert.ok(st2.balances.held >= 10 && st2.balances.spent > 0 && st2.balances.toppedUp >= 10);
   const hist = (await call('/app/balance', { token: A.token })).history.map((t) => t.kind);
   assert.deepEqual(hist, ['ADMIN', 'AUTO_RENEW', 'GIFT', 'PURCHASE', 'TOPUP']);
   ok('admin: balance on the card, +$4.40 from a device card lands on the account; going below zero refused; customers get 403; history complete');

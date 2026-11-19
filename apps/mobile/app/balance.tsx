@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -28,6 +28,7 @@ export default function BalanceScreen() {
   const [loading, setLoading] = useState(false);
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
+  const [manual, setManual] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -48,6 +49,16 @@ export default function BalanceScreen() {
     catch (e) { toast(e instanceof ApiError ? e.message : 'Не получилось'); } finally { setBusy(false); }
   };
   const renewPlan = plans.find((p) => p.code === (info?.autoRenew?.planCode ?? 'pro_monthly')) ?? plans.find((p) => p.durationDays === 30);
+  // Without auto-renew the customer renews by hand: the chosen tariff is charged from the balance.
+  const manualPlan = plans.find((p) => p.code === manual) ?? renewPlan;
+  const renewNow = () => manualPlan && Alert.alert('Продлить с баланса?', `${period(manualPlan.durationDays)} — спишем ${money(manualPlan.priceUsd)} с баланса. Подписка продлится на всех ваших устройствах.`, [
+    { text: 'Отмена', style: 'cancel' },
+    { text: `Списать ${money(manualPlan.priceUsd)}`, onPress: async () => {
+      setBusy(true);
+      try { const r = await api.payFromBalance(manualPlan.code); void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); toast(`Продлено до ${dateRu(r.until, false)} · списано ${money(r.priceUsd)}`); void load(); void refresh(); }
+      catch (e) { toast(e instanceof ApiError ? e.message : 'Не получилось'); } finally { setBusy(false); }
+    } },
+  ]);
 
   return <Screen title="Баланс" subtitle="Пополните один раз — и оплачивайте тарифы в одно нажатие или включите автопродление." onRefresh={() => void load()} refreshing={loading}>
     {!info && !error && <Loading />}
@@ -86,6 +97,18 @@ export default function BalanceScreen() {
           {plans.map((p) => <Chip key={p.code} label={`${period(p.durationDays)} · ${money(p.priceUsd)}`} active={info.autoRenew?.planCode === p.code} onPress={() => !busy && void setRenew(p.code)} />)}
         </View>}
       </Card>
+
+      {!info.autoRenew && plans.length > 0 && <>
+        <Text style={styles.section}>Продлить с баланса</Text>
+        <Card>
+          <Text style={styles.renewHint}>Автопродление выключено — продлевайте сами, когда подписка подходит к концу. Выберите срок и нажмите «Списать».</Text>
+          <View style={[ui.wrap, { marginTop: 12, marginBottom: 14 }]}>
+            {plans.map((p) => <Chip key={p.code} label={`${period(p.durationDays)} · ${money(p.priceUsd)}`} active={manualPlan?.code === p.code} onPress={() => setManual(p.code)} />)}
+          </View>
+          {manualPlan && <SaliButton title={info.balanceUsd >= manualPlan.priceUsd ? `Списать ${money(manualPlan.priceUsd)} и продлить` : `Не хватает ${money(Math.round((manualPlan.priceUsd - info.balanceUsd) * 100) / 100)} — пополните`} disabled={busy || info.balanceUsd < manualPlan.priceUsd} onPress={renewNow} />}
+        </Card>
+      </>}
+
 
       <Text style={styles.section}>История</Text>
       {info.history.length === 0 && <Text style={ui.muted}>Пока пусто</Text>}

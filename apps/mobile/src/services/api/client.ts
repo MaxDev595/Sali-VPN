@@ -127,7 +127,7 @@ export interface AccountDevices { linked: boolean; subscription: { plan: string;
 export interface Plan { code: string; name: string; description: string | null; perMonthUsd: number; durationDays: number; priceUsd: number; originalPriceUsd: number | null; maxDevices: number; discountedPriceUsd: number | null }
 export interface PlansResponse { telegramLinked: boolean; currency: string; discountPercent: number; plans: Plan[] }
 export interface Invoice { topup?: boolean; paymentId: string; plan: { code: string; name: string; durationDays: number }; gift: string | null; discountPercent: number; amount: string; asset: string; network: string; address: string; comment: string; expiresAt: string; tonUrl: string | null; tonkeeperUrl: string | null }
-export interface PaymentState { topup?: boolean; balanceUsd?: number | null; amountUsd?: number; status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; expired: boolean; plan: string; gift: boolean; until: string | null }
+export interface PaymentState { topup?: boolean; autoRenew?: boolean | null; balanceUsd?: number | null; amountUsd?: number; status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED'; expired: boolean; plan: string; gift: boolean; until: string | null }
 export type PromoResult =
   | { kind: 'DAYS'; code: string; days: number; until: string | null }
   | { kind: 'DISCOUNT'; code: string; percent: number }
@@ -150,6 +150,7 @@ export interface AdminStats {
   access: { paid: number; granted: number; trial: number; expired30d: number; expiringPaid3d: number; onlineNow: number | null };
   revenue: { day: number; dayCount: number; week: number; weekCount: number; month: number; monthCount: number; total: number; totalCount: number; avgCheck30d: number; byMethod30d: Array<{ method: string; sum: number; count: number }>; payers: number; payers30d: number; refunds: number };
   referrals: { total: number; rewarded: number };
+  balances?: { wallet: string; held: number; toppedUp: number; spent: number };
   servers: Array<{ name: string; online: boolean; premiumOnly: boolean; isActive: boolean; users: number; connectedNow: number | null }>;
 }
 export type PeopleSegment = 'paid' | 'granted' | 'trial' | 'expired';

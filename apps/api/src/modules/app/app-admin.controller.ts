@@ -11,6 +11,8 @@ import { AdminBotService, FOREVER_DAYS, type PeopleSegment } from '../admin-bot/
 import { formatPublicId, parseDeviceId } from '../codes/code-format';
 import { PromoService } from './promo.service';
 import { BalanceService } from './balance.service';
+import { ConfigService } from '@nestjs/config';
+import { BALANCE_WALLET_DEFAULT } from '../payments/providers/crypto.provider';
 
 class LookupDto { @IsString() @MaxLength(80) query!: string; }
 class UserDto { @IsString() @MaxLength(40) userId!: string; }
@@ -49,6 +51,7 @@ export class AppAdminController {
     private readonly admin: AdminBotService,
     private readonly promos: PromoService,
     private readonly balance: BalanceService,
+    private readonly config: ConfigService,
   ) {}
 
   /** The account a card belongs to (a device card → its Telegram account). */
@@ -68,7 +71,23 @@ export class AppAdminController {
 
   @Get('stats')
   async stats(@CurrentUser() user: AuthTokenPayload) {
-    return this.admin.stats(await this.adminId(user.sub));
+    const stats = await this.admin.stats(await this.adminId(user.sub));
+    // Sali balances: top-ups land in the balance wallet; what customers spent from it belongs to the main wallet.
+    const [held, kinds] = await Promise.all([
+      this.prisma.user.aggregate({ _sum: { balanceUsd: true }, where: { balanceUsd: { gt: 0 } } }),
+      this.prisma.balanceTx.groupBy({ by: ['kind'], _sum: { amountUsd: true } }),
+    ]);
+    const sum = (k: string) => Number(kinds.find((r) => r.kind === k)?._sum.amountUsd ?? 0);
+    const spent = -(sum('PURCHASE') + sum('GIFT') + sum('AUTO_RENEW')) - sum('REFUND');
+    return {
+      ...stats,
+      balances: {
+        wallet: this.config.get<string>('CRYPTO_TON_BALANCE_ADDRESS')?.trim() || BALANCE_WALLET_DEFAULT,
+        held: Number(held._sum.balanceUsd ?? 0),
+        toppedUp: sum('TOPUP'),
+        spent: Math.round(spent * 100) / 100,
+      },
+    };
   }
 
   @Get('people')

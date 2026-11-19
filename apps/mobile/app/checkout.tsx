@@ -33,6 +33,18 @@ export default function CheckoutScreen() {
   const [paid, setPaid] = useState<BalancePurchase | null>(null);
   const [paying, setPaying] = useState(false);
   const started = useRef(false);
+  const [renewOn, setRenewOn] = useState(false);
+  const [renewBusy, setRenewBusy] = useState(false);
+  // After a top-up: offer auto-renew with the account's current tariff (30 days if none).
+  const enableRenew = async () => {
+    setRenewBusy(true);
+    try {
+      const [p, h] = await Promise.all([api.plans(), api.home()]);
+      const code = p.plans.find((x) => x.name === h.subscription?.plan.name)?.code ?? p.plans.find((x) => x.durationDays === 30)?.code ?? 'pro_monthly';
+      await api.setAutoRenew(code);
+      setRenewOn(true); void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) { toast(e instanceof ApiError ? e.message : 'Не получилось'); } finally { setRenewBusy(false); }
+  };
 
   const create = useCallback(async () => {
     setError(null); setInvoice(null); setState(null); setChoice(null);
@@ -118,9 +130,17 @@ export default function CheckoutScreen() {
       <Animated.View entering={ZoomIn.duration(420)} style={styles.successIcon}><Icon name="check" size={46} color={theme.colors.onPrimary} /></Animated.View>
       <Animated.View entering={FadeInDown.delay(150).duration(380)}>
         <Text style={styles.successTitle}>+${(state.amountUsd ?? 0).toFixed(2)} на балансе</Text>
-        <Text style={styles.successText}>Теперь на балансе ${(state.balanceUsd ?? 0).toFixed(2)}. Оплачивайте тарифы в одно нажатие или включите автопродление.</Text>
-        <View style={{ height: 24 }} />
-        <SaliButton title="К балансу" onPress={() => router.back()} />
+        <Text style={styles.successText}>Теперь на балансе ${(state.balanceUsd ?? 0).toFixed(2)}.</Text>
+        {state.autoRenew || renewOn
+          ? <Card style={{ marginTop: 18 }}><Text style={styles.renewTitle}>Автопродление включено</Text><Text style={styles.renewText}>За сутки до конца подписки стоимость тарифа спишется с баланса сама — VPN не прервётся.</Text></Card>
+          : <Card accent style={{ marginTop: 18 }}>
+            <Text style={styles.renewTitle}>Включить автопродление?</Text>
+            <Text style={styles.renewText}>Подписка будет продлеваться с баланса сама, за сутки до конца, и не прервётся. Без автопродления продлевайте вручную: «Баланс» → «Продлить с баланса».</Text>
+            <View style={{ height: 14 }} />
+            <SaliButton title="Включить автопродление" loading={renewBusy} onPress={() => void enableRenew()} />
+          </Card>}
+        <View style={{ height: 16 }} />
+        <SaliButton secondary={!(state.autoRenew || renewOn)} title="К балансу" onPress={() => router.back()} />
       </Animated.View>
     </Screen>;
   }
@@ -199,6 +219,8 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
+  renewTitle: { color: theme.colors.textPrimary, fontSize: 16, fontFamily: 'SaliSans-SemiBold', marginBottom: 6 },
+  renewText: { color: theme.colors.textSecondary, fontSize: 13.5, lineHeight: 19 },
   label: { color: theme.colors.textSecondary, fontSize: 11, letterSpacing: 1.6, fontFamily: 'SaliSans-Bold' },
   amountLine: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 6 },
   amount: { color: theme.colors.cream, fontSize: 44, fontFamily: 'SaliSans-Bold', fontVariant: ['tabular-nums'] },

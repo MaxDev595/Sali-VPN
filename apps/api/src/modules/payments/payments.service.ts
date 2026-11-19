@@ -228,7 +228,7 @@ export class PaymentsService {
     const payment = await this.prisma.payment.create({ data: { userId, planId: plan.id, provider: this.crypto.name, amountUsd: amount, status: PaymentStatus.PENDING } });
     let result;
     try {
-      result = await this.crypto.createPayment({ userId, planId: plan.id, amountUsd: amount, metadata: { paymentId: payment.id, userId, planId: plan.id } });
+      result = await this.crypto.createPayment({ userId, planId: plan.id, amountUsd: amount, metadata: { paymentId: payment.id, userId, planId: plan.id, wallet: 'balance' } });
     } catch (error) {
       await this.markFailed(payment.id, 'Payment provider initialization failed');
       throw error;
@@ -249,7 +249,10 @@ export class PaymentsService {
         return applyBalance(tx, current.userId, Number(current.amountUsd), 'TOPUP', { paymentId, note: 'USDT (TON)' });
       });
       if (credited && !options.silent) {
-        await this.notifications.sendHtml(current.userId, `✅ <b>Баланс пополнен на $${usd(current.amountUsd)}</b>\n\nНа балансе: <b>$${usd(credited.balanceAfter)}</b>. Оплатить тариф или включить автопродление можно в приложении Sali VPN → «Подписка» → «Баланс».`).catch(() => false);
+        const renew = await this.prisma.user.findUnique({ where: { id: current.userId }, select: { autoRenewPlanId: true } });
+        await this.notifications.sendHtml(current.userId, `✅ <b>Баланс пополнен на $${usd(current.amountUsd)}</b>\n\nНа балансе: <b>$${usd(credited.balanceAfter)}</b>.\n\n${renew?.autoRenewPlanId
+          ? '🔁 Автопродление включено — подписка продлится с баланса сама, за сутки до конца.'
+          : '🔁 <b>Включите автопродление</b> — подписка будет продлеваться с баланса сама, за сутки до конца, и не прервётся. Sali VPN → «Подписка» → «Баланс» → «Автопродление».\nБез автопродления продлевайте вручную: «Баланс» → «Продлить с баланса».'}`).catch(() => false);
       }
       return this.prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, include: { plan: true } });
     }

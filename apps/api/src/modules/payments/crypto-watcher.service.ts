@@ -34,17 +34,17 @@ export class CryptoWatcherService {
       await this.expireInvoices();
       await this.finishDetected();
       const master = this.config.get<string>('CRYPTO_USDT_TON_MASTER')?.trim() || OFFICIAL_USDT_TON_MASTER;
-      const [recipientRaw, masterRaw, operations] = await Promise.all([
-        this.normalizeAddress(address),
-        this.normalizeAddress(master),
-        this.fetchJettonOperations(address),
-      ]);
+      const masterRaw = await this.normalizeAddress(master);
       const open = await this.prisma.cryptoInvoice.findMany({ where: { network: 'TON', asset: 'USDT', status: CryptoInvoiceStatus.PENDING, expiresAt: { gt: new Date() } } });
-      for (const invoice of open) {
-        const match = this.findTransfer(operations, recipientRaw, masterRaw, invoice.expectedAtomic, invoice.reference, invoice.createdAt);
-        if (!match) continue;
-        const claimed = await this.prisma.cryptoInvoice.updateMany({ where: { id: invoice.id, status: CryptoInvoiceStatus.PENDING, txHash: null }, data: { status: CryptoInvoiceStatus.DETECTED, txHash: match.hash, detectedAt: match.detectedAt } });
-        if (claimed.count === 1) await this.finishInvoice(invoice.id);
+      // Tariffs are paid to the main wallet, balance top-ups to the balance wallet: watch every wallet with open invoices.
+      for (const wallet of new Set(open.map((invoice) => invoice.receiveAddress))) {
+        const [recipientRaw, operations] = await Promise.all([this.normalizeAddress(wallet), this.fetchJettonOperations(wallet)]);
+        for (const invoice of open.filter((row) => row.receiveAddress === wallet)) {
+          const match = this.findTransfer(operations, recipientRaw, masterRaw, invoice.expectedAtomic, invoice.reference, invoice.createdAt);
+          if (!match) continue;
+          const claimed = await this.prisma.cryptoInvoice.updateMany({ where: { id: invoice.id, status: CryptoInvoiceStatus.PENDING, txHash: null }, data: { status: CryptoInvoiceStatus.DETECTED, txHash: match.hash, detectedAt: match.detectedAt } });
+          if (claimed.count === 1) await this.finishInvoice(invoice.id);
+        }
       }
     } catch (error) {
       this.logger.error(error instanceof Error ? error.message : String(error));

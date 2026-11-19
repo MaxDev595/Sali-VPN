@@ -164,10 +164,13 @@ export class AppClientController {
     const full = await this.prisma.payment.findUniqueOrThrow({ where: { id }, include: { plan: true, cryptoInvoice: true } });
     const sub = payment.status === PaymentStatus.SUCCEEDED ? await this.subscriptions.getOwnActive(full.giftToUserId ?? account.id) : null;
     const topup = full.plan.code === TOPUP_PLAN;
-    const balanceUsd = topup ? Number((await this.prisma.user.findUniqueOrThrow({ where: { id: account.id }, select: { balanceUsd: true } })).balanceUsd) : null;
+    const wallet = topup ? await this.prisma.user.findUniqueOrThrow({ where: { id: account.id }, select: { balanceUsd: true, autoRenewPlanId: true } }) : null;
+    const balanceUsd = wallet ? Number(wallet.balanceUsd) : null;
     return {
       topup,
       balanceUsd,
+      // After a top-up the app offers to switch auto-renew on.
+      autoRenew: wallet ? Boolean(wallet.autoRenewPlanId) : null,
       amountUsd: Number(full.amountUsd),
       status: payment.status,
       expired: payment.status === PaymentStatus.PENDING && Boolean(full.cryptoInvoice && full.cryptoInvoice.expiresAt <= new Date()),

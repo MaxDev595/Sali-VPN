@@ -4,6 +4,9 @@ import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreatePaymentInput, CreatePaymentResult, PaymentProvider, PaymentStatusResult } from './payment-provider.interface';
 
+/** Sali balances are topped up into their own wallet, apart from the main one tariffs are paid to. */
+export const BALANCE_WALLET_DEFAULT = 'UQA29YKZ0GMWk48WrwLhhB-0-RjsV-ktGTuPTJMotUcb8rcD';
+
 /** Creates USDT (Jetton) invoices payable to a TON Space wallet. */
 @Injectable()
 export class CryptoPaymentProvider implements PaymentProvider {
@@ -12,7 +15,9 @@ export class CryptoPaymentProvider implements PaymentProvider {
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
     const paymentId = input.metadata?.paymentId;
-    const address = this.config.get<string>('CRYPTO_TON_RECEIVE_ADDRESS')?.trim();
+    const address = input.metadata?.wallet === 'balance'
+      ? (this.config.get<string>('CRYPTO_TON_BALANCE_ADDRESS')?.trim() || BALANCE_WALLET_DEFAULT)
+      : this.config.get<string>('CRYPTO_TON_RECEIVE_ADDRESS')?.trim();
     // A plan-specific override is useful when its USDT price differs from USD.
     // Otherwise charge the amount reserved by PaymentsService, including discounts.
     const configuredAmount = this.config.get<string>(`CRYPTO_USDT_TON_AMOUNT_${input.planId}`)

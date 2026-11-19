@@ -413,7 +413,7 @@ VIEWS.checkout = async (root, params) => {
       if (st.status === 'SUCCEEDED') {
         clearInterval(payTimer);
         await loadHome({ quiet: true });
-        if (st.topup) success(`+${usd2(st.amountUsd)} на балансе`, `Теперь на балансе ${usd2(st.balanceUsd)}. Оплачивайте тарифы в одно нажатие или включите автопродление.`, 'К балансу', back);
+        if (st.topup) topupDone(co, st);
         else { if (promo) promo = null; success(st.gift ? 'Подарок оплачен' : 'Оплачено', st.gift ? 'Подписка уже на аккаунте друга.' : `Подписка до ${dateRu(st.until)} — работает на всех ваших устройствах.`, st.gift ? 'Готово' : 'Включить VPN', toVpn); }
       } else if (st.status === 'FAILED' || (st.expired && st.status === 'PENDING')) {
         clearInterval(payTimer);
@@ -446,6 +446,28 @@ VIEWS.checkout = async (root, params) => {
   };
 };
 
+/* After a top-up: always offer auto-renew (the account's tariff, 30 days if none). */
+function topupDone(co, st) {
+  const on = st.autoRenew;
+  co.innerHTML = `<div class="success">${icon('check', 'd', 'ok-ico')}<h3>+${usd2(st.amountUsd)} на балансе</h3><p>Теперь на балансе ${usd2(st.balanceUsd)}.</p>
+    ${on ? '<div class="card"><h4>Автопродление включено</h4><p class="muted">За сутки до конца подписки стоимость тарифа спишется с баланса сама — VPN не прервётся.</p></div>'
+      : '<div class="card accent" id="renewOffer"><h4>Включить автопродление?</h4><p class="muted">Подписка будет продлеваться с баланса сама, за сутки до конца, и не прервётся. Без автопродления продлевайте вручную: «Баланс» → «Продлить с баланса».</p><button class="btn btn-peach" id="renewOn">Включить автопродление</button></div>'}
+    <button class="btn btn-ghost" id="coDone">К балансу</button></div>`;
+  co.querySelector('#coDone').onclick = back;
+  const btn = co.querySelector('#renewOn');
+  if (btn) btn.onclick = async () => {
+    btn.disabled = true;
+    try {
+      const p = await loadPlans();
+      const name = home && home.subscription && home.subscription.plan ? home.subscription.plan.name : null;
+      const plan = (p && (p.plans.find((x) => x.name === name) || p.plans.find((x) => x.durationDays === 30))) || null;
+      await api('/app/balance/auto-renew', 'POST', { planCode: plan ? plan.code : 'pro_monthly' });
+      co.querySelector('#renewOffer').innerHTML = `<h4>Автопродление включено</h4><p class="muted">${plan ? `${esc(period(plan.durationDays))} за ${money(plan.priceUsd)} — ` : ''}спишется с баланса за сутки до конца подписки.</p>`;
+      toast('Автопродление включено', 'ok');
+    } catch (e) { btn.disabled = false; toast(e.message, 'err'); }
+  };
+}
+
 /* ---------- Баланс ---------- */
 VIEWS.balance = async (root) => {
   root.innerHTML = head('Баланс', 'Пополните один раз — и оплачивайте тарифы в одно нажатие или включите автопродление.') + `<div id="bal">${loading}</div>`;
@@ -464,10 +486,31 @@ VIEWS.balance = async (root) => {
   <p class="label">${icon('key')}АВТОПРОДЛЕНИЕ</p>
   <div class="card"><div class="toggle-row"><div><b>${info.autoRenew ? `${esc(period(info.autoRenew.durationDays))} за ${money(info.autoRenew.priceUsd)}` : 'Выключено'}</b><span>За сутки до конца подписки спишем стоимость тарифа с баланса. Не хватит — напомним в Telegram.</span></div><button class="switch${info.autoRenew ? ' on' : ''}" id="renew" aria-label="Автопродление"><i></i></button></div>
     ${info.autoRenew ? `<div class="chips">${plans.map((p) => `<button class="chip${info.autoRenew.planCode === p.code ? ' on' : ''}" data-renew="${esc(p.code)}">${esc(period(p.durationDays))} · ${money(p.priceUsd)}</button>`).join('')}</div>` : ''}</div>
+  ${!info.autoRenew && plans.length ? `<p class="label">${icon('cash')}ПРОДЛИТЬ С БАЛАНСА</p>
+  <div class="card"><p class="muted">Автопродление выключено — продлевайте сами, когда подписка подходит к концу. Выберите срок и нажмите «Списать».</p>
+    <div class="chips">${plans.map((p) => `<button class="chip${renewPlan && renewPlan.code === p.code ? ' on' : ''}" data-manual="${esc(p.code)}">${esc(period(p.durationDays))} · ${money(p.priceUsd)}</button>`).join('')}</div>
+    <button class="btn btn-peach" id="manualGo"></button></div>` : ''}
   <p class="label">${icon('info')}ИСТОРИЯ</p>
   <div class="tx-list">${info.history.length ? info.history.map((t) => `<div class="tx">${icon(kindIcon(t), t.amountUsd > 0 ? 'g' : 'p', 'tx-ico')}<div><b>${esc(t.label)}</b><small>${esc(dateTime(t.at))}${t.note ? ` · ${esc(t.note)}` : ''}</small></div><em class="${t.amountUsd > 0 ? 'plus' : ''}">${t.amountUsd > 0 ? '+' : '−'}${usd2(Math.abs(t.amountUsd))}</em></div>`).join('') : '<p class="muted">Пока пусто</p>'}</div>
   <p class="fine">Деньги на балансе тратятся только на Sali VPN и не выводятся. Нужен возврат — напишите в поддержку: вернём на кошелёк, с которого пришёл перевод.</p>`;
   box.querySelector('#payPlan').onclick = () => open('plans');
+  const manualGo = box.querySelector('#manualGo');
+  if (manualGo) {
+    let manual = renewPlan || plans[0];
+    const paint = () => {
+      const short = Math.round((manual.priceUsd - info.balanceUsd) * 100) / 100;
+      manualGo.textContent = short > 0 ? `Не хватает ${money(short)} — пополните` : `Списать ${money(manual.priceUsd)} и продлить`;
+      manualGo.disabled = short > 0;
+    };
+    box.querySelectorAll('[data-manual]').forEach((b) => { b.onclick = () => { manual = plans.find((p) => p.code === b.dataset.manual); box.querySelectorAll('[data-manual]').forEach((o) => o.classList.toggle('on', o === b)); paint(); }; });
+    paint();
+    manualGo.onclick = async () => {
+      if (!(await confirmBox('Продлить с баланса?', `${period(manual.durationDays)} — спишем ${money(manual.priceUsd)} с баланса. Подписка продлится на всех ваших устройствах.`, `Списать ${money(manual.priceUsd)}`))) return;
+      manualGo.disabled = true;
+      try { const r = await api('/app/balance/pay', 'POST', { planCode: manual.code }); toast(`Продлено до ${dateRu(r.until, false)} · списано ${money(r.priceUsd)}`, 'ok'); await loadHome({ quiet: true }); void renderView(); }
+      catch (e) { toast(e.message, 'err'); manualGo.disabled = false; }
+    };
+  }
   box.querySelectorAll('[data-top]').forEach((b) => { b.onclick = () => open('checkout', { topup: Number(b.dataset.top).toFixed(2) }); });
   const amount = box.querySelector('#topAmount');
   amount.oninput = () => { amount.value = amount.value.replace(/[^0-9.,]/g, '').slice(0, 7); };
@@ -595,10 +638,13 @@ async function renderAdminHome() {
   const box = root.querySelector('#adm');
   let s; try { s = await api('/app/admin/stats'); } catch (e) { box.innerHTML = errorNote(e.message); return; }
   box.innerHTML = `<p class="label">${icon('key')}ДЕНЬГИ</p><div class="stats four">${stat('Сегодня', money(s.revenue.day), `${s.revenue.dayCount} опл.`)}${stat('7 дней', money(s.revenue.week), `${s.revenue.weekCount} опл.`)}${stat('30 дней', money(s.revenue.month), `${s.revenue.monthCount} опл. · чек ${money(s.revenue.avgCheck30d)}`)}${stat('Всего', money(s.revenue.total), `${s.revenue.payers} платили`)}</div>
+    ${s.balances ? `<p class="label">${icon('cash')}БАЛАНСЫ SALI</p><div class="stats four">${stat('На балансах', usd2(s.balances.held), 'деньги клиентов')}${stat('Пополнено всего', usd2(s.balances.toppedUp))}${stat('Списано за тарифы', usd2(s.balances.spent), 'к переводу на основной счёт')}</div>
+      <button class="copybox" data-copy="${esc(s.balances.wallet)}"><small>КОШЕЛЁК ДЛЯ ПОПОЛНЕНИЙ</small><b class="addr">${esc(s.balances.wallet)}</b>${icon('copy')}</button>` : ''}
     <p class="label">${icon('shield')}ДОСТУП СЕЙЧАС</p><div class="stats four">${stat('Платная подписка', s.access.paid, s.access.expiringPaid3d ? `${s.access.expiringPaid3d} кончаются за 3 дня` : '')}${stat('От администрации', s.access.granted)}${stat('Бесплатные 3 дня', s.access.trial)}${stat('Онлайн', s.access.onlineNow ?? '—')}</div>
     <p class="label">${icon('user')}ЛЮДИ</p><div class="stats four">${stat('Новых за сутки', s.new24h)}${stat('За 7 дней', s.new7d)}${stat('Устройств активно (7 дн.)', s.activeDevices7d)}${stat('Пришли по приглашению', s.referrals.total)}</div>
     <p class="label">${icon('globe')}СЕРВЕРЫ</p><div class="group">${s.servers.map((v) => `<div class="row static">${icon('dot', v.online ? 'g' : 'r', 'ri')}<span><b>${esc(v.name)}</b><small>${v.premiumOnly ? 'платный' : 'бесплатный'}${v.isActive ? '' : ' · выключен'} · ${v.users} ключей</small></span>${v.connectedNow !== null ? `<em>${v.connectedNow} онлайн</em>` : ''}</div>`).join('')}</div>
     <p class="fine">Серверы, рассылки и воронка — по-прежнему в боте: /admin</p>`;
+  box.querySelectorAll('[data-copy]').forEach((b) => { b.onclick = () => void copy(b.dataset.copy, 'Адрес скопирован'); });
 }
 
 const SEGMENTS = [['paid', 'Платные'], ['granted', 'От администрации'], ['trial', 'Бесплатные'], ['expired', 'Ушедшие']];
