@@ -349,6 +349,20 @@ async function pay(paymentId) {
   await call('/codes/redeem', { token: A.token, method: 'POST', body: { code: 'SALI-AAAA-BBBB-CCCC' }, expect: 404 });
   ok('old app builds: /codes/redeem still answers');
 
+  // --- the subscription is bought on the account and applies on EVERY device by itself:
+  // a PC linked after several old phones (more than 3 installs) gets it as soon as it is opened.
+  const olds = [];
+  for (const n of ['P1', 'P2', 'P3']) { const p = await device(n); await linkTo(p, await p.home(), 222, 'alice'); olds.push(p); }
+  await db.query(`update "Device" set "lastActiveAt" = now() - interval '10 days' where "userId" in (select id from "User" where "linkedTelegramId" = 222 or "telegramId" = 222)`);
+  const PC = await device('PC');
+  await linkTo(PC, await PC.home(), 222, 'alice');
+  const hPC = await PC.home();
+  assert.equal(hPC.user.publicId, idA);
+  assert.equal(hPC.subscription?.status, 'ACTIVE', 'PC must get the account subscription automatically');
+  await PC.connect();
+  assert.equal((await A.home()).subscription?.status, 'ACTIVE');
+  ok('PC linked after older phones: account subscription applied automatically, VPN connects; the phone in use keeps it too');
+
   await db.end();
   console.log(`\nALL ${step} CHECKS PASSED`);
 })().catch(async (error) => { console.error('✘ FAILED at step', step + 1, '\n', error); await db.end().catch(() => {}); process.exit(1); });

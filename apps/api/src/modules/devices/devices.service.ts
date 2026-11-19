@@ -96,6 +96,9 @@ export class DevicesService {
       throw new ForbiddenException('Устройство не зарегистрировано или отключено');
     }
 
+    // Connecting = using this device now: it takes a place on the account's subscription
+    // before access is checked (the least recently used device gives it up).
+    await this.touchActive(device.id);
     const activeSub = await this.subscriptions.getActiveForUser(userId);
     if (!activeSub) {
       const foreignClaim = await this.prisma.trialDeviceClaim.findUnique({ where: { deviceKey } });
@@ -106,7 +109,6 @@ export class DevicesService {
         where: { deviceKey }, update: {}, create: { deviceKey, userId },
       });
     }
-    await this.touchActive(device.id);
     return { device, activeSub };
   }
 

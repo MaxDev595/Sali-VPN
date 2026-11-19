@@ -33,6 +33,9 @@ export class HomeController {
   @Get('home')
   async getHome(@CurrentUser() authUser: AuthTokenPayload) {
     const user = await this.users.findById(authUser.sub);
+    // Opening the app = using this device today: it keeps (or takes) its place on the
+    // account's subscription, so a subscription bought on the phone shows up here by itself.
+    await this.prisma.device.updateMany({ where: { userId: user.id, revokedAt: null }, data: { lastActiveAt: new Date(new Date().setUTCHours(0, 0, 0, 0)) } }).catch(() => undefined);
     // One ID per account: a linked app shows its account's Sali ID; the device has its own label.
     const owner = await this.accounts.accountFor(authUser.sub).catch(() => null);
     const tg = owner?.telegramId ?? null;

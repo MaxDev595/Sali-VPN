@@ -40,7 +40,7 @@ export class SubscriptionsService {
     const me = await this.prisma.user.findUnique({ where: { id: userId }, select: { telegramId: true, linkedTelegramId: true, appDeviceKey: true } });
     const tg = me?.linkedTelegramId ?? me?.telegramId;
     if (!me?.appDeviceKey || !tg) return null;
-    const family = await this.sharing(tg);
+    const family = await this.sharing(tg, userId);
     return family.sub && family.devices.some((d) => d.id === userId && d.covered) ? family.sub : null;
   }
 
@@ -50,7 +50,12 @@ export class SubscriptionsService {
    * that holds it first, then the others in the order they were linked, up to maxDevices.
    * Installations with a subscription of their own keep it and take no shared slot.
    */
-  async sharing(telegramId: bigint) {
+  /**
+   * The subscription covers the installations used most recently (up to maxDevices): an old
+   * phone or a reinstalled test build that nobody opens any more gives its place up by itself,
+   * and the device being used right now always gets one. `preferId` wins ties of the same day.
+   */
+  async sharing(telegramId: bigint, preferId?: string) {
     const now = new Date();
     const members = await this.prisma.user.findMany({
       where: { OR: [{ telegramId }, { linkedTelegramId: telegramId }] },
@@ -64,9 +69,10 @@ export class SubscriptionsService {
     const sub = subs[0] ?? null;
     const owners = new Set(subs.map((s) => s.userId));
     const since = (m: { linkedAt: Date | null; createdAt: Date }) => (m.linkedAt ?? m.createdAt).getTime();
+    const used_ = (m: (typeof members)[number]) => m.devices[0]?.lastActiveAt?.getTime() ?? 0;
     const installs = members
       .filter((m) => m.appDeviceKey && !m.isBlocked)
-      .sort((a, b) => Number(b.id === sub?.userId) - Number(a.id === sub?.userId) || since(a) - since(b));
+      .sort((a, b) => used_(b) - used_(a) || Number(b.id === preferId) - Number(a.id === preferId) || since(b) - since(a));
     const max = sub?.plan.maxDevices ?? 0;
     let used = 0;
     const devices = installs.map((m) => {
