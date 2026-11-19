@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AnimatedLogo, LogoBadge, LogoMarkStatic, LogoWordmark } from '../landing/AnimatedLogo';
 import { LanguageSwitch } from '../landing/components';
 import { useLandingLanguage } from '../landing/i18n';
-import { copy, PRICES } from '../landing/copy';
+import { copy, TARIFFS } from '../landing/copy';
 import '../landing/landing.css';
 import { DOWNLOADS } from '../lib/downloads';
 
@@ -51,8 +51,9 @@ export function LandingPage() {
   useReveal();
   useEffect(() => { const onScroll = () => setScrolled(window.scrollY > 12); onScroll(); window.addEventListener('scroll', onScroll, { passive: true }); return () => window.removeEventListener('scroll', onScroll); }, []);
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  const monthlyOfYear = (PRICES.year / 12).toFixed(2);
-  const saving = Math.round((1 - PRICES.year / (PRICES.month * 12)) * 100);
+  // Price per 30 days of the main plan: longer plans show their saving against it.
+  const base30 = TARIFFS.find((t) => t.days === 30)!.price;
+  const bestDays = TARIFFS.reduce((top, t) => (t.price / t.days < top.price / top.days ? t : top)).days;
 
   return <main className="sv">
     <header className={`sv-nav${scrolled ? ' scrolled' : ''}`}>
@@ -91,11 +92,25 @@ export function LandingPage() {
     <section className="sv-section sv-section-soft" id="plans">
       <div className="sv-wrap">
         <div className="sv-head sv-reveal"><p className="sv-eyebrow">{c.plansEyebrow}</p><h2>{c.plansTitle}</h2><p>{c.plansText}</p></div>
-        <div className="sv-plans">
-          <article className="sv-plan sv-reveal"><h3>{c.free}</h3><p className="sv-price"><strong>{PRICES.freeDays}</strong><s style={{ textDecoration: "none" }}>{c.dayWord}</s><span>{c.freeText}</span></p><Link className="sv-btn sv-btn-ghost-dark" to="/download">{c.freeCta}</Link></article>
-          <article className="sv-plan sv-reveal"><h3>{c.month}</h3><p className="sv-price"><strong>${PRICES.month}</strong><s>${PRICES.monthOld}</s></p><ul>{c.benefits.map((b) => <li key={b}>{b}</li>)}</ul><Link className="sv-btn sv-btn-dark" to="/download">{c.buyCta}</Link></article>
-          <article className="sv-plan sv-plan-best sv-reveal"><em>{c.best} · −{saving}%</em><h3>{c.year}</h3><p className="sv-price"><strong>${PRICES.year}</strong><s>${PRICES.yearOld}</s><span>${monthlyOfYear}{c.perMonth}</span></p><ul>{c.benefits.map((b) => <li key={b}>{b}</li>)}</ul><Link className="sv-btn sv-btn-peach" to="/download">{c.buyCta}</Link></article>
+        <div className="sv-free sv-reveal">
+          <div><strong>{c.free}</strong><span>{c.freeText}</span></div>
+          <Link className="sv-btn sv-btn-ghost-dark" to="/download">{c.freeCta}</Link>
         </div>
+        <div className="sv-plans sv-plans-all">
+          {TARIFFS.map((t) => {
+            const per30 = t.price / t.days * 30;
+            const off = t.days > 30 ? Math.round((1 - per30 / base30) * 100) : 0;
+            const best = t.days === bestDays;
+            return <article key={t.days} className={`sv-plan sv-reveal${t.main ? ' sv-plan-best' : ''}${best ? ' sv-plan-value' : ''}`}>
+              {t.main && <em>{c.mainBadge}</em>}
+              {best && <em className="sv-value-badge">{c.best} · −{off}%</em>}
+              <h3>{t.title[language]}</h3>
+              <p className="sv-price"><strong>${t.price % 1 ? t.price.toFixed(2) : t.price}</strong><span>{t.note[language]}{off > 0 ? ` · $${per30.toFixed(2)} ${c.per30}, ${c.saving} ${off}%` : ''}</span></p>
+              <Link className={`sv-btn ${t.main ? 'sv-btn-peach' : 'sv-btn-dark'}`} to="/download">{c.buyCta}</Link>
+            </article>;
+          })}
+        </div>
+        <p className="sv-included sv-reveal"><b>{c.included}</b> {c.benefits.join(' · ')}</p>
         <p className="sv-pay">{c.payMethods}</p>
       </div>
     </section>

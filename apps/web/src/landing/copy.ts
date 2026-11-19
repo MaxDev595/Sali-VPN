@@ -11,11 +11,21 @@ export const PRICES = {
   freeDays: Number(env.VITE_FREE_DAYS ?? 3),
 };
 
+/** All tariffs, as in the app (API: migration 20261119120000_tariffs). */
+export const TARIFFS: Array<{ days: number; price: number; title: { ru: string; en: string }; note: { ru: string; en: string }; main?: boolean }> = [
+  { days: 7, price: 1.2, title: { ru: '7 дней', en: '7 days' }, note: { ru: 'Недельное использование', en: 'A week' } },
+  { days: 14, price: 2, title: { ru: '14 дней', en: '14 days' }, note: { ru: 'Две недели', en: 'Two weeks' } },
+  { days: 30, price: 3, title: { ru: '30 дней', en: '30 days' }, note: { ru: 'Основная подписка', en: 'The main plan' }, main: true },
+  { days: 90, price: 8, title: { ru: '90 дней', en: '90 days' }, note: { ru: 'Постоянные пользователи', en: 'For regulars' } },
+  { days: 180, price: 15, title: { ru: 'Полгода', en: 'Half a year' }, note: { ru: '6 месяцев', en: '6 months' } },
+  { days: 365, price: 30, title: { ru: 'Год', en: 'Year' }, note: { ru: '12 месяцев', en: '12 months' } },
+];
+
 export const copy: Record<LandingLanguage, {
   nav: [string, string][]; help: string; openBot: string; download: string; downloadNav: string; dayWord: string; heroBadge: string; heroTitle: [string, string]; heroText: string;
   trust: string[]; howEyebrow: string; howTitle: string; howText: string; steps: [string, string][];
   plansEyebrow: string; plansTitle: string; plansText: string; free: string; freeText: string; freeCta: string;
-  month: string; year: string; perMonth: string; best: string; buyCta: string; benefits: string[]; payMethods: string;
+  month: string; year: string; perMonth: string; best: string; buyCta: string; benefits: string[]; payMethods: string; mainBadge: string; per30: string; saving: string; included: string;
   featuresEyebrow: string; featuresTitle: string; features: [string, string, string][];
   securityEyebrow: string; securityTitle: string; securityText: string; security: [string, string, string][]; securityMore: string;
   faqTitle: string; faqs: [string, string][]; ctaTitle: string; ctaText: string; footer: string; privacy: string; terms: string; support: string;
@@ -33,10 +43,10 @@ export const copy: Record<LandingLanguage, {
       ['Нажмите «Включить»', 'И всё — 3 дня бесплатно. Ничего вводить и привязывать не нужно.'],
       ['Оформите подписку', 'Прямо в приложении: выберите тариф и оплатите в USDT. Один раз привяжите Telegram — подписка будет на вашем аккаунте.'],
     ],
-    plansEyebrow: 'Тарифы', plansTitle: 'Честные цены', plansText: 'Без автосписаний. Подписка на аккаунт — до 3 устройств. В приложении 6 тарифов: 7, 14, 30, 90 дней, полгода и год — от $1.20.',
+    plansEyebrow: 'Тарифы', plansTitle: 'Честные цены', plansText: 'Подписка на аккаунт — до 3 устройств. Новая покупка добавляет дни к текущей, а автопродление с баланса — только если вы сами его включите.',
     free: 'Бесплатно', freeText: '3 дня VPN без ограничений — проверьте всё сами', freeCta: 'Скачать и включить',
-    month: '30 дней', year: '1 год', perMonth: '/мес', best: 'Выгоднее всего', buyCta: 'Оформить в приложении',
-    benefits: ['Все серверы', 'До 3 устройств', 'Без логов и рекламы'], payMethods: 'USDT (TON)',
+    month: '30 дней', year: '1 год', perMonth: '/мес', best: 'Выгоднее всего', buyCta: 'Оформить в приложении', mainBadge: 'Основной', per30: 'за 30 дней', saving: 'экономия', included: 'В каждом тарифе:',
+    benefits: ['Быстрая сеть', 'Конфиденциальность превыше всего', 'Все серверы', 'До 3 устройств'], payMethods: 'USDT (TON)',
     featuresEyebrow: 'Возможности', featuresTitle: 'Всё, что нужно. Ничего лишнего.',
     features: [
       ['bolt', 'Быстрая сеть', 'Современный протокол и серверы без перегрузки — видео, игры и звонки без задержек.'],
@@ -84,10 +94,10 @@ export const copy: Record<LandingLanguage, {
       ['Tap “Turn on”', 'That’s it — 3 days free. Nothing to enter or link.'],
       ['Get a plan', 'Right in the app: pick a plan and pay in USDT. Link Telegram once so the plan belongs to your account.'],
     ],
-    plansEyebrow: 'Pricing', plansTitle: 'Honest prices', plansText: 'No auto-renewals. One plan per account — up to 3 devices. Six plans in the app: 7, 14, 30, 90 days, half a year and a year — from $1.20.',
+    plansEyebrow: 'Pricing', plansTitle: 'Honest prices', plansText: 'One plan per account — up to 3 devices. A new purchase adds days on top; auto-renewal from your balance only if you turn it on.',
     free: 'Free', freeText: '3 days of unlimited VPN to try everything', freeCta: 'Download and turn on',
-    month: '30 days', year: '1 year', perMonth: '/mo', best: 'Best value', buyCta: 'Get it in the app',
-    benefits: ['All servers', 'Up to 3 devices', 'No logs, no ads'], payMethods: 'USDT (TON)',
+    month: '30 days', year: '1 year', perMonth: '/mo', best: 'Best value', buyCta: 'Get it in the app', mainBadge: 'Main', per30: 'per 30 days', saving: 'save', included: 'Every plan includes:',
+    benefits: ['Fast network', 'Privacy above all', 'All servers', 'Up to 3 devices'], payMethods: 'USDT (TON)',
     featuresEyebrow: 'Features', featuresTitle: 'Everything you need. Nothing you don’t.',
     features: [
       ['bolt', 'Fast network', 'A modern protocol and uncrowded servers — video, games and calls without lag.'],

@@ -295,3 +295,24 @@
   .sv-dl-step-icon, .sv-dl-step-icon .sv-ico { width: 46px; height: 46px; }
   .sv-legal-nav .sv-wrap > div > a { display: none; }
 }
+
+/* All tariffs (7 / 14 / 30 / 90 / 180 / 365 days) */
+.sv-free { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px 26px; margin-bottom: 18px; border-radius: 22px; background: var(--paper); box-shadow: 0 0 0 1px var(--line); }
+.sv-free strong { display: block; font: 700 22px/1.2 'Sali Sans', sans-serif; }
+.sv-free span { color: var(--muted); font-size: 15px; }
+.sv-free .sv-btn { flex: none; }
+.sv-plans-all { grid-template-columns: repeat(3, 1fr); max-width: none; }
+.sv-plans-all .sv-plan { padding: 26px 24px; }
+.sv-plans-all .sv-price { margin: 10px 0 18px !important; }
+.sv-plans-all .sv-price strong { font-size: 42px; }
+.sv-plan-value { box-shadow: 0 0 0 1.5px rgba(255,197,135,.6), 0 24px 50px -40px rgba(0,0,0,.7); }
+.sv-plan-value .sv-value-badge { position: absolute; top: 20px; right: 20px; padding: 5px 11px; border-radius: 99px; background: #E8F7EE; color: #11663A; font-style: normal; font-size: 12px; font-weight: 800; }
+.sv-included { margin-top: 26px; text-align: center; color: var(--ink-2); font-size: 15px; }
+.sv-included b { color: var(--ink); margin-right: 4px; }
+@media (max-width: 900px) {
+  .sv-plans-all { grid-template-columns: repeat(2, 1fr); max-width: none; }
+  .sv-free { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 560px) {
+  .sv-plans-all { grid-template-columns: 1fr; }
+}
