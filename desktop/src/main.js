@@ -120,6 +120,16 @@ ipcMain.handle('account:devices', async () => {
 ipcMain.handle('account:unlink', async (_event, publicId) => {
   try { await api.unlinkDevice(String(publicId)); return { ok: true }; } catch (error) { return { ok: false, error: errorMessage(error) }; }
 });
+ipcMain.handle('api', async (_event, req) => {
+  try { return { ok: true, data: await api.call(String(req?.path ?? ''), req?.method === 'POST' ? 'POST' : 'GET', req?.body) }; }
+  catch (error) { return { ok: false, error: errorMessage(error), code: error.code ?? null, status: error.status ?? null }; }
+});
+// Wallets (ton://, Tonkeeper), backup apps (Happ, v2RayTun, Hiddify) and Telegram links.
+ipcMain.handle('open:url', async (_event, url) => {
+  const u = String(url ?? '');
+  if (!/^(https:\/\/|ton:\/\/|tonkeeper:\/\/|happ:\/\/|v2raytun:\/\/|hiddify:\/\/|tg:\/\/)/i.test(u)) return false;
+  try { await shell.openExternal(u); return true; } catch { return false; }
+});
 ipcMain.handle('vpn:connect', () => connect());
 ipcMain.handle('vpn:disconnect', () => disconnect());
 ipcMain.handle('vpn:state', async () => ({ state: vpnState, serverLocation, connectedAt: store.get('connectedAt') ?? null }));

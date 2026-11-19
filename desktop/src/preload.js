@@ -17,4 +17,6 @@ contextBridge.exposeInMainWorld('sali', {
   readClipboard: () => ipcRenderer.invoke('clipboard:read'),
   copy: (text) => ipcRenderer.invoke('clipboard:write', text),
   version: () => ipcRenderer.invoke('app:version'),
+  api: (path, method, body) => ipcRenderer.invoke('api', { path, method, body }),
+  openUrl: (url) => ipcRenderer.invoke('open:url', url),
 });

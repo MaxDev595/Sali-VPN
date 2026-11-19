@@ -9,18 +9,20 @@
 <body>
   <div class="drag"></div>
   <div class="shell" id="app">
-    <!-- Sidebar: brand, sections (the peach pen cap marks the current one), account at the bottom. -->
+    <!-- Sidebar: brand, sections (the peach drop marks the current one), the account's Sali ID at the bottom. -->
     <aside class="side">
       <div class="brand"><span class="badge"><img src="assets/mark.svg" alt="" /></span><img class="word" src="assets/wordmark.svg" alt="Sali" /></div>
       <nav class="nav" id="nav" role="tablist" aria-label="Разделы">
         <span class="nav-drop" id="navDrop" aria-hidden="true"></span>
-        <button role="tab" data-page="vpn" aria-selected="true"><i class="ico ico-key" aria-hidden="true"></i>VPN<kbd>1</kbd></button>
-        <button role="tab" data-page="devices" aria-selected="false"><i class="ico ico-devices" aria-hidden="true"></i>Устройства<kbd>2</kbd></button>
-        <button role="tab" data-page="settings" aria-selected="false"><i class="ico ico-gear" aria-hidden="true"></i>Настройки<kbd>3</kbd></button>
-        <button role="tab" data-page="help" aria-selected="false"><i class="ico ico-help" aria-hidden="true"></i>Помощь<kbd>4</kbd></button>
+        <button role="tab" data-page="vpn" aria-selected="true"><img class="ni" data-icon="power" alt="" />VPN<kbd>1</kbd></button>
+        <button role="tab" data-page="sub" aria-selected="false"><img class="ni" data-icon="key" alt="" />Подписка<kbd>2</kbd></button>
+        <button role="tab" data-page="devices" aria-selected="false"><img class="ni" data-icon="devices" alt="" />Устройства<kbd>3</kbd></button>
+        <button role="tab" data-page="settings" aria-selected="false"><img class="ni" data-icon="gear" alt="" />Настройки<kbd>4</kbd></button>
+        <button role="tab" data-page="help" aria-selected="false"><img class="ni" data-icon="help" alt="" />Помощь<kbd>5</kbd></button>
+        <button role="tab" data-page="admin" aria-selected="false" id="navAdmin" hidden><img class="ni" data-icon="shield" alt="" />Админка<kbd>6</kbd></button>
       </nav>
       <div class="side-foot">
-        <button class="id-card" id="idChip" title="Скопировать Sali ID"><i class="ico ico-shield id-badge" aria-hidden="true"></i><small>SALI ID</small><b id="publicId">····-····</b><span>копировать</span></button>
+        <button class="id-card" id="idChip" title="Скопировать Sali ID"><img class="id-badge" src="assets/icons/shield-p.png" alt="" /><small>SALI ID АККАУНТА</small><b id="publicId">SL-····-····</b><span id="idHint">копировать</span></button>
         <span class="version" id="version"></span>
       </div>
     </aside>
@@ -55,20 +57,20 @@
               <span class="perf" aria-hidden="true"></span>
               <div class="stub">
                 <small>ЛОКАЦИЯ</small>
-                <b class="loc"><img id="flag" src="assets/globe-glyph.png" alt="" /><span id="server">Автовыбор</span></b>
+                <b class="loc"><img id="flag" src="assets/flags/globe.png" alt="" /><span id="server">Автовыбор</span></b>
                 <span>Выбирается автоматически</span>
               </div>
             </div>
 
             <div class="actions">
-              <button class="btn btn-peach" id="getCode"><img src="assets/telegram-glyph.png" alt="" /><span id="getCodeLabel">Войти через Telegram</span></button>
-              <button class="btn btn-ghost" id="enterCode"><img src="assets/key-glyph.png" alt="" />Промокод</button>
+              <button class="btn btn-peach" id="getCode"><img class="i" src="assets/icons/key-d.png" alt="" /><span id="getCodeLabel">Тарифы</span></button>
+              <button class="btn btn-ghost" id="enterCode"><img class="i" src="assets/icons/tag-p.png" alt="" />Промокод</button>
             </div>
 
             <section class="link-card" id="linkCard" hidden>
-              <img src="assets/link-glyph.png" alt="" />
-              <div><b>Бот не ответил?</b><span id="linkHint">В Telegram нажмите «Запустить». Если бот молчит — отправьте ему номер этого компьютера, он уже скопирован.</span></div>
-              <button class="btn-small" id="linkBtn">Открыть бота</button>
+              <img class="i" src="assets/icons/telegram-p.png" alt="" />
+              <div><b id="linkTitle">Привяжите Telegram</b><span id="linkHint">Нужно только для оплаты: подписка начисляется на аккаунт и работает на всех устройствах.</span></div>
+              <button class="btn-small" id="linkBtn">Привязать</button>
             </section>
 
             <p class="hint"><kbd>Пробел</kbd> — подключить или отключить</p>
@@ -76,45 +78,61 @@
         </div>
       </section>
 
-      <!-- Devices: every row opens salivpn.com/help/devices -->
-      <section class="page" data-page="devices" id="page-devices" hidden>
-        <header class="page-head"><h2>Устройства</h2><p>Одна подписка — до 3 устройств: компьютер, телефон и ещё одно. Ненужные можно удалить здесь или в боте.</p></header>
-        <button class="device current" data-help="devices">
-          <span class="dev-icon"><img src="assets/windows-glyph.png" alt="" /></span>
-          <span class="dev-copy"><small>ЭТОТ КОМПЬЮТЕР</small><b>Windows</b></span>
-          <span class="dev-facts"><span>Sali ID <b id="devId">—</b></span><span>Тариф <b id="devTariff">—</b></span><span>Telegram <b id="devTg">—</b></span></span>
-          <i class="ico ico-external ext" aria-hidden="true"></i>
+      <!-- Subscription: status, tariffs, balance, gift, promo, invite, devices -->
+      <section class="page" data-page="sub" id="page-sub" hidden>
+        <header class="page-head"><h2>Подписка</h2><p>Подписка покупается на аккаунт и сама работает на всех ваших устройствах — до 3.</p></header>
+        <div class="status-card" id="subStatus"><span class="dot" id="subDot"></span><div><b id="subTitle">—</b><small id="subHint">&nbsp;</small></div><button class="pill" id="subDevices"><img class="i" src="assets/icons/devices-p.png" alt="" /><span id="subDevicesText">1/3</span></button></div>
+        <div id="subLink"></div>
+        <p class="label"><img class="i" src="assets/icons/key-p.png" alt="" />ТАРИФЫ</p>
+        <button class="plans-card" id="plansCard">
+          <span class="plans-top"><span><b id="plansTitle">Тарифы</b><small id="plansHint">От 7 дней до года</small></span><img class="i" src="assets/icons/chevron-p.png" alt="" /></span>
+          <span class="perks"><span><img class="i" src="assets/icons/bolt-p.png" alt="" />Быстрая сеть</span><span><img class="i" src="assets/icons/lock-p.png" alt="" />Конфиденциальность превыше всего</span></span>
+          <span class="cta">Выбрать тариф</span>
         </button>
-        <section id="accountBox" hidden>
-          <p class="label"><i class="ico ico-devices" aria-hidden="true"></i>УСТРОЙСТВА АККАУНТА <span id="accountSlots"></span></p>
-          <div class="acc-list" id="accountList"></div>
-        </section>
-        <p class="label"><i class="ico ico-devices" aria-hidden="true"></i>SALI VPN ЕСТЬ НА</p>
-        <div class="dev-list">
-          <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/android-glyph.png" alt="" /></span><span class="dev-copy"><b>Android</b><small>Телефоны и планшеты · Android 7+</small></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
-          <button class="device" data-help="devices"><span class="dev-icon"><img src="assets/windows-glyph.png" alt="" /></span><span class="dev-copy"><b>Windows</b><small>Компьютеры и ноутбуки · Windows 10, 11</small></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
-        </div>
-        <div class="add">
-          <div><b>Добавить устройство</b><span>Установите Sali VPN на телефон и нажмите «Войти через Telegram» — подписка заработает на нём сама.</span></div>
-          <button class="btn btn-ghost" id="phone">Скачать на телефон</button>
+        <div class="discount" id="discount" hidden><img class="i" src="assets/icons/check-g.png" alt="" /><span id="discountText"></span><button id="discountClear" title="Убрать"><img class="i" src="assets/icons/close-m.png" alt="" /></button></div>
+        <p class="label"><img class="i" src="assets/icons/plus-p.png" alt="" />ЕЩЁ</p>
+        <div class="group">
+          <button class="row" data-open="balance"><img class="ri" src="assets/icons/cash-p.png" alt="" /><span><b>Баланс</b><small>Пополните USDT — оплата в одно нажатие и автопродление</small></span><em id="balanceValue">$0.00</em><img class="chev" src="assets/icons/chevron-m.png" alt="" /></button>
+          <button class="row" data-open="gift"><img class="ri" src="assets/icons/gift-p.png" alt="" /><span><b>Подарить подписку</b><small>Другу по его Sali ID</small></span><img class="chev" src="assets/icons/chevron-m.png" alt="" /></button>
+          <button class="row" id="rowPromo"><img class="ri" src="assets/icons/tag-p.png" alt="" /><span><b>Промокод</b><small>Или Sali ID друга, который вас пригласил</small></span><em id="promoValue"></em><img class="chev" src="assets/icons/chevron-m.png" alt="" /></button>
+          <button class="row" data-open="invite"><img class="ri" src="assets/icons/users-p.png" alt="" /><span><b>Пригласить друга</b><small>Другу +1 день, вам скидка на оплату</small></span><img class="chev" src="assets/icons/chevron-m.png" alt="" /></button>
+          <button class="row" data-goto="devices"><img class="ri" src="assets/icons/devices-p.png" alt="" /><span><b>Устройства</b></span><em id="devicesValue">1 из 3</em><img class="chev" src="assets/icons/chevron-m.png" alt="" /></button>
         </div>
       </section>
 
-      <!-- Settings: protocol / DNS / … open the help centre -->
-      <section class="page" data-page="settings" id="page-settings" hidden>
-        <header class="page-head"><h2>Настройки</h2><p>Как устроено соединение — подробно на сайте.</p></header>
-        <p class="label"><i class="ico ico-shield" aria-hidden="true"></i>СОЕДИНЕНИЕ</p>
-        <div class="group">
-          <button class="row" data-help="protocol"><span><b>Протокол</b><small>Как работают WireGuard и AmneziaWG</small></span><em>WireGuard</em><i class="ico ico-external ext" aria-hidden="true"></i></button>
-          <button class="row" data-help="dns"><span><b>DNS</b><small>Запросы идут внутри туннеля</small></span><em>Свой, без журналов</em><i class="ico ico-external ext" aria-hidden="true"></i></button>
-          <button class="row" data-help="servers"><span><b>Серверы</b><small>Автовыбор и перенос при сбое</small></span><em>Авто</em><i class="ico ico-external ext" aria-hidden="true"></i></button>
+      <!-- Devices of the account -->
+      <section class="page" data-page="devices" id="page-devices" hidden>
+        <header class="page-head"><h2>Устройства</h2><p id="devHead">Одна подписка — до 3 устройств. У аккаунта один Sali ID.</p></header>
+        <div class="dev-stack" id="devList"></div>
+        <div id="devLink"></div>
+        <div class="add">
+          <div><b>Добавить устройство</b><span>Установите Sali VPN на телефон или другой ПК и привяжите тот же Telegram — подписка заработает на нём сама.</span></div>
+          <button class="btn btn-ghost" id="phone">Скачать Sali VPN</button>
         </div>
-        <p class="label"><i class="ico ico-user" aria-hidden="true"></i>АККАУНТ</p>
+      </section>
+
+      <!-- Settings -->
+      <section class="page" data-page="settings" id="page-settings" hidden>
+        <header class="page-head"><h2>Настройки</h2><p>Аккаунт, оплата и соединение.</p></header>
+        <p class="label"><img class="i" src="assets/icons/user-p.png" alt="" />АККАУНТ</p>
         <div class="group">
-          <button class="row" id="rowTelegram"><span><b>Telegram</b><small id="tgHint">Коды и напоминания приходят в бот</small></span><em id="tgValue">—</em><i class="ico ico-chevron chev" aria-hidden="true"></i></button>
-          <button class="row" data-help="payments"><span><b>Оплата и коды</b><small>Stars, USDT, сроки кодов</small></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
-          <button class="row" data-site="/privacy"><span><b>Политика конфиденциальности</b></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
-          <button class="row" data-site="/terms"><span><b>Условия использования</b></span><i class="ico ico-external ext" aria-hidden="true"></i></button>
+          <button class="row" id="rowTelegram"><img class="ri" src="assets/icons/telegram-p.png" alt="" /><span><b>Telegram</b><small id="tgHint">Нужно только для оплаты подписки</small></span><em id="tgValue">—</em><img class="chev" src="assets/icons/chevron-m.png" alt="" /></button>
+          <button class="row" id="rowId"><img class="ri" src="assets/icons/shield-p.png" alt="" /><span><b>Sali ID</b><small id="rowIdHint">Один на аккаунт — на всех устройствах</small></span><em id="rowIdValue">—</em><img class="chev" src="assets/icons/copy-m.png" alt="" /></button>
+          <button class="row" data-open="balance"><img class="ri" src="assets/icons/cash-p.png" alt="" /><span><b>Баланс</b><small>USDT на аккаунте Sali</small></span><em id="balanceValue2">$0.00</em><img class="chev" src="assets/icons/chevron-m.png" alt="" /></button>
+          <button class="row" data-open="admin-home" id="rowAdmin" hidden><img class="ri" src="assets/icons/star-p.png" alt="" /><span><b>Админ-панель</b><small>Статистика, пользователи, платежи, промокоды</small></span><img class="chev" src="assets/icons/chevron-m.png" alt="" /></button>
+        </div>
+        <p class="label"><img class="i" src="assets/icons/shield-p.png" alt="" />СОЕДИНЕНИЕ</p>
+        <div class="group">
+          <button class="row" data-open="backup"><img class="ri" src="assets/icons/lifebuoy-p.png" alt="" /><span><b>Запасное подключение</b><small>Happ, v2RayTun, Hiddify — если в сети Sali не подключается</small></span><img class="chev" src="assets/icons/chevron-m.png" alt="" /></button>
+          <button class="row" data-help="protocol"><img class="ri" src="assets/icons/bolt-p.png" alt="" /><span><b>Протокол</b><small>Как работают WireGuard и AmneziaWG</small></span><em>WireGuard</em><img class="chev" src="assets/icons/external-m.png" alt="" /></button>
+          <button class="row" data-help="dns"><img class="ri" src="assets/icons/lock-p.png" alt="" /><span><b>DNS</b><small>Запросы идут внутри туннеля</small></span><em>Свой, без журналов</em><img class="chev" src="assets/icons/external-m.png" alt="" /></button>
+          <button class="row" data-help="servers"><img class="ri" src="assets/icons/globe-p.png" alt="" /><span><b>Серверы</b><small>Автовыбор и перенос при сбое</small></span><em>Авто</em><img class="chev" src="assets/icons/external-m.png" alt="" /></button>
+        </div>
+        <p class="label"><img class="i" src="assets/icons/info-p.png" alt="" />О ПРИЛОЖЕНИИ</p>
+        <div class="group">
+          <button class="row" data-url="https://t.me/SaliVpnNews"><img class="ri" src="assets/icons/megaphone-p.png" alt="" /><span><b>Наш канал</b><small>@SaliVpnNews — новости, акции и промокоды</small></span><img class="chev" src="assets/icons/external-m.png" alt="" /></button>
+          <button class="row" data-site="/privacy"><img class="ri" src="assets/icons/lock-p.png" alt="" /><span><b>Политика конфиденциальности</b></span><img class="chev" src="assets/icons/external-m.png" alt="" /></button>
+          <button class="row" data-site="/terms"><img class="ri" src="assets/icons/info-p.png" alt="" /><span><b>Условия использования</b></span><img class="chev" src="assets/icons/external-m.png" alt="" /></button>
         </div>
       </section>
 
@@ -125,29 +143,20 @@
           <div><b>@SaliVPNHelpBot</b><span>Укажите ваш Sali ID: <em id="supportId">—</em></span></div>
           <button class="btn btn-peach" id="support">Написать в поддержку</button>
         </div>
-        <p class="label"><i class="ico ico-help" aria-hidden="true"></i>ЧАСТЫЕ ВОПРОСЫ</p>
+        <p class="label"><img class="i" src="assets/icons/help-p.png" alt="" />ЧАСТЫЕ ВОПРОСЫ</p>
         <div class="faq" id="faq"></div>
-        <button class="more" data-help="">Все статьи в справочном центре <i class="ico ico-external" aria-hidden="true"></i></button>
+        <button class="more" data-help="">Все статьи в справочном центре <img class="mi" src="assets/icons/external-p.png" alt="" /></button>
       </section>
+
+      <!-- Admin (owner only) -->
+      <section class="page" data-page="admin" id="page-admin" hidden></section>
+
+      <!-- Inner screens: tariffs, checkout, balance, gift, invite, backup, admin tools -->
+      <section class="page" data-page="view" id="page-view" hidden></section>
     </main>
   </div>
 
-  <div class="sheet-backdrop" id="sheet" hidden>
-    <form class="sheet" id="codeForm" autocomplete="off">
-      <h2>Промокод</h2>
-      <p>Подписка приходит на аккаунт сама — вводить нужно только промокод, если он у вас есть. VPN не подключается при активной подписке? Напишите в поддержку.</p>
-      <div class="code-field">
-        <input id="codeInput" spellcheck="false" placeholder="SALI-XXXX-XXXX-XXXX" maxlength="19" />
-        <button type="button" id="paste" class="btn-small">Вставить</button>
-      </div>
-      <p class="form-error" id="codeError" hidden></p>
-      <div class="sheet-actions">
-        <button class="btn btn-ghost" type="button" id="codeCancel">Отмена</button>
-        <button class="btn btn-peach" id="codeSubmit" type="submit">Активировать</button>
-      </div>
-    </form>
-  </div>
-
+  <div class="sheet-backdrop" id="modal" hidden><div class="sheet" id="modalBox"></div></div>
   <div class="toast" id="toast" hidden></div>
   <script src="app.js"></script>
 </body>

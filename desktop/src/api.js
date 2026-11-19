@@ -100,8 +100,16 @@ async function authed(fn) {
   }
 }
 
+/** Account features (tariffs, payment, balance, gift, promo, devices, backup, admin) — same /app API as Android. */
+const ALLOWED = /^\/(app\/[a-z0-9/_-]+(\?[a-z0-9=&_-]*)?|home)$/i;
+function call(path, method = 'GET', body) {
+  if (!ALLOWED.test(String(path)) || !['GET', 'POST'].includes(method)) return Promise.reject(new ApiError('Недоступно', 400, 'BAD_PATH'));
+  return authed(() => request(path, { method, body: method === 'POST' ? (body ?? {}) : undefined }));
+}
+
 module.exports = {
   ApiError,
+  call,
   home: () => authed(() => request('/home')),
   redeem: (code) => authed(() => request('/codes/redeem', { method: 'POST', body: { code } })),
   connect: () => authed(() => request('/vpn/connect', { method: 'POST', headers: { 'X-Device-Key': store.deviceKey() } })),
